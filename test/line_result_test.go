@@ -1,12 +1,12 @@
 package test
 
 import (
-	"intraclub/models"
+	"intraclub/model"
 	"testing"
 )
 
 func TestBasicLineResult(t *testing.T) {
-	lineResult := models.LineResult{
+	lineResult := model.LineResult{
 		Team1:      matchup(Team1Id, true),
 		Team2:      matchup(Team2Id, false),
 		SetResults: threeSetResults(),
@@ -18,56 +18,56 @@ func TestBasicLineResult(t *testing.T) {
 	}
 }
 
-func matchup(teamId string, isTeam1 bool) models.Matchup {
-	player1 := TomEasum
+func matchup(teamId string, isTeam1 bool) model.Matchup {
+	player1 := Tom
 	if !isTeam1 {
-		player1 = EthanMoland
+		player1 = Ethan
 	}
 
-	player2 := AndyLascik
+	player2 := Andy
 	if !isTeam1 {
-		player2 = JdArthur
+		player2 = JD
 	}
 
-	return models.Matchup{
+	return model.Matchup{
 		Team:           teamId,
 		Line1:          player1.Line,
-		Player1:        player1.PlayerId,
+		Player1:        player1.UserId,
 		Player1Penalty: false,
 		Line2:          player2.Line,
-		Player2:        player2.PlayerId,
+		Player2:        player2.UserId,
 		Player2Penalty: false,
 	}
 }
 
-func threeSetResults() []models.SetResult {
-	return []models.SetResult{
+func threeSetResults() []model.SetResult {
+	return []model.SetResult{
 		{
-			Team1: models.TeamSetResult{
+			Team1: model.TeamSetResult{
 				ID:       Team1Id,
 				GamesWon: 7,
 			},
-			Team2: models.TeamSetResult{
+			Team2: model.TeamSetResult{
 				ID:       Team2Id,
 				GamesWon: 5,
 			},
 		},
 		{
-			Team1: models.TeamSetResult{
+			Team1: model.TeamSetResult{
 				ID:       Team1Id,
 				GamesWon: 4,
 			},
-			Team2: models.TeamSetResult{
+			Team2: model.TeamSetResult{
 				ID:       Team2Id,
 				GamesWon: 6,
 			},
 		},
 		{
-			Team1: models.TeamSetResult{
+			Team1: model.TeamSetResult{
 				ID:       Team1Id,
 				GamesWon: 6,
 			},
-			Team2: models.TeamSetResult{
+			Team2: model.TeamSetResult{
 				ID:       Team2Id,
 				GamesWon: 3,
 			},

@@ -2,12 +2,12 @@ package test
 
 import (
 	"fmt"
-	"intraclub/models"
+	"intraclub/model"
 	"testing"
 )
 
 func TestMatchupValid(t *testing.T) {
-	m := models.Matchup{
+	m := model.Matchup{
 		Line1: 1,
 		Line2: 1,
 	}
@@ -19,7 +19,7 @@ func TestMatchupValid(t *testing.T) {
 }
 
 func TestZeroLine(t *testing.T) {
-	m := models.Matchup{
+	m := model.Matchup{
 		Line1: 0,
 		Line2: 1,
 	}
@@ -31,7 +31,7 @@ func TestZeroLine(t *testing.T) {
 
 	fmt.Println(err)
 
-	m = models.Matchup{
+	m = model.Matchup{
 		Line1: 1,
 		Line2: 0,
 	}
@@ -45,7 +45,7 @@ func TestZeroLine(t *testing.T) {
 }
 
 func TestGreaterThanThreeLine(t *testing.T) {
-	m := models.Matchup{
+	m := model.Matchup{
 		Line1: 4,
 		Line2: 1,
 	}
@@ -57,7 +57,7 @@ func TestGreaterThanThreeLine(t *testing.T) {
 
 	fmt.Println(err)
 
-	m = models.Matchup{
+	m = model.Matchup{
 		Line1: 1,
 		Line2: 4,
 	}

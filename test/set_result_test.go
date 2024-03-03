@@ -2,7 +2,7 @@ package test
 
 import (
 	"fmt"
-	"intraclub/models"
+	"intraclub/model"
 	"testing"
 )
 
@@ -83,13 +83,13 @@ func TestTiebreak(t *testing.T) {
 	}
 }
 
-func baseSetResult(team1Games, team2Games int) models.SetResult {
-	return models.SetResult{
-		Team1: models.TeamSetResult{
+func baseSetResult(team1Games, team2Games int) model.SetResult {
+	return model.SetResult{
+		Team1: model.TeamSetResult{
 			ID:       Team1Id,
 			GamesWon: team1Games,
 		},
-		Team2: models.TeamSetResult{
+		Team2: model.TeamSetResult{
 			ID:       Team2Id,
 			GamesWon: team2Games,
 		},
