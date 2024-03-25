@@ -3,16 +3,14 @@ package model
 import (
 	"fmt"
 	"intraclub/common"
+	"strings"
 )
 
 type User struct {
-	UserId       string
-	FirstName    string
-	LastName     string
-	Email        string
-	Username     string
-	Password     string
-	PasswordHash string
+	ID        string `json:"user_id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Email     string `json:"email"`
 }
 
 func (u *User) ValidateStatic() error {
@@ -22,19 +20,31 @@ func (u *User) ValidateStatic() error {
 	if u.LastName == "" {
 		return fmt.Errorf("last name must not be empty")
 	}
-	if u.Username == "" {
-		return fmt.Errorf("username must not be empty")
-	}
 	if u.Email == "" {
 		return fmt.Errorf("email must not be empty")
+	}
+
+	if !strings.Contains(u.Email, "@") {
+		return fmt.Errorf("email must contain an @")
+	}
+
+	if u.Email[0] == '@' {
+		return fmt.Errorf("email must not start with @")
+	}
+
+	if u.Email[len(u.Email)-1] == '@' {
+		return fmt.Errorf("email must not end with @")
+	}
+
+	if len(strings.Split(u.Email, "@")) > 2 {
+		return fmt.Errorf("email must not contain multiple @s")
 	}
 
 	return nil
 }
 
-func (u *User) ValidateDynamic() error {
-	//TODO implement me
-	panic("implement me")
+func (u *User) ValidateDynamic(provider common.DbProvider) error {
+	return nil
 }
 
 func (u *User) ListOfRecords() interface{} {
@@ -42,11 +52,11 @@ func (u *User) ListOfRecords() interface{} {
 }
 
 func (u *User) SetId(id string) {
-	u.UserId = id
+	u.ID = id
 }
 
 func (u *User) GetId() string {
-	return u.UserId
+	return u.ID
 }
 
 func (u *User) RecordType() string {

@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"intraclub/common"
 )
 
 type Player struct {
@@ -9,7 +10,16 @@ type Player struct {
 	Line   int
 }
 
-func (p Player) ValidateStatic() error {
+func (p *Player) ValidateDynamic(db common.DbProvider) error {
+	err := common.CheckExistenceOrError(&User{ID: p.UserId})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Player) ValidateStatic() error {
 	if p.Line <= 0 {
 		return errors.New("player's line is less than or equal to zero")
 	}
@@ -18,9 +28,5 @@ func (p Player) ValidateStatic() error {
 		return errors.New("player's line is greater than three")
 	}
 
-	//_, exists := controllers.UserExists(p.UserId)
-	//if !exists {
-	//return fmt.Errorf("user ID %s is not a valid user ID", p.UserId)
-	//}
 	return nil
 }

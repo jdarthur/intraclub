@@ -14,5 +14,5 @@ type Validatable interface {
 	//
 	// This should always be called when accepting data from an untrusted source, for
 	// example from a `POST` request on an API endpoint.
-	ValidateDynamic() error
+	ValidateDynamic(db DbProvider) error
 }

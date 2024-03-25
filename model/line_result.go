@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"intraclub/common"
 )
 
 type LineResult struct {
@@ -18,16 +19,16 @@ func (l LineResult) Winner() string {
 			team1SetsWon += 1
 		}
 	}
-	winner := l.Team1.Team
+	winner := l.Team1.TeamId
 	if team1SetsWon < 2 {
-		winner = l.Team2.Team
+		winner = l.Team2.TeamId
 	}
 
 	return winner
 }
 
 func (l LineResult) ValidateStatic() error {
-	if l.Team1.Team == l.Team2.Team {
+	if l.Team1.TeamId == l.Team2.TeamId {
 		return errors.New("team 1's ID == team 2's ID")
 	}
 
@@ -64,12 +65,12 @@ func (l LineResult) ValidateStatic() error {
 			return errors.New(ret)
 		}
 
-		if result.Team1.ID != l.Team1.Team {
+		if result.Team1.ID != l.Team1.TeamId {
 			ret := fmt.Sprintf("For set %d, team 1's ID (%s) did not match the overall line result (%s)", i+1, result.Team1, l.Team1)
 			return errors.New(ret)
 		}
 
-		if result.Team2.ID != l.Team2.Team {
+		if result.Team2.ID != l.Team2.TeamId {
 			ret := fmt.Sprintf("For set %d, team 2's ID (%s) did not match the overall line result (%s)", i+1, result.Team2, l.Team2)
 			return errors.New(ret)
 		}
@@ -95,7 +96,15 @@ func (l LineResult) ValidateStatic() error {
 func (l LineResult) ValidateDynamic() error {
 	// validate that Team 1's ID is valid
 
-	// validate that Team 2's ID is valid
+	err := common.CheckExistenceOrError(&Team{ID: l.Team1.TeamId})
+	if err != nil {
+		return err
+	}
+
+	err = common.CheckExistenceOrError(&Team{ID: l.Team2.TeamId})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -103,11 +112,11 @@ func (l LineResult) ValidateDynamic() error {
 // Calculate a point total for a team from a LineResult
 func (l LineResult) Calculate(teamId string) (int, error) {
 
-	if teamId != l.Team1.Team && teamId != l.Team2.Team {
+	if teamId != l.Team1.TeamId && teamId != l.Team2.TeamId {
 		return -1, errors.New("provided team ID is neither team 1's nor team 2's ID")
 	}
 
-	isTeam1 := teamId == l.Team1.Team
+	isTeam1 := teamId == l.Team1.TeamId
 
 	totalPoints := 0
 

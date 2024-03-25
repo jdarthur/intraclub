@@ -33,12 +33,12 @@ func (m *MongoDb) GetAll(record common.CrudRecord) (objects interface{}, err err
 	return output, nil
 }
 
-func (m *MongoDb) GetOne(record common.CrudRecord, id string) (object interface{}, exists bool, err error) {
+func (m *MongoDb) GetOne(record common.CrudRecord) (object common.CrudRecord, exists bool, err error) {
 
 	ctx, cancel := defaultTimeout()
 	defer cancel()
 
-	res, err := m.Connection.Collection(record.RecordType()).Find(ctx, byId(id))
+	res, err := m.Connection.Collection(record.RecordType()).Find(ctx, byId(record.GetId()))
 	if err != nil {
 		return nil, false, err
 	}
@@ -53,17 +53,17 @@ func (m *MongoDb) GetOne(record common.CrudRecord, id string) (object interface{
 
 }
 
-func (m *MongoDb) Create(record common.CrudRecord, object interface{}) (interface{}, error) {
+func (m *MongoDb) Create(object common.CrudRecord) (common.CrudRecord, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *MongoDb) Update(record common.CrudRecord, object interface{}) error {
+func (m *MongoDb) Update(object common.CrudRecord) error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (m *MongoDb) Delete(record common.CrudRecord, id string) error {
+func (m *MongoDb) Delete(record common.CrudRecord) error {
 	//TODO implement me
 	panic("implement me")
 }

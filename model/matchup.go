@@ -7,7 +7,7 @@ import (
 
 // Matchup represents a particular line
 type Matchup struct {
-	Team           string `json:"team"`
+	TeamId         string `json:"team"`
 	Line1          int    `json:"line_1"`   // 1, 2, or 3
 	Player1        string `json:"player_1"` // UUID of player 1
 	Player1Penalty bool   `json:"player_1_penalty"`

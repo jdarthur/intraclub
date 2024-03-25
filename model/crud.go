@@ -28,7 +28,7 @@ func ReturnData(c *gin.Context, data interface{}) {
 }
 
 func (cc *CrudController) GetAll(c *gin.Context) {
-	records, err := cc.Database.GetAll(cc.Record)
+	records, err := common.GetAll(cc.Database, cc.Record)
 	if err != nil {
 		AbortWithError(c, err)
 		return
@@ -44,7 +44,7 @@ func (cc *CrudController) GetOne(c *gin.Context) {
 		return
 	}
 
-	record, exists, err := cc.Database.GetOne(cc.Record, id)
+	record, exists, err := common.GetOne(cc.Database, cc.Record)
 	if err != nil {
 		AbortWithError(c, err)
 		return
@@ -73,7 +73,7 @@ func (cc *CrudController) Create(c *gin.Context) {
 	}
 
 	// create the record
-	record, err := cc.Database.Create(cc.Record, body)
+	record, err := common.Create(cc.Database, body)
 	if err != nil {
 		AbortWithError(c, err)
 		return
@@ -92,7 +92,7 @@ func (cc *CrudController) Update(c *gin.Context) {
 
 	// validate that the record exists
 	id := body.GetId()
-	_, exists, err := cc.Database.GetOne(cc.Record, id)
+	_, exists, err := common.GetOne(cc.Database, cc.Record)
 
 	// shouldn't get a DB error here, but if we do we will return it
 	if err != nil {
@@ -107,7 +107,7 @@ func (cc *CrudController) Update(c *gin.Context) {
 	}
 
 	// do actual update
-	err = cc.Database.Update(cc.Record, body)
+	err = common.Update(cc.Database, body)
 	if err != nil {
 		AbortWithError(c, err)
 	}
@@ -122,7 +122,7 @@ func (cc *CrudController) Delete(c *gin.Context) {
 		return
 	}
 
-	record, exists, err := cc.Database.GetOne(cc.Record, id)
+	record, exists, err := common.GetOne(cc.Database, cc.Record)
 	if err != nil {
 		AbortWithError(c, err)
 		return
@@ -133,7 +133,7 @@ func (cc *CrudController) Delete(c *gin.Context) {
 		return
 	}
 
-	err = cc.Database.Delete(cc.Record, id)
+	err = common.Delete(cc.Database, cc.Record)
 	if err != nil {
 		AbortWithError(c, err)
 	}
