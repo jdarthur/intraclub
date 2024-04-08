@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"intraclub/common"
+	"intraclub/controllers"
 	"intraclub/middleware"
 	"intraclub/model"
 )
@@ -16,7 +17,7 @@ func main() {
 
 	apiAuthAndAccess := router.Group("/api", middleware.AuthCheck())
 
-	userCtl := model.CrudController{Record: &model.User{}, Database: common.GlobalDbProvider}
+	userCtl := common.CrudController{Controller: controllers.UserController{}, Database: common.GlobalDbProvider}
 	apiAuthAndAccess.Handle("GET", "/api/users", userCtl.GetAll)
 	apiAuthAndAccess.Handle("GET", "/api/users/:id", userCtl.GetOne)
 	apiAuthAndAccess.Handle("POST", "/api/users", userCtl.Create)

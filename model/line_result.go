@@ -7,6 +7,7 @@ import (
 )
 
 type LineResult struct {
+	ID         string      `json:"id"`
 	Team1      Matchup     `json:"team_1_matchup"`
 	Team2      Matchup     `json:"team_2_matchup"`
 	SetResults []SetResult `json:"set_results"`
@@ -65,13 +66,13 @@ func (l LineResult) ValidateStatic() error {
 			return errors.New(ret)
 		}
 
-		if result.Team1.ID != l.Team1.TeamId {
-			ret := fmt.Sprintf("For set %d, team 1's ID (%s) did not match the overall line result (%s)", i+1, result.Team1, l.Team1)
+		if result.Team1.TeamId != l.Team1.TeamId {
+			ret := fmt.Sprintf("For set %d, team 1's ID (%s) did not match the overall line result (%s)", i+1, result.Team1.TeamId, l.Team1.TeamId)
 			return errors.New(ret)
 		}
 
-		if result.Team2.ID != l.Team2.TeamId {
-			ret := fmt.Sprintf("For set %d, team 2's ID (%s) did not match the overall line result (%s)", i+1, result.Team2, l.Team2)
+		if result.Team2.TeamId != l.Team2.TeamId {
+			ret := fmt.Sprintf("For set %d, team 2's ID (%s) did not match the overall line result (%s)", i+1, result.Team2.TeamId, l.Team2.TeamId)
 			return errors.New(ret)
 		}
 
@@ -93,15 +94,15 @@ func (l LineResult) ValidateStatic() error {
 	return nil
 }
 
-func (l LineResult) ValidateDynamic() error {
+func (l LineResult) ValidateDynamic(provider common.DbProvider) error {
 	// validate that Team 1's ID is valid
 
-	err := common.CheckExistenceOrError(&Team{ID: l.Team1.TeamId})
+	err := common.CheckExistenceOrError(provider, &Team{ID: l.Team1.TeamId})
 	if err != nil {
 		return err
 	}
 
-	err = common.CheckExistenceOrError(&Team{ID: l.Team2.TeamId})
+	err = common.CheckExistenceOrError(provider, &Team{ID: l.Team2.TeamId})
 	if err != nil {
 		return err
 	}

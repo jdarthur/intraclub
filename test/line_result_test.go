@@ -30,7 +30,7 @@ func matchup(teamId string, isTeam1 bool) model.Matchup {
 	}
 
 	return model.Matchup{
-		Team:           teamId,
+		TeamId:         teamId,
 		Line1:          player1.Line,
 		Player1:        player1.UserId,
 		Player1Penalty: false,
@@ -44,31 +44,31 @@ func threeSetResults() []model.SetResult {
 	return []model.SetResult{
 		{
 			Team1: model.TeamSetResult{
-				ID:       Team1Id,
+				TeamId:   Team1Id,
 				GamesWon: 7,
 			},
 			Team2: model.TeamSetResult{
-				ID:       Team2Id,
+				TeamId:   Team2Id,
 				GamesWon: 5,
 			},
 		},
 		{
 			Team1: model.TeamSetResult{
-				ID:       Team1Id,
+				TeamId:   Team1Id,
 				GamesWon: 4,
 			},
 			Team2: model.TeamSetResult{
-				ID:       Team2Id,
+				TeamId:   Team2Id,
 				GamesWon: 6,
 			},
 		},
 		{
 			Team1: model.TeamSetResult{
-				ID:       Team1Id,
+				TeamId:   Team1Id,
 				GamesWon: 6,
 			},
 			Team2: model.TeamSetResult{
-				ID:       Team2Id,
+				TeamId:   Team2Id,
 				GamesWon: 3,
 			},
 		},

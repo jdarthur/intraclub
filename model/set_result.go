@@ -3,15 +3,17 @@ package model
 import (
 	"errors"
 	"fmt"
+	"intraclub/common"
 )
 
 type SetResult struct {
+	ID    string        `json:"id"`
 	Team1 TeamSetResult `json:"team1"`
 	Team2 TeamSetResult `json:"team2"`
 }
 
 type TeamSetResult struct {
-	ID          string `json:"team_id"`
+	TeamId      string `json:"team_id"`
 	GamesWon    int    `json:"games_won"`
 	TiebreakSet bool   `json:"tiebreak_set"`
 }
@@ -76,9 +78,9 @@ func (s SetResult) Tiebreak() bool {
 func (s SetResult) TiebreakWinner() string {
 	if s.Tiebreak() {
 		if s.Team1.GamesWon == 7 {
-			return s.Team1.ID
+			return s.Team1.TeamId
 		} else {
-			return s.Team2.ID
+			return s.Team2.TeamId
 		}
 	} else {
 		return ""
@@ -86,7 +88,7 @@ func (s SetResult) TiebreakWinner() string {
 }
 
 func (s SetResult) ValidateStatic() error {
-	if s.Team1.ID == s.Team2.ID {
+	if s.Team1.TeamId == s.Team2.TeamId {
 		return errors.New("teams 1 and 2 are identical")
 	}
 
@@ -105,10 +107,16 @@ func (s SetResult) ValidateStatic() error {
 	return nil
 }
 
-func (s SetResult) ValidateDynamic() error {
-	// TODO: validate if team1 is not valid
+func (s SetResult) ValidateDynamic(provider common.DbProvider) error {
+	err := common.CheckExistenceOrError(provider, &Team{ID: s.Team1.TeamId})
+	if err != nil {
+		return err
+	}
 
-	// TODO: validate if team2 is not valid
+	err = common.CheckExistenceOrError(provider, &Team{ID: s.Team2.TeamId})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

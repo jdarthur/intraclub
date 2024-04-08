@@ -24,8 +24,14 @@ func (t *Team) OneRecord() common.CrudRecord {
 	return new(Team)
 }
 
-func (t *Team) ListOfRecords() interface{} {
-	return make([]*Team, 0)
+type listOfTeams []*Team
+
+func (l listOfTeams) Length() int {
+	return len(l)
+}
+
+func (t *Team) ListOfRecords() common.ListOfCrudRecords {
+	return make(listOfTeams, 0)
 }
 
 func (t *Team) SetId(id string) {
@@ -55,20 +61,20 @@ func (t *Team) ValidateStatic() error {
 
 func (t *Team) ValidateDynamic(db common.DbProvider) error {
 
-	err := common.CheckExistenceOrError(&User{ID: t.CaptainId})
+	err := common.CheckExistenceOrError(db, &User{ID: t.CaptainId})
 	if err != nil {
 		return err
 	}
 
 	for _, coCaption := range t.CoCaptains {
-		err = common.CheckExistenceOrError(&User{ID: coCaption})
+		err = common.CheckExistenceOrError(db, &User{ID: coCaption})
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, player := range t.Players {
-		err = common.CheckExistenceOrError(&User{ID: player.UserId})
+		err = common.CheckExistenceOrError(db, &User{ID: player.UserId})
 		if err != nil {
 			return err
 		}

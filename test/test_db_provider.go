@@ -1,6 +1,7 @@
 package test
 
 import (
+	"encoding/json"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"intraclub/common"
 )
@@ -30,6 +31,47 @@ type RecordCache map[string]map[string]common.CrudRecord
 
 type UnitTestDbProvider struct {
 	Map RecordCache
+}
+
+type listOfAny []interface{}
+
+func (l listOfAny) Length() int {
+	return len(l)
+}
+
+func (u UnitTestDbProvider) GetAllWhere(record common.CrudRecord, filter map[string]interface{}) (objects common.ListOfCrudRecords, err error) {
+
+	rootKey := record.RecordType()
+
+	output := make(listOfAny, 0)
+
+	v, ok := u.Map[rootKey]
+	if !ok {
+		return output, nil
+	}
+
+	for _, record := range v {
+
+		m := make(map[string]interface{})
+		b, err := json.Marshal(record)
+		if err != nil {
+			return nil, err
+		}
+
+		err = json.Unmarshal(b, &m)
+		if err != nil {
+			return nil, err
+		}
+
+		for key, value := range filter {
+			mValue, ok := m[key]
+			if ok && mValue == value {
+				output = append(output, m)
+			}
+		}
+	}
+
+	return output, nil
 }
 
 func (u UnitTestDbProvider) Connect() error {

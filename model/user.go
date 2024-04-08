@@ -8,9 +8,20 @@ import (
 
 type User struct {
 	ID        string `json:"user_id"`
+	IsAdmin   bool   `json:"is_admin"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
+}
+
+type listOfUsers []*User
+
+func (l listOfUsers) Length() int {
+	return len(l)
+}
+
+func (l listOfUsers) Value() interface{} {
+	return l
 }
 
 func (u *User) ValidateStatic() error {
@@ -47,8 +58,8 @@ func (u *User) ValidateDynamic(provider common.DbProvider) error {
 	return nil
 }
 
-func (u *User) ListOfRecords() interface{} {
-	return make([]User, 0)
+func (u *User) ListOfRecords() common.ListOfCrudRecords {
+	return make(listOfUsers, 0)
 }
 
 func (u *User) SetId(id string) {

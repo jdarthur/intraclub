@@ -78,7 +78,7 @@ func TestTiebreak(t *testing.T) {
 		t.Error("Expected 7-6 set to be marked as a tiebreak")
 	}
 
-	if setResult.TiebreakWinner() != setResult.Team1.ID {
+	if setResult.TiebreakWinner() != setResult.Team1.TeamId {
 		t.Error("Expected tiebreak winner to be team 1's ID")
 	}
 }
@@ -86,11 +86,11 @@ func TestTiebreak(t *testing.T) {
 func baseSetResult(team1Games, team2Games int) model.SetResult {
 	return model.SetResult{
 		Team1: model.TeamSetResult{
-			ID:       Team1Id,
+			TeamId:   Team1Id,
 			GamesWon: team1Games,
 		},
 		Team2: model.TeamSetResult{
-			ID:       Team2Id,
+			TeamId:   Team2Id,
 			GamesWon: team2Games,
 		},
 	}

@@ -15,11 +15,12 @@ type MongoDb struct {
 	Connection *mongo.Database
 }
 
-func (m *MongoDb) GetAll(record common.CrudRecord) (objects interface{}, err error) {
+func (m *MongoDb) GetAllWhere(record common.CrudRecord, filter map[string]interface{}) (objects common.ListOfCrudRecords, err error) {
+
 	ctx, cancel := defaultTimeout()
 	defer cancel()
 
-	res, err := m.Connection.Collection(record.RecordType()).Find(ctx, bson.M{})
+	res, err := m.Connection.Collection(record.RecordType()).Find(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -31,6 +32,10 @@ func (m *MongoDb) GetAll(record common.CrudRecord) (objects interface{}, err err
 	}
 
 	return output, nil
+}
+
+func (m *MongoDb) GetAll(record common.CrudRecord) (objects interface{}, err error) {
+	return m.GetAllWhere(record, bson.M{})
 }
 
 func (m *MongoDb) GetOne(record common.CrudRecord) (object common.CrudRecord, exists bool, err error) {

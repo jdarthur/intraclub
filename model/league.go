@@ -24,8 +24,14 @@ func (l *League) OneRecord() common.CrudRecord {
 	return new(League)
 }
 
-func (l *League) ListOfRecords() interface{} {
-	return make([]*League, 0)
+type listOfLeagues []*League
+
+func (l listOfLeagues) Length() int {
+	return len(l)
+}
+
+func (l *League) ListOfRecords() common.ListOfCrudRecords {
+	return make(listOfLeagues, 0)
 }
 
 func (l *League) SetId(id string) {

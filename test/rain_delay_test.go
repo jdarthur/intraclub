@@ -1,6 +1,7 @@
 package test
 
 import (
+	"intraclub/common"
 	"intraclub/model"
 	"testing"
 	"time"
@@ -13,18 +14,31 @@ var OriginalWeek4 = time.Date(2024, time.April, 13, 0, 0, 0, 0, time.UTC)
 
 func TestRainDelay(t *testing.T) {
 
+	weeks := []*model.Week{
+		WeekAt(OriginalWeek1),
+		WeekAt(OriginalWeek2),
+		WeekAt(OriginalWeek3),
+		WeekAt(OriginalWeek4),
+	}
+
+	weekIds := make([]string, 0)
+
+	for _, week := range weeks {
+		w, err := common.Create(common.GlobalDbProvider, week)
+		if err != nil {
+			panic(err)
+		}
+
+		weekIds = append(weekIds, w.GetId())
+	}
+
 	season := &model.Season{
 		ID:        "",
 		StartTime: time.Date(0, 0, 0, 80, 30, 0, 0, time.UTC),
-		Weeks: []*model.Week{
-			WeekAt(OriginalWeek1, "1"),
-			WeekAt(OriginalWeek2, "2"),
-			WeekAt(OriginalWeek3, "3"),
-			WeekAt(OriginalWeek4, "4"),
-		},
+		Weeks:     weekIds,
 	}
 
-	err := season.RainDelayOn("2")
+	err := season.RainDelayOn(common.GlobalDbProvider, weekIds[1])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,16 +47,21 @@ func TestRainDelay(t *testing.T) {
 		t.Fatalf("Expected 4 week season, got %d after RainDelayOn", len(season.Weeks))
 	}
 
-	week1 := season.Weeks[0]
+	weeks, err = season.GetWeeks(common.GlobalDbProvider)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	week1 := weeks[0]
 	expectWeek(week1, OriginalWeek1, OriginalWeek1, t)
 
-	week2 := season.Weeks[1]
+	week2 := weeks[1]
 	expectWeek(week2, OriginalWeek2, OriginalWeek3, t)
 
-	week3 := season.Weeks[2]
+	week3 := weeks[2]
 	expectWeek(week3, OriginalWeek3, OriginalWeek4, t)
 
-	week4 := season.Weeks[3]
+	week4 := weeks[3]
 	expectWeek(week4, OriginalWeek4, time.Date(2024, time.April, 20, 0, 0, 0, 0, time.UTC), t)
 
 }
@@ -57,11 +76,9 @@ func expectWeek(week *model.Week, origDate, newDate time.Time, t *testing.T) {
 	}
 }
 
-func WeekAt(t time.Time, id string) *model.Week {
+func WeekAt(t time.Time) *model.Week {
 	return &model.Week{
-		ID:           id,
 		Date:         t,
 		OriginalDate: t,
 	}
-
 }

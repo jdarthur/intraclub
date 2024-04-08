@@ -1,15 +1,96 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"intraclub/common"
 	"time"
 )
 
 type Season struct {
-	ID        string
-	StartTime time.Time
-	Weeks     []*Week
+	ID        string    `json:"season_id" bson:"season_id"`
+	LeagueId  string    `json:"league_id" bson:"league_id"`
+	StartTime time.Time `json:"start_time" bson:"start_time"`
+	Weeks     []string  `json:"weeks" bson:"weeks"`
+}
+
+func (s *Season) RecordType() string {
+	return "season"
+}
+
+func (s *Season) OneRecord() common.CrudRecord {
+	return new(Season)
+}
+
+type listOfSeasons []*Season
+
+func (l listOfSeasons) Length() int {
+	return len(l)
+}
+
+func (s *Season) ListOfRecords() common.ListOfCrudRecords {
+	return make(listOfSeasons, 0)
+}
+
+func (s *Season) SetId(id string) {
+	s.ID = id
+}
+
+func (s *Season) GetId() string {
+	return s.ID
+}
+
+func (s *Season) ValidateStatic() error {
+	year, month, day := s.StartTime.Date()
+
+	if year != 0 {
+		return errors.New("year must not be set in start time")
+	}
+
+	if month != 0 {
+		return errors.New("month must not be set in start time")
+	}
+
+	if day != 0 {
+		return errors.New("day must not be set in start time")
+	}
+
+	return nil
+}
+
+func (s *Season) ValidateDynamic(db common.DbProvider) error {
+
+	err := common.CheckExistenceOrError(db, &League{ID: s.LeagueId})
+	if err != nil {
+		return err
+	}
+
+	for _, w := range s.Weeks {
+		err := common.CheckExistenceOrError(db, &Week{ID: w})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Season) GetWeeks(provider common.DbProvider) ([]*Week, error) {
+
+	weeks := make([]*Week, 0)
+	for _, w := range s.Weeks {
+		search := &Week{ID: w}
+		week, exists, err := provider.GetOne(search)
+		if !exists {
+			return nil, common.RecordDoesNotExist(&Week{})
+		}
+		if err != nil {
+			return nil, err
+		}
+		weeks = append(weeks, week.(*Week))
+	}
+
+	return weeks, nil
 }
 
 var oneWeek = time.Hour * 24 * 7
@@ -20,10 +101,15 @@ var TimeFormat = "2006-01-02"
 // week's date. This is usually 7 days later, but when there is a holiday in
 // between weeks, this logic will correctly move the week around the holiday
 // by just switching the week's Date to the next Week in the list (e.g. 14 days later)
-func (s *Season) RainDelayOn(weekId string) error {
+func (s *Season) RainDelayOn(provider common.DbProvider, weekId string) error {
 
 	startWeek := -1
-	for i, week := range s.Weeks {
+	weeks, err := s.GetWeeks(provider)
+	if err != nil {
+		return err
+	}
+
+	for i, week := range weeks {
 		if weekId == week.ID {
 			startWeek = i
 			break
@@ -34,7 +120,7 @@ func (s *Season) RainDelayOn(weekId string) error {
 		return fmt.Errorf("week with ID %s was not found in season %s", weekId, s.ID)
 	}
 
-	weeksAffected := s.Weeks[startWeek:]
+	weeksAffected := weeks[startWeek:]
 
 	for i, week := range weeksAffected {
 
@@ -51,53 +137,12 @@ func (s *Season) RainDelayOn(weekId string) error {
 			nextWeek := weeksAffected[i+1]
 			week.Date = nextWeek.Date
 		}
+
+		err = provider.Update(week)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
-}
-
-type Week struct {
-	ID           string
-	Date         time.Time // date when this week was actually played
-	OriginalDate time.Time // date when this week was originally scheduled to play (e.g. before a rain day)
-}
-
-func (w *Week) RecordType() string {
-	return "week"
-}
-
-func (w *Week) OneRecord() common.CrudRecord {
-	return new(Week)
-}
-
-func (w *Week) ListOfRecords() interface{} {
-	return make([]*Week, 0)
-}
-
-func (w *Week) SetId(id string) {
-	w.ID = id
-}
-
-func (w *Week) GetId() string {
-	return w.ID
-}
-
-func (w *Week) ValidateStatic() error {
-	if w.Date.IsZero() {
-		return fmt.Errorf("date field must not be empty")
-	}
-
-	if w.OriginalDate.IsZero() {
-		return fmt.Errorf("original date field must not be empty")
-	}
-
-	return nil
-}
-
-func (w *Week) ValidateDynamic(db common.DbProvider) error {
-	return nil
-}
-
-func (w *Week) PushBack(weeks int) {
-	w.Date = w.Date.Add(time.Duration(weeks) * oneWeek)
 }

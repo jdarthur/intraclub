@@ -7,6 +7,7 @@ type DbProvider interface {
 	Disconnect() error
 
 	GetAll(record CrudRecord) (objects interface{}, err error)
+	GetAllWhere(record CrudRecord, filter map[string]interface{}) (objects ListOfCrudRecords, err error)
 	GetOne(record CrudRecord) (object CrudRecord, exists bool, err error)
 	Create(object CrudRecord) (CrudRecord, error)
 	Update(object CrudRecord) error
@@ -15,6 +16,10 @@ type DbProvider interface {
 
 func GetAll(db DbProvider, record CrudRecord) (objects interface{}, err error) {
 	return db.GetAll(record)
+}
+
+func GetAllWhere(db DbProvider, record CrudRecord, filter map[string]interface{}) (objects ListOfCrudRecords, err error) {
+	return db.GetAllWhere(record, filter)
 }
 
 func GetOne(db DbProvider, record CrudRecord) (object CrudRecord, exists bool, err error) {

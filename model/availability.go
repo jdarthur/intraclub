@@ -21,11 +21,17 @@ func (o AvailabilityOption) String() string {
 	}[o]
 }
 
+type listOfAvailability []*Availability
+
+func (l listOfAvailability) Length() int {
+	return len(l)
+}
+
 type Availability struct {
-	Id        string
-	WeekId    string
-	UserId    string
-	Available AvailabilityOption
+	Id        string             `json:"availability_id" bson:"availability_id"`
+	WeekId    string             `json:"week_id" bson:"week_id"`
+	UserId    string             `json:"user_id" bson:"user_id"`
+	Available AvailabilityOption `json:"available" bson:"available"`
 }
 
 func (a *Availability) RecordType() string {
@@ -36,8 +42,8 @@ func (a *Availability) OneRecord() common.CrudRecord {
 	return new(Availability)
 }
 
-func (a *Availability) ListOfRecords() interface{} {
-	return make([]*Availability, 0)
+func (a *Availability) ListOfRecords() common.ListOfCrudRecords {
+	return make(listOfAvailability, 0)
 }
 
 func (a *Availability) SetId(id string) {

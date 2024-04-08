@@ -3,22 +3,52 @@ package model
 import (
 	"errors"
 	"fmt"
+	"intraclub/common"
 )
 
-// Matchup represents a particular line
+// Matchup represents a particular line for a particular team
 type Matchup struct {
-	TeamId         string `json:"team"`
-	Line1          int    `json:"line_1"`   // 1, 2, or 3
-	Player1        string `json:"player_1"` // UUID of player 1
-	Player1Penalty bool   `json:"player_1_penalty"`
-	Line2          int    `json:"line_2"`   // 1, 2, or 3
-	Player2        string `json:"player_2"` // UUID of player 2
-	Player2Penalty bool   `json:"player_2_penalty"`
+	ID             string `json:"id"`               // unique ID for this particular matchup
+	TeamId         string `json:"team"`             // id for the team in question
+	Line1          int    `json:"line_1"`           // 1, 2, or 3
+	Player1        string `json:"player_1"`         // Player.ID of the Line1 player
+	Player1Penalty bool   `json:"player_1_penalty"` // true if Player1 was playing down for this matchup
+	Line2          int    `json:"line_2"`           // 1, 2, or 3
+	Player2        string `json:"player_2"`         // Player.ID of the Line2 player
+	Player2Penalty bool   `json:"player_2_penalty"` // true if Player2 was playing down for this matchup
+}
+
+func (m *Matchup) RecordType() string {
+	return "matchup"
+}
+
+func (m *Matchup) OneRecord() common.CrudRecord {
+	return new(Matchup)
+}
+
+type listOfMatchups []*Matchup
+
+func (l listOfMatchups) Length() int {
+	return len(l)
+}
+
+func (m *Matchup) ListOfRecords() common.ListOfCrudRecords {
+	return make(listOfMatchups, 0)
+}
+
+func (m *Matchup) SetId(id string) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *Matchup) GetId() string {
+	//TODO implement me
+	panic("implement me")
 }
 
 // ValidateStatic tests a Matchup and returns an error if either of the
 // lines provided are outside of the range {1, 2, 3}
-func (m Matchup) ValidateStatic() error {
+func (m *Matchup) ValidateStatic() error {
 
 	if m.Line1 <= 0 {
 		return errors.New("line 1 value was <= 0")
@@ -39,8 +69,8 @@ func (m Matchup) ValidateStatic() error {
 	return nil
 }
 
-func (m Matchup) ValidateDynamic() error {
-	player1, err := getPlayer(m.Player1)
+func (m *Matchup) ValidateDynamic(db common.DbProvider) error {
+	player1, err := GetPlayer(m.Player1)
 	if err != nil {
 		return err
 	}
@@ -57,7 +87,7 @@ func (m Matchup) ValidateDynamic() error {
 		}
 	}
 
-	player2, err := getPlayer(m.Player2)
+	player2, err := GetPlayer(m.Player2)
 	if err != nil {
 		return err
 	}
@@ -77,6 +107,24 @@ func (m Matchup) ValidateDynamic() error {
 	return nil
 }
 
-func getPlayer(playerId string) (Player, error) {
-	return Player{}, nil
+func GetPlayer(playerId string) (*Player, error) {
+	player, exists, err := common.GetOne(common.GlobalDbProvider, &Player{ID: playerId})
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, common.RecordDoesNotExist(&Player{ID: playerId})
+	}
+
+	return player.(*Player), nil
+}
+
+func GetAllMatchupsWithPlayerPair(m *Matchup) ([]*Matchup, error) {
+	matchups, err := common.GetAllWhere(common.GlobalDbProvider, m, map[string]interface{}{"player1": m.Player1, "player2": m.Player2})
+	if err != nil {
+		return nil, err
+	}
+
+	return matchups.(listOfMatchups), nil
 }
