@@ -1,45 +1,37 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/gin-gonic/gin"
-	"net/http"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type Token struct {
-	UserId string `json:"userId"`
+	UserId string `json:"user_id"`
 }
 
-func ParseToken(token string) (*Token, error) {
-
-	// parse JWT into a &Token
-
-	return &Token{UserId: ""}, nil
-}
-
-func NewToken(userId string) *Token {
-	return &Token{UserId: userId}
-}
-
-func (t *Token) ToJwt() string {
-	return ""
-}
-
-func WithToken(c *gin.Context) {
-
-	t, exists := c.Get("x-session-token")
-	if !exists {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "No token found"})
-		return
-	}
-
-	token, err := ParseToken(t.(string))
+func ParseToken(tokenString string) (*Token, error) {
+	token := Token{}
+	err := json.Unmarshal([]byte(tokenString), &token)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token was not valid"})
+		return nil, err
 	}
 
-	c.Set("token", token)
-	c.Next()
+	return &token, nil
+}
+
+func NewToken(userId primitive.ObjectID) *Token {
+	return &Token{UserId: userId.Hex()}
+}
+
+func (t *Token) ToJwt() (string, error) {
+	b, err := json.Marshal(t)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }
 
 func GetTokenFromContext(c *gin.Context) (*Token, error) {

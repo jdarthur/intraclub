@@ -3,19 +3,20 @@ package model
 import (
 	"errors"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"intraclub/common"
 )
 
 // Matchup represents a particular line for a particular team
 type Matchup struct {
-	ID             string `json:"id"`               // unique ID for this particular matchup
-	TeamId         string `json:"team"`             // id for the team in question
-	Line1          int    `json:"line_1"`           // 1, 2, or 3
-	Player1        string `json:"player_1"`         // Player.ID of the Line1 player
-	Player1Penalty bool   `json:"player_1_penalty"` // true if Player1 was playing down for this matchup
-	Line2          int    `json:"line_2"`           // 1, 2, or 3
-	Player2        string `json:"player_2"`         // Player.ID of the Line2 player
-	Player2Penalty bool   `json:"player_2_penalty"` // true if Player2 was playing down for this matchup
+	ID             primitive.ObjectID `json:"id" bson:"_id"`                            // unique ID for this particular matchup
+	TeamId         string             `json:"team_id" bson:"team_id"`                   // id for the team in question
+	Line1          int                `json:"line_1" bson:"line_1"`                     // 1, 2, or 3
+	Player1        string             `json:"player_1" bson:"player_1"`                 // Player.ID of the Line1 player
+	Player1Penalty bool               `json:"player_1_penalty" bson:"player_1_penalty"` // true if Player1 was playing down for this matchup
+	Line2          int                `json:"line_2" bson:"line_2"`                     // 1, 2, or 3
+	Player2        string             `json:"player_2" bson:"player_2"`                 // Player.ID of the Line2 player
+	Player2Penalty bool               `json:"player_2_penalty" bson:"player_2_penalty"` // true if Player2 was playing down for this matchup
 }
 
 func (m *Matchup) RecordType() string {
@@ -28,6 +29,10 @@ func (m *Matchup) OneRecord() common.CrudRecord {
 
 type listOfMatchups []*Matchup
 
+func (l listOfMatchups) Get(index int) common.CrudRecord {
+	return l[index]
+}
+
 func (l listOfMatchups) Length() int {
 	return len(l)
 }
@@ -36,14 +41,12 @@ func (m *Matchup) ListOfRecords() common.ListOfCrudRecords {
 	return make(listOfMatchups, 0)
 }
 
-func (m *Matchup) SetId(id string) {
-	//TODO implement me
-	panic("implement me")
+func (m *Matchup) SetId(id primitive.ObjectID) {
+	m.ID = id
 }
 
-func (m *Matchup) GetId() string {
-	//TODO implement me
-	panic("implement me")
+func (m *Matchup) GetId() primitive.ObjectID {
+	return m.ID
 }
 
 // ValidateStatic tests a Matchup and returns an error if either of the
@@ -69,8 +72,8 @@ func (m *Matchup) ValidateStatic() error {
 	return nil
 }
 
-func (m *Matchup) ValidateDynamic(db common.DbProvider) error {
-	player1, err := GetPlayer(m.Player1)
+func (m *Matchup) ValidateDynamic(db common.DbProvider, isUpdate bool, previousState common.CrudRecord) error {
+	player1, err := GetPlayer(db, m.Player1)
 	if err != nil {
 		return err
 	}
@@ -87,7 +90,7 @@ func (m *Matchup) ValidateDynamic(db common.DbProvider) error {
 		}
 	}
 
-	player2, err := GetPlayer(m.Player2)
+	player2, err := GetPlayer(db, m.Player2)
 	if err != nil {
 		return err
 	}
@@ -107,14 +110,20 @@ func (m *Matchup) ValidateDynamic(db common.DbProvider) error {
 	return nil
 }
 
-func GetPlayer(playerId string) (*Player, error) {
-	player, exists, err := common.GetOne(common.GlobalDbProvider, &Player{ID: playerId})
+func GetPlayer(db common.DbProvider, playerId string) (*Player, error) {
+
+	id, err := primitive.ObjectIDFromHex(playerId)
+	if err != nil {
+		return nil, err
+	}
+
+	player, exists, err := common.GetOne(db, &Player{ID: id})
 	if err != nil {
 		return nil, err
 	}
 
 	if !exists {
-		return nil, common.RecordDoesNotExist(&Player{ID: playerId})
+		return nil, common.RecordDoesNotExist(&Player{ID: id})
 	}
 
 	return player.(*Player), nil

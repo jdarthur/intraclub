@@ -3,15 +3,16 @@ package model
 import (
 	"errors"
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"intraclub/common"
 	"time"
 )
 
 type Season struct {
-	ID        string    `json:"season_id" bson:"season_id"`
-	LeagueId  string    `json:"league_id" bson:"league_id"`
-	StartTime time.Time `json:"start_time" bson:"start_time"`
-	Weeks     []string  `json:"weeks" bson:"weeks"`
+	ID        primitive.ObjectID `json:"season_id" bson:"_id"`
+	LeagueId  string             `json:"league_id" bson:"league_id"`
+	StartTime time.Time          `json:"start_time" bson:"start_time"`
+	Weeks     []string           `json:"weeks" bson:"weeks"`
 }
 
 func (s *Season) RecordType() string {
@@ -24,6 +25,10 @@ func (s *Season) OneRecord() common.CrudRecord {
 
 type listOfSeasons []*Season
 
+func (l listOfSeasons) Get(index int) common.CrudRecord {
+	return l[index]
+}
+
 func (l listOfSeasons) Length() int {
 	return len(l)
 }
@@ -32,11 +37,11 @@ func (s *Season) ListOfRecords() common.ListOfCrudRecords {
 	return make(listOfSeasons, 0)
 }
 
-func (s *Season) SetId(id string) {
+func (s *Season) SetId(id primitive.ObjectID) {
 	s.ID = id
 }
 
-func (s *Season) GetId() string {
+func (s *Season) GetId() primitive.ObjectID {
 	return s.ID
 }
 
@@ -58,15 +63,15 @@ func (s *Season) ValidateStatic() error {
 	return nil
 }
 
-func (s *Season) ValidateDynamic(db common.DbProvider) error {
+func (s *Season) ValidateDynamic(db common.DbProvider, isUpdate bool, previousState common.CrudRecord) error {
 
-	err := common.CheckExistenceOrError(db, &League{ID: s.LeagueId})
+	err := common.CheckExistenceOrErrorByStringId(db, &League{}, s.LeagueId)
 	if err != nil {
 		return err
 	}
 
 	for _, w := range s.Weeks {
-		err := common.CheckExistenceOrError(db, &Week{ID: w})
+		err := common.CheckExistenceOrErrorByStringId(db, &Week{}, w)
 		if err != nil {
 			return err
 		}
@@ -79,7 +84,13 @@ func (s *Season) GetWeeks(provider common.DbProvider) ([]*Week, error) {
 
 	weeks := make([]*Week, 0)
 	for _, w := range s.Weeks {
-		search := &Week{ID: w}
+
+		weekId, err := primitive.ObjectIDFromHex(w)
+		if err != nil {
+			return nil, err
+		}
+
+		search := &Week{ID: weekId}
 		week, exists, err := provider.GetOne(search)
 		if !exists {
 			return nil, common.RecordDoesNotExist(&Week{})
@@ -109,8 +120,13 @@ func (s *Season) RainDelayOn(provider common.DbProvider, weekId string) error {
 		return err
 	}
 
+	weekObjId, err := primitive.ObjectIDFromHex(weekId)
+	if err != nil {
+		return err
+	}
+
 	for i, week := range weeks {
-		if weekId == week.ID {
+		if weekObjId == week.ID {
 			startWeek = i
 			break
 		}

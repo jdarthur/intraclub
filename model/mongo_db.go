@@ -2,8 +2,11 @@ package model
 
 import (
 	"context"
+	"errors"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"intraclub/common"
 	"time"
 )
@@ -14,6 +17,8 @@ type MongoDb struct {
 	Password   string
 	Connection *mongo.Database
 }
+
+var IntraclubMongoDatabase = "intraclub"
 
 func (m *MongoDb) GetAllWhere(record common.CrudRecord, filter map[string]interface{}) (objects common.ListOfCrudRecords, err error) {
 
@@ -26,7 +31,7 @@ func (m *MongoDb) GetAllWhere(record common.CrudRecord, filter map[string]interf
 	}
 
 	output := record.ListOfRecords()
-	err = res.Decode(output)
+	err = res.All(ctx, &output)
 	if err != nil {
 		return nil, err
 	}
@@ -43,8 +48,11 @@ func (m *MongoDb) GetOne(record common.CrudRecord) (object common.CrudRecord, ex
 	ctx, cancel := defaultTimeout()
 	defer cancel()
 
-	res, err := m.Connection.Collection(record.RecordType()).Find(ctx, byId(record.GetId()))
-	if err != nil {
+	res := m.Connection.Collection(record.RecordType()).FindOne(ctx, byId(record.GetId()))
+	if res.Err() != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, false, nil
+		}
 		return nil, false, err
 	}
 
@@ -59,8 +67,21 @@ func (m *MongoDb) GetOne(record common.CrudRecord) (object common.CrudRecord, ex
 }
 
 func (m *MongoDb) Create(object common.CrudRecord) (common.CrudRecord, error) {
-	//TODO implement me
-	panic("implement me")
+
+	ctx, cancel := defaultTimeout()
+	defer cancel()
+
+	object.SetId(primitive.NewObjectID())
+
+	inserted, err := m.Connection.Collection(object.RecordType()).InsertOne(ctx, object)
+	if err != nil {
+		return nil, err
+	}
+
+	object.SetId(inserted.InsertedID.(primitive.ObjectID))
+
+	return object, nil
+
 }
 
 func (m *MongoDb) Update(object common.CrudRecord) error {
@@ -69,29 +90,48 @@ func (m *MongoDb) Update(object common.CrudRecord) error {
 }
 
 func (m *MongoDb) Delete(record common.CrudRecord) error {
-	//TODO implement me
-	panic("implement me")
+
+	ctx, cancel := defaultTimeout()
+	defer cancel()
+
+	deleted, err := m.Connection.Collection(record.RecordType()).DeleteOne(ctx, byId(record.GetId()))
+	if err != nil {
+		return err
+	}
+
+	if deleted.DeletedCount == 0 {
+		return errors.New("deleted count was 0")
+	}
+
+	return nil
 }
 
 func (m *MongoDb) Disconnect() error {
-	//TODO implement me
-	panic("implement me")
+	ctx, cancel := defaultTimeout()
+	defer cancel()
+	return m.Connection.Client().Disconnect(ctx)
 }
 
 func defaultTimeout() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 5*time.Second)
 }
 
-func byId(id string) bson.M {
+func byId(id primitive.ObjectID) bson.M {
 	return bson.M{"_id": id}
 }
 
 func (m *MongoDb) Connect() error {
 
-	//conn, err := mongo.Connect(defaultTimeout(), options.Client())
+	ctx, cancel := defaultTimeout()
+	defer cancel()
 
-	//TODO implement me
-	panic("implement me")
+	conn, err := mongo.Connect(ctx, options.Client().ApplyURI(m.Hostname))
+	if err != nil {
+		return err
+	}
+
+	m.Connection = conn.Database(IntraclubMongoDatabase)
+	return nil
 }
 
 func NewMongoDbProvider(url, username, password string) common.DbProvider {

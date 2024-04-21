@@ -3,12 +3,13 @@ package common
 import (
 	"errors"
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
 )
 
 type ControllerType interface {
 	Model() CrudRecord
-	ValidateRequest(c *gin.Context, isUpdate bool, provider DbProvider) (CrudRecord, error)
+	ValidateRequest(c CrudRecord, isUpdate bool, provider DbProvider) (CrudRecord, error)
 	GetAllFilter(c *gin.Context) (map[string]interface{}, error)
 }
 
@@ -37,7 +38,7 @@ func (cc *CrudController) GetOne(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, existingRecord)
+	c.JSON(http.StatusOK, gin.H{"resource": existingRecord})
 }
 
 func (cc *CrudController) GetAll(c *gin.Context) {
@@ -53,13 +54,19 @@ func (cc *CrudController) GetAll(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, v)
+	c.JSON(http.StatusOK, gin.H{"resource": v})
 }
 
 func (cc *CrudController) Update(c *gin.Context) {
 
-	// validate the payload first for illegal values
-	record, err := cc.Controller.ValidateRequest(c, true, cc.Database)
+	model := cc.Controller.Model()
+	err := c.Bind(model)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	record, err := cc.Controller.ValidateRequest(model, true, cc.Database)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -77,19 +84,26 @@ func (cc *CrudController) Update(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, record)
+	c.JSON(http.StatusOK, gin.H{"resource": record})
 }
 
 func (cc *CrudController) Create(c *gin.Context) {
 
-	// validate the payload first for illegal values
-	record, err := cc.Controller.ValidateRequest(c, false, cc.Database)
+	model := cc.Controller.Model()
+	err := c.Bind(model)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if record.GetId() != "" {
+	// validate the payload first for illegal values
+	record, err := cc.Controller.ValidateRequest(model, false, cc.Database)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if record.GetId().String() != "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "id field must not be set in create request"})
 		return
 	}
@@ -100,7 +114,7 @@ func (cc *CrudController) Create(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, created)
+	c.JSON(http.StatusCreated, gin.H{"resource": created})
 }
 
 func (cc *CrudController) Delete(c *gin.Context) {
@@ -117,16 +131,16 @@ func (cc *CrudController) Delete(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, existingRecord)
+	c.JSON(http.StatusOK, gin.H{"resource": existingRecord})
 }
 
-func getId(c *gin.Context) (string, error) {
+func getId(c *gin.Context) (primitive.ObjectID, error) {
 	id := c.Param("id")
 	if id == "" {
-		return "", errors.New(":id field was not provided")
+		return primitive.ObjectID{}, errors.New(":id field was not provided")
 	}
 
-	return id, nil
+	return primitive.ObjectIDFromHex(id)
 }
 
 // idValidation checks that the provided :id field in the request was a valid

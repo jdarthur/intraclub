@@ -2,19 +2,28 @@ package model
 
 import (
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"intraclub/common"
 	"strings"
 )
 
 type User struct {
-	ID        string `json:"user_id"`
-	IsAdmin   bool   `json:"is_admin"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Email     string `json:"email"`
+	ID        primitive.ObjectID `json:"user_id" bson:"_id"`
+	IsAdmin   bool               `json:"is_admin" bson:"is_admin"`
+	FirstName string             `json:"first_name" bson:"first_name"`
+	LastName  string             `json:"last_name" bson:"last_name"`
+	Email     string             `json:"email" bson:"email"`
+}
+
+func (u *User) GetUserId() string {
+	return u.ID.Hex()
 }
 
 type listOfUsers []*User
+
+func (l listOfUsers) Get(index int) common.CrudRecord {
+	return l[index]
+}
 
 func (l listOfUsers) Length() int {
 	return len(l)
@@ -54,7 +63,12 @@ func (u *User) ValidateStatic() error {
 	return nil
 }
 
-func (u *User) ValidateDynamic(provider common.DbProvider) error {
+func (u *User) ValidateDynamic(db common.DbProvider, isUpdate bool, previousState common.CrudRecord) error {
+
+	if !isUpdate {
+		return common.ValueMustBeGloballyUnique(db, &User{}, "email", u.Email)
+	}
+
 	return nil
 }
 
@@ -62,11 +76,11 @@ func (u *User) ListOfRecords() common.ListOfCrudRecords {
 	return make(listOfUsers, 0)
 }
 
-func (u *User) SetId(id string) {
+func (u *User) SetId(id primitive.ObjectID) {
 	u.ID = id
 }
 
-func (u *User) GetId() string {
+func (u *User) GetId() primitive.ObjectID {
 	return u.ID
 }
 
@@ -76,4 +90,21 @@ func (u *User) RecordType() string {
 
 func (u *User) OneRecord() common.CrudRecord {
 	return new(User)
+}
+
+func GetUserByEmail(db common.DbProvider, email string) (*User, error) {
+	users, err := common.GetAllWhere(db, &User{}, map[string]interface{}{"email": email})
+	if err != nil {
+		return nil, err
+	}
+
+	if users.Length() == 0 {
+		return nil, fmt.Errorf("user with email %s was not found", email)
+	}
+
+	if users.Length() > 1 {
+		return nil, fmt.Errorf("user with email %s was not found", email)
+	}
+
+	return users.Get(0).(*User), nil
 }

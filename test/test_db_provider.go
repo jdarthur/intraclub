@@ -27,13 +27,17 @@ import (
 //			},
 //	     ...
 //		}
-type RecordCache map[string]map[string]common.CrudRecord
+type RecordCache map[string]map[primitive.ObjectID]common.CrudRecord
 
 type UnitTestDbProvider struct {
 	Map RecordCache
 }
 
-type listOfAny []interface{}
+type listOfAny []common.CrudRecord
+
+func (l listOfAny) Get(index int) common.CrudRecord {
+	return l[index]
+}
 
 func (l listOfAny) Length() int {
 	return len(l)
@@ -55,18 +59,20 @@ func (u UnitTestDbProvider) GetAllWhere(record common.CrudRecord, filter map[str
 		m := make(map[string]interface{})
 		b, err := json.Marshal(record)
 		if err != nil {
+			panic(err)
 			return nil, err
 		}
 
 		err = json.Unmarshal(b, &m)
 		if err != nil {
+			panic(err)
 			return nil, err
 		}
 
 		for key, value := range filter {
 			mValue, ok := m[key]
 			if ok && mValue == value {
-				output = append(output, m)
+				output = append(output, record)
 			}
 		}
 	}
@@ -113,7 +119,7 @@ func (u UnitTestDbProvider) GetOne(record common.CrudRecord) (object common.Crud
 func (u UnitTestDbProvider) Create(object common.CrudRecord) (common.CrudRecord, error) {
 	v := u.CreateRootMapIfNotExists(object)
 
-	id := primitive.NewObjectID().String()
+	id := primitive.NewObjectID()
 	object.SetId(id)
 
 	v[id] = object
@@ -125,7 +131,7 @@ func (u UnitTestDbProvider) Create(object common.CrudRecord) (common.CrudRecord,
 func (u UnitTestDbProvider) Update(object common.CrudRecord) error {
 	v := u.CreateRootMapIfNotExists(object)
 
-	id := primitive.NewObjectID().String()
+	id := primitive.NewObjectID()
 	object.SetId(id)
 
 	v[id] = object
@@ -150,10 +156,10 @@ func NewUnitTestDbProvider() *UnitTestDbProvider {
 	return &UnitTestDbProvider{Map: make(RecordCache)}
 }
 
-func (u UnitTestDbProvider) CreateRootMapIfNotExists(record common.CrudRecord) map[string]common.CrudRecord {
+func (u UnitTestDbProvider) CreateRootMapIfNotExists(record common.CrudRecord) map[primitive.ObjectID]common.CrudRecord {
 	v, ok := u.Map[record.RecordType()]
 	if !ok {
-		v = make(map[string]common.CrudRecord)
+		v = make(map[primitive.ObjectID]common.CrudRecord)
 	}
 
 	return v

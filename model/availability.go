@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"intraclub/common"
 )
 
@@ -23,12 +24,16 @@ func (o AvailabilityOption) String() string {
 
 type listOfAvailability []*Availability
 
+func (l listOfAvailability) Get(index int) common.CrudRecord {
+	return l[index]
+}
+
 func (l listOfAvailability) Length() int {
 	return len(l)
 }
 
 type Availability struct {
-	Id        string             `json:"availability_id" bson:"availability_id"`
+	Id        primitive.ObjectID `json:"availability_id" bson:"_id"`
 	WeekId    string             `json:"week_id" bson:"week_id"`
 	UserId    string             `json:"user_id" bson:"user_id"`
 	Available AvailabilityOption `json:"available" bson:"available"`
@@ -46,11 +51,11 @@ func (a *Availability) ListOfRecords() common.ListOfCrudRecords {
 	return make(listOfAvailability, 0)
 }
 
-func (a *Availability) SetId(id string) {
+func (a *Availability) SetId(id primitive.ObjectID) {
 	a.Id = id
 }
 
-func (a *Availability) GetId() string {
+func (a *Availability) GetId() primitive.ObjectID {
 	return a.Id
 }
 
@@ -66,24 +71,16 @@ func (a *Availability) ValidateStatic() error {
 	return fmt.Errorf("unexpected availability option: %d", a.Available)
 }
 
-func (a *Availability) ValidateDynamic(db common.DbProvider) error {
+func (a *Availability) ValidateDynamic(db common.DbProvider, isUpdate bool, previousState common.CrudRecord) error {
 
-	_, exists, err := db.GetOne(&Week{ID: a.WeekId})
+	err := common.CheckExistenceOrErrorByStringId(db, &Week{}, a.WeekId)
 	if err != nil {
 		return err
 	}
 
-	if !exists {
-		return fmt.Errorf("invalid week ID '%s'", a.WeekId)
-	}
-
-	_, exists, err = db.GetOne(&User{ID: a.UserId})
+	err = common.CheckExistenceOrErrorByStringId(db, &User{}, a.UserId)
 	if err != nil {
 		return err
-	}
-
-	if !exists {
-		return fmt.Errorf("invalid user ID '%s'", a.UserId)
 	}
 
 	return nil

@@ -1,5 +1,7 @@
 package common
 
+import "strings"
+
 var GlobalDbProvider DbProvider
 
 type DbProvider interface {
@@ -30,11 +32,17 @@ func Create(db DbProvider, record CrudRecord) (object CrudRecord, err error) {
 
 	err = record.ValidateStatic()
 	if err != nil {
+		if strings.Contains(err.Error(), "unmarshal") {
+			panic(err)
+		}
 		return nil, err
 	}
 
-	err = record.ValidateDynamic(db)
+	err = record.ValidateDynamic(db, false, nil)
 	if err != nil {
+		if strings.Contains(err.Error(), "unmarshal") {
+			panic(err)
+		}
 		return nil, err
 	}
 
@@ -47,9 +55,20 @@ func Update(db DbProvider, record CrudRecord) (err error) {
 		return err
 	}
 
-	err = record.ValidateDynamic(db)
+	err = record.ValidateDynamic(db, false, nil)
 	if err != nil {
 		return err
+	}
+
+	// check if the record in question has non-updatable fields
+	// configured and whether any of those fields has been changed
+	// in the request vs. the existing record
+	h, ok := record.(HasNonUpdatable)
+	if ok {
+		err = CheckNonUpdatableFields(h, db)
+		if err != nil {
+			return err
+		}
 	}
 
 	return db.Update(record)

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"intraclub/common"
 	"intraclub/model"
 )
 
@@ -39,17 +40,23 @@ func CaptainOrCoCaptainOperation(team model.Team, userId string) error {
 		}
 	}
 
-	return fmt.Errorf("user %s is not a captain or co-captain of league %s", userId, team.ID)
+	return fmt.Errorf("user %s is not a captain or co-captain of team %s", userId, team.ID)
 }
 
 // TeamMemberOperation validates that a particular user ID is a member of the given team. This is used
 // to protect team-specific API endpoints, e.g. viewing weekly availability
-func TeamMemberOperation(team model.Team, userId string) error {
-	for _, teamMember := range team.Players {
+func TeamMemberOperation(team *model.Team, userId string) error {
+
+	players, err := team.GetPlayers(common.GlobalDbProvider)
+	if err != nil {
+		return err
+	}
+
+	for _, teamMember := range players {
 		if userId == teamMember.UserId {
 			return nil
 		}
 	}
 
-	return fmt.Errorf("user %s is not a captain or co-captain of league %s", userId, team.ID)
+	return fmt.Errorf("user %s is not a member of team %s", userId, team.ID.Hex())
 }

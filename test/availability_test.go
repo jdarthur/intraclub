@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	common.GlobalDbProvider = NewUnitTestDbProvider()
+	ResetDatabase()
 }
 
 func TestInvalidAvailabilityOption(t *testing.T) {
@@ -28,7 +28,7 @@ func TestEmptyWeekId(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error on invalid week ID")
 	} else {
-		ValidateErrorContains(t, err, "invalid week ID")
+		ValidateErrorContains(t, err, "invalid object id")
 	}
 }
 
@@ -39,7 +39,7 @@ func TestInvalidWeekId(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error on invalid week ID")
 	} else {
-		ValidateErrorContains(t, err, "invalid week ID")
+		ValidateErrorContains(t, err, "invalid object id")
 	}
 }
 
@@ -49,14 +49,14 @@ func TestInvalidUserId(t *testing.T) {
 
 	a := &model.Availability{
 		Available: model.Available,
-		WeekId:    week.ID,
+		WeekId:    week.ID.Hex(),
 	}
 
 	_, err := common.Create(common.GlobalDbProvider, a)
 	if err == nil {
 		t.Fatalf("expected error on invalid user ID")
 	} else {
-		ValidateErrorContains(t, err, "invalid user ID")
+		ValidateErrorContains(t, err, "invalid object id")
 	}
 }
 
@@ -67,8 +67,8 @@ func TestValidAvailability(t *testing.T) {
 
 	a := &model.Availability{
 		Available: model.Available,
-		WeekId:    week.ID,
-		UserId:    user.ID,
+		WeekId:    week.ID.Hex(),
+		UserId:    user.ID.Hex(),
 	}
 
 	_, err := common.Create(common.GlobalDbProvider, a)

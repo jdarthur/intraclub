@@ -94,17 +94,17 @@ func (l LineResult) ValidateStatic() error {
 	return nil
 }
 
-func (l LineResult) ValidateDynamic(provider common.DbProvider) error {
+func (l LineResult) ValidateDynamic(db common.DbProvider, isUpdate bool, previousState common.CrudRecord) error {
 	// validate that Team 1's ID is valid
 
-	err := common.CheckExistenceOrError(provider, &Team{ID: l.Team1.TeamId})
+	err := common.CheckExistenceOrErrorByStringId(db, &Team{}, l.Team1.TeamId)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid team 1 ID: %s", err.Error())
 	}
 
-	err = common.CheckExistenceOrError(provider, &Team{ID: l.Team2.TeamId})
+	err = common.CheckExistenceOrErrorByStringId(db, &Team{}, l.Team2.TeamId)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid team 2 ID: %s", err.Error())
 	}
 
 	return nil

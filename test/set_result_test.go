@@ -86,11 +86,11 @@ func TestTiebreak(t *testing.T) {
 func baseSetResult(team1Games, team2Games int) model.SetResult {
 	return model.SetResult{
 		Team1: model.TeamSetResult{
-			TeamId:   Team1Id,
+			TeamId:   BlueTeamId.Hex(),
 			GamesWon: team1Games,
 		},
 		Team2: model.TeamSetResult{
-			TeamId:   Team2Id,
+			TeamId:   GreenTeamId.Hex(),
 			GamesWon: team2Games,
 		},
 	}

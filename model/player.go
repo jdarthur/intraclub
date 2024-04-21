@@ -2,13 +2,14 @@ package model
 
 import (
 	"errors"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"intraclub/common"
 )
 
 type Player struct {
-	ID     string
-	UserId string
-	Line   int
+	ID     primitive.ObjectID `json:"player_id" bson:"_id"`
+	UserId string             `json:"user_id" bson:"user_id"`
+	Line   int                `json:"line" bson:"line"`
 }
 
 func (p *Player) RecordType() string {
@@ -21,6 +22,10 @@ func (p *Player) OneRecord() common.CrudRecord {
 
 type listOfPlayers []*Player
 
+func (l listOfPlayers) Get(index int) common.CrudRecord {
+	return l[index]
+}
+
 func (l listOfPlayers) Length() int {
 	return len(l)
 }
@@ -29,16 +34,16 @@ func (p *Player) ListOfRecords() common.ListOfCrudRecords {
 	return make(listOfPlayers, 0)
 }
 
-func (p *Player) SetId(id string) {
+func (p *Player) SetId(id primitive.ObjectID) {
 	p.ID = id
 }
 
-func (p *Player) GetId() string {
+func (p *Player) GetId() primitive.ObjectID {
 	return p.ID
 }
 
-func (p *Player) ValidateDynamic(db common.DbProvider) error {
-	err := common.CheckExistenceOrError(db, &User{ID: p.UserId})
+func (p *Player) ValidateDynamic(db common.DbProvider, isUpdate bool, previousState common.CrudRecord) error {
+	err := common.CheckExistenceOrErrorByStringId(db, &User{}, p.UserId)
 	if err != nil {
 		return err
 	}

@@ -2,14 +2,15 @@ package controllers
 
 import (
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"intraclub/common"
 	"intraclub/model"
 	"net/http"
 )
 
 type adminUpdateUserRequest struct {
-	UserId string `json:"user_id"`
-	Email  string `json:"email"`
+	UserId primitive.ObjectID `json:"user_id"`
+	Email  string             `json:"email"`
 }
 
 func UpdateUserId(c *gin.Context) {

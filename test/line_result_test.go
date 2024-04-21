@@ -7,8 +7,8 @@ import (
 
 func TestBasicLineResult(t *testing.T) {
 	lineResult := model.LineResult{
-		Team1:      matchup(Team1Id, true),
-		Team2:      matchup(Team2Id, false),
+		Team1:      matchup(BlueTeamId.Hex(), true),
+		Team2:      matchup(GreenTeamId.Hex(), false),
 		SetResults: threeSetResults(),
 	}
 
@@ -44,31 +44,31 @@ func threeSetResults() []model.SetResult {
 	return []model.SetResult{
 		{
 			Team1: model.TeamSetResult{
-				TeamId:   Team1Id,
+				TeamId:   BlueTeamId.Hex(),
 				GamesWon: 7,
 			},
 			Team2: model.TeamSetResult{
-				TeamId:   Team2Id,
+				TeamId:   GreenTeamId.Hex(),
 				GamesWon: 5,
 			},
 		},
 		{
 			Team1: model.TeamSetResult{
-				TeamId:   Team1Id,
+				TeamId:   BlueTeamId.Hex(),
 				GamesWon: 4,
 			},
 			Team2: model.TeamSetResult{
-				TeamId:   Team2Id,
+				TeamId:   GreenTeamId.Hex(),
 				GamesWon: 6,
 			},
 		},
 		{
 			Team1: model.TeamSetResult{
-				TeamId:   Team1Id,
+				TeamId:   BlueTeamId.Hex(),
 				GamesWon: 6,
 			},
 			Team2: model.TeamSetResult{
-				TeamId:   Team2Id,
+				TeamId:   GreenTeamId.Hex(),
 				GamesWon: 3,
 			},
 		},

@@ -11,6 +11,9 @@ type TeamColor struct {
 	Hex  string
 }
 
+// ValidateStatic checks that the TeamColor has:
+//   - a non-empty name
+//   - a non-empty, 6-character hex code that is parseable as valid hex
 func (t TeamColor) ValidateStatic() error {
 	if t.Name == "" {
 		return fmt.Errorf("name must not be empty")
@@ -26,7 +29,7 @@ func (t TeamColor) ValidateStatic() error {
 
 	_, err := hex.DecodeString(t.Hex)
 	if err != nil {
-		return fmt.Errorf("invalid hex (error: %s)", err)
+		return fmt.Errorf("invalid hex code (error: %s)", err)
 	}
 
 	return nil

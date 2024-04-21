@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"intraclub/common"
 	"net/http"
 )
@@ -15,8 +16,13 @@ func AsAdminUser(c *gin.Context) {
 	}
 
 	userId := token.UserId
+	id, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
-	user, err := getUser(common.GlobalDbProvider, userId)
+	user, err := getUser(common.GlobalDbProvider, id)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -30,19 +36,16 @@ func AsAdminUser(c *gin.Context) {
 	c.Next()
 }
 
-func UserIsAdmin(provider common.DbProvider, userId string) (bool, error) {
-	user, exists, err := common.GetOne(provider, &User{ID: userId})
-	if !exists {
-		return false, common.RecordDoesNotExist(&User{ID: userId})
-	}
+func UserIsAdmin(provider common.DbProvider, userId primitive.ObjectID) (bool, error) {
+	user, err := getUser(provider, userId)
 	if err != nil {
 		return false, err
 	}
 
-	return user.(*User).IsAdmin, nil
+	return user.IsAdmin, nil
 }
 
-func MarkUserAsAdministrator(provider common.DbProvider, userId string) error {
+func MarkUserAsAdministrator(provider common.DbProvider, userId primitive.ObjectID) error {
 	user, err := getUser(provider, userId)
 	if err != nil {
 		return err
@@ -52,21 +55,23 @@ func MarkUserAsAdministrator(provider common.DbProvider, userId string) error {
 	return common.Update(provider, user)
 }
 
-func UpdateUserEmail(provider common.DbProvider, userId, email string) error {
+func UpdateUserEmail(provider common.DbProvider, userId primitive.ObjectID, email string) error {
 	user, err := getUser(provider, userId)
 	if err != nil {
 		return err
 	}
 
-	user.IsAdmin = true
+	user.Email = email
 	return common.Update(provider, user)
 
 }
 
-func getUser(provider common.DbProvider, userId string) (*User, error) {
-	r, exists, err := common.GetOne(provider, &User{ID: userId})
+func getUser(provider common.DbProvider, userId primitive.ObjectID) (*User, error) {
+	search := &User{ID: userId}
+
+	r, exists, err := common.GetOne(provider, search)
 	if !exists {
-		return nil, common.RecordDoesNotExist(&User{ID: userId})
+		return nil, common.RecordDoesNotExist(search)
 	}
 	if err != nil {
 		return nil, err

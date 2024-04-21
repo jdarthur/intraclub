@@ -107,13 +107,13 @@ func (s SetResult) ValidateStatic() error {
 	return nil
 }
 
-func (s SetResult) ValidateDynamic(provider common.DbProvider) error {
-	err := common.CheckExistenceOrError(provider, &Team{ID: s.Team1.TeamId})
+func (s SetResult) ValidateDynamic(db common.DbProvider, isUpdate bool, previousState common.CrudRecord) error {
+	err := common.CheckExistenceOrErrorByStringId(db, &Team{}, s.Team1.TeamId)
 	if err != nil {
 		return err
 	}
 
-	err = common.CheckExistenceOrError(provider, &Team{ID: s.Team2.TeamId})
+	err = common.CheckExistenceOrErrorByStringId(db, &Team{}, s.Team2.TeamId)
 	if err != nil {
 		return err
 	}

@@ -18,7 +18,7 @@ type Validatable interface {
 	//
 	// This should always be called when accepting data from an untrusted source, for
 	// example from a `POST` request on an API endpoint.
-	ValidateDynamic(db DbProvider) error
+	ValidateDynamic(db DbProvider, isUpdate bool, previousState CrudRecord) error
 }
 
 func ValueMustBeGloballyUnique(db DbProvider, record CrudRecord, key string, value interface{}) error {
@@ -29,11 +29,35 @@ func ValueMustBeGloballyUnique(db DbProvider, record CrudRecord, key string, val
 
 	records, err := db.GetAllWhere(record, filter)
 	if err != nil {
+		panic(err)
 		return err
 	}
 
 	if records.Length() != 0 {
 		return fmt.Errorf("%s with %s %v already exists", record.RecordType(), key, value)
+	}
+
+	return nil
+}
+
+type HasNonUpdatable interface {
+	VerifyUpdatable(c CrudRecord) (illegalUpdate bool, field string)
+	CrudRecord
+}
+
+func CheckNonUpdatableFields(request HasNonUpdatable, db DbProvider) error {
+
+	recordInDb, exists, err := GetOne(db, request)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return RecordDoesNotExist(request)
+	}
+
+	illegalUpdate, field := request.VerifyUpdatable(recordInDb)
+	if illegalUpdate {
+		return fmt.Errorf("field '%s' may not be changed after creation", field)
 	}
 
 	return nil
