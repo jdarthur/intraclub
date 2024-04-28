@@ -1,14 +1,12 @@
 package common
 
-import "strings"
-
 var GlobalDbProvider DbProvider
 
 type DbProvider interface {
 	Connect() error
 	Disconnect() error
 
-	GetAll(record CrudRecord) (objects interface{}, err error)
+	GetAll(record CrudRecord) (objects ListOfCrudRecords, err error)
 	GetAllWhere(record CrudRecord, filter map[string]interface{}) (objects ListOfCrudRecords, err error)
 	GetOne(record CrudRecord) (object CrudRecord, exists bool, err error)
 	Create(object CrudRecord) (CrudRecord, error)
@@ -16,8 +14,9 @@ type DbProvider interface {
 	Delete(record CrudRecord) error
 }
 
-func GetAll(db DbProvider, record CrudRecord) (objects interface{}, err error) {
+func GetAll(db DbProvider, record CrudRecord) (objects ListOfCrudRecords, err error) {
 	return db.GetAll(record)
+
 }
 
 func GetAllWhere(db DbProvider, record CrudRecord, filter map[string]interface{}) (objects ListOfCrudRecords, err error) {
@@ -28,21 +27,35 @@ func GetOne(db DbProvider, record CrudRecord) (object CrudRecord, exists bool, e
 	return db.GetOne(record)
 }
 
-func Create(db DbProvider, record CrudRecord) (object CrudRecord, err error) {
+func GetOneByStringId(db DbProvider, record CrudRecord, id string) (object CrudRecord, err error) {
 
+	objectId, err := TryParsingObjectId(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// set the object ID on this record
+	record.SetId(objectId)
+
+	record, exists, err := GetOne(db, record)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, RecordDoesNotExist(record)
+	}
+
+	return record, nil
+}
+
+func Create(db DbProvider, record CrudRecord) (object CrudRecord, err error) {
 	err = record.ValidateStatic()
 	if err != nil {
-		if strings.Contains(err.Error(), "unmarshal") {
-			panic(err)
-		}
 		return nil, err
 	}
 
 	err = record.ValidateDynamic(db, false, nil)
 	if err != nil {
-		if strings.Contains(err.Error(), "unmarshal") {
-			panic(err)
-		}
 		return nil, err
 	}
 

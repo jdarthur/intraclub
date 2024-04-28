@@ -1,9 +1,5 @@
 package common
 
-import (
-	"fmt"
-)
-
 type Validatable interface {
 	// ValidateStatic validates static constraints, e.g. number is in range, value
 	// is non-empty, etc.
@@ -29,12 +25,14 @@ func ValueMustBeGloballyUnique(db DbProvider, record CrudRecord, key string, val
 
 	records, err := db.GetAllWhere(record, filter)
 	if err != nil {
-		panic(err)
 		return err
 	}
 
 	if records.Length() != 0 {
-		return fmt.Errorf("%s with %s %v already exists", record.RecordType(), key, value)
+		return ApiError{
+			References: []interface{}{record.RecordType(), key, value},
+			Code:       FieldMustBeGloballyUnique,
+		}
 	}
 
 	return nil
@@ -51,14 +49,37 @@ func CheckNonUpdatableFields(request HasNonUpdatable, db DbProvider) error {
 	if err != nil {
 		return err
 	}
+
 	if !exists {
 		return RecordDoesNotExist(request)
 	}
 
 	illegalUpdate, field := request.VerifyUpdatable(recordInDb)
 	if illegalUpdate {
-		return fmt.Errorf("field '%s' may not be changed after creation", field)
+		return ApiError{
+			References: field,
+			Code:       FieldNotUpdatable,
+		}
 	}
 
 	return nil
+}
+
+func GetOneByIdAndValidate(db DbProvider, c CrudRecord, id string) error {
+
+	record, err := GetOneByStringId(db, c, id)
+	if err != nil {
+		return err
+	}
+
+	return ValidateStaticAndDynamic(db, record)
+}
+
+func ValidateStaticAndDynamic(db DbProvider, record Validatable) error {
+	err := record.ValidateStatic()
+	if err != nil {
+		return err
+	}
+
+	return record.ValidateDynamic(db, false, nil)
 }

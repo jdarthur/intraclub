@@ -15,6 +15,7 @@ type Team struct {
 	CaptainId  string             `json:"captain" bson:"captain_id"`      // user ID of captain
 	CoCaptains []string           `json:"co_captains" bson:"co_captains"` // user ID(s) of any co-captains
 	Players    []string           `json:"players" bson:"players"`         // list of Player s on team
+	Active     bool               `json:"active,omitempty" bson:"-"`
 }
 
 func (t *Team) RecordType() string {
@@ -64,7 +65,12 @@ func (t *Team) ValidateDynamic(db common.DbProvider, isUpdate bool, previousStat
 		return err
 	}
 
-	if !t.userIdIsInPlayerList(db, t.CaptainId) {
+	captainInPlayers, err := t.userIdIsInPlayerList(db, t.CaptainId)
+	if err != nil {
+		return err
+	}
+
+	if !captainInPlayers {
 		return fmt.Errorf("captain %s is not in player list", t.CaptainId)
 	}
 
@@ -79,7 +85,12 @@ func (t *Team) ValidateDynamic(db common.DbProvider, isUpdate bool, previousStat
 			return fmt.Errorf("error with co-captain ID %s: %s", coCaptain, err.Error())
 		}
 
-		if !t.userIdIsInPlayerList(db, coCaptain) {
+		coCaptainInPlayers, err := t.userIdIsInPlayerList(db, coCaptain)
+		if err != nil {
+			return err
+		}
+
+		if !coCaptainInPlayers {
 			return fmt.Errorf("co-captain %s is not in player list", coCaptain)
 		}
 	}
@@ -94,20 +105,20 @@ func (t *Team) ValidateDynamic(db common.DbProvider, isUpdate bool, previousStat
 	return nil
 }
 
-func (t *Team) userIdIsInPlayerList(db common.DbProvider, userId string) bool {
+func (t *Team) userIdIsInPlayerList(db common.DbProvider, userId string) (bool, error) {
 
 	players, err := t.GetPlayers(db)
 	if err != nil {
-		return false
+		return false, err
 	}
 
 	for _, player := range players {
 
 		if player.UserId == userId {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func (t *Team) playerIdIsInPlayerList(playerId string) bool {
@@ -124,18 +135,9 @@ func (t *Team) GetPlayers(db common.DbProvider) ([]*Player, error) {
 	players := make([]*Player, 0)
 	for _, playerId := range t.Players {
 
-		id, err := primitive.ObjectIDFromHex(playerId)
+		player, err := common.GetOneByStringId(db, &Player{}, playerId)
 		if err != nil {
 			return nil, err
-		}
-
-		player, exists, err := common.GetOne(db, &Player{ID: id})
-		if err != nil {
-			return nil, err
-		}
-
-		if !exists {
-			return nil, common.RecordDoesNotExist(&Player{ID: id})
 		}
 
 		players = append(players, player.(*Player))
@@ -220,4 +222,15 @@ func NewTeam(color TeamColor, captain string) Team {
 		Color:     color,
 		CaptainId: captain,
 	}
+}
+
+func (t *Team) IsActive(db common.DbProvider) (bool, error) {
+	v, err := common.GetOneByStringId(db, &League{}, t.LeagueId)
+	if err != nil {
+		return false, err
+	}
+
+	league := v.(*League)
+
+	return league.IsActive(db)
 }

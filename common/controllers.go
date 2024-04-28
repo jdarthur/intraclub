@@ -7,6 +7,8 @@ import (
 	"net/http"
 )
 
+var ResourceKey = "resource"
+
 type ControllerType interface {
 	Model() CrudRecord
 	ValidateRequest(c CrudRecord, isUpdate bool, provider DbProvider) (CrudRecord, error)
@@ -38,7 +40,7 @@ func (cc *CrudController) GetOne(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"resource": existingRecord})
+	c.JSON(http.StatusOK, gin.H{ResourceKey: existingRecord})
 }
 
 func (cc *CrudController) GetAll(c *gin.Context) {
@@ -54,7 +56,7 @@ func (cc *CrudController) GetAll(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"resource": v})
+	c.JSON(http.StatusOK, gin.H{ResourceKey: v})
 }
 
 func (cc *CrudController) Update(c *gin.Context) {
@@ -84,7 +86,7 @@ func (cc *CrudController) Update(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"resource": record})
+	c.JSON(http.StatusOK, gin.H{ResourceKey: record})
 }
 
 func (cc *CrudController) Create(c *gin.Context) {
@@ -114,7 +116,7 @@ func (cc *CrudController) Create(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"resource": created})
+	c.JSON(http.StatusCreated, gin.H{ResourceKey: created})
 }
 
 func (cc *CrudController) Delete(c *gin.Context) {
@@ -131,7 +133,7 @@ func (cc *CrudController) Delete(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"resource": existingRecord})
+	c.JSON(http.StatusOK, gin.H{ResourceKey: existingRecord})
 }
 
 func getId(c *gin.Context) (primitive.ObjectID, error) {

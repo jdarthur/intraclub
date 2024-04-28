@@ -92,3 +92,18 @@ func newUser(t *testing.T) *model.User {
 	}
 	return created.(*model.User)
 }
+
+func newUserWithEmail(t *testing.T, email string) *model.User {
+	user := &model.User{
+		IsAdmin:   false,
+		FirstName: "test",
+		LastName:  "test",
+		Email:     fmt.Sprintf("test%d@test.com", rand.Int()),
+	}
+
+	created, err := common.Create(common.GlobalDbProvider, user)
+	if err != nil {
+		t.Fatalf("error creating user: %s\n", err)
+	}
+	return created.(*model.User)
+}

@@ -70,9 +70,7 @@ func TestInvalidPlayerId(t *testing.T) {
 		t.Fatalf("Expected error, got none")
 	}
 
-	ValidateErrorContains(t, err, "co-captain")
-	ValidateErrorContains(t, err, "is not in player list")
-
+	ValidateErrorContains(t, err, "Invalid object ID")
 }
 
 func TestInvalidLeagueId(t *testing.T) {

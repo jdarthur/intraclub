@@ -39,7 +39,7 @@ func (m *MongoDb) GetAllWhere(record common.CrudRecord, filter map[string]interf
 	return output, nil
 }
 
-func (m *MongoDb) GetAll(record common.CrudRecord) (objects interface{}, err error) {
+func (m *MongoDb) GetAll(record common.CrudRecord) (objects common.ListOfCrudRecords, err error) {
 	return m.GetAllWhere(record, bson.M{})
 }
 

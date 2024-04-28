@@ -2,9 +2,10 @@ package model
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"intraclub/common"
 )
 
 type Token struct {
@@ -28,7 +29,7 @@ func NewToken(userId primitive.ObjectID) *Token {
 func (t *Token) ToJwt() (string, error) {
 	b, err := json.Marshal(t)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error marshalling token: %v", err)
 	}
 
 	return string(b), nil
@@ -37,7 +38,9 @@ func (t *Token) ToJwt() (string, error) {
 func GetTokenFromContext(c *gin.Context) (*Token, error) {
 	token, exists := c.Get("token")
 	if !exists {
-		return nil, errors.New("token was not present")
+		return nil, common.ApiError{
+			Code: common.TokenWasNotPresentOnGinContext,
+		}
 	}
 
 	return token.(*Token), nil

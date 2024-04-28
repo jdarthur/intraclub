@@ -33,7 +33,7 @@ func TestRainDelay(t *testing.T) {
 		weekIds = append(weekIds, w.GetId().Hex())
 	}
 
-	season := &model.Season{
+	season := &model.League{
 		ID:        primitive.NewObjectID(),
 		StartTime: time.Date(0, 0, 0, 80, 30, 0, 0, time.UTC),
 		Weeks:     weekIds,

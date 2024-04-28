@@ -7,8 +7,8 @@ import (
 )
 
 type TeamColor struct {
-	Name string
-	Hex  string
+	Name string `json:"name"`
+	Hex  string `json:"hex"`
 }
 
 // ValidateStatic checks that the TeamColor has:

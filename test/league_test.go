@@ -6,14 +6,14 @@ import (
 	"testing"
 )
 
+func init() {
+	ResetDatabase()
+}
+
 func TestCommissionerNonUpdatable(t *testing.T) {
 
-	commish := newUser(t)
-
-	league := &model.League{
-		Colors:       []model.TeamColor{model.Blue, model.Green},
-		Commissioner: commish.ID.Hex(),
-	}
+	commish1 := newUser(t)
+	league := NewLeagueWithCommish(commish1)
 
 	created, err := common.Create(common.GlobalDbProvider, league)
 	if err != nil {
@@ -31,7 +31,7 @@ func TestCommissionerNonUpdatable(t *testing.T) {
 		t.Errorf("expected updated commissioner ID to throw error")
 	}
 
-	ValidateErrorContains(t, err, "may not be changed")
+	ValidateErrorContains(t, err, "is not updatable")
 }
 
 func TestInvalidColorIncorrectLength(t *testing.T) {
@@ -120,5 +120,6 @@ func copyLeague(league *model.League) *model.League {
 		ID:           league.ID,
 		Colors:       league.Colors,
 		Commissioner: league.Commissioner,
+		Facility:     league.Facility,
 	}
 }

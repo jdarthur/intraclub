@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"intraclub/common"
 	"intraclub/model"
@@ -22,7 +21,10 @@ type OneTimePasswordManager struct {
 func (m *OneTimePasswordManager) GetOneTimePassword(userId string) (model.OneTimePassword, error) {
 	v, ok := m.Map.Load(userId)
 	if !ok {
-		return model.OneTimePassword{}, fmt.Errorf("username %s has no active OTPs", userId)
+		return model.OneTimePassword{}, common.ApiError{
+			References: userId,
+			Code:       common.UserHasNoActiveOneTimePasswords,
+		}
 	}
 
 	return v.(model.OneTimePassword), nil
@@ -65,7 +67,10 @@ func (m *OneTimePasswordManager) ValidateUUID(username, uuid string) (err error)
 
 	// if UUID doesn't match, return an error
 	if uuid != otp.UUID {
-		return fmt.Errorf("invalid UUID for username %s", username)
+		return common.ApiError{
+			References: username,
+			Code:       common.InvalidUuidForUsername,
+		}
 	}
 
 	// uuid/username combination is no longer valid after use
@@ -84,22 +89,23 @@ func (m *OneTimePasswordManager) GetToken(c *gin.Context) {
 
 	user, err := model.GetUserByEmail(common.GlobalDbProvider, req.Email)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		common.RespondWithError(c, err)
 		return
 	}
 
 	err = m.ValidateUUID(req.Email, req.UUID)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		common.RespondWithError(c, err)
 		return
 	}
 
 	token := model.NewToken(user.GetId())
 	jwt, err := token.ToJwt()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		common.RespondWithError(c, err)
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"token": jwt})
 }
 

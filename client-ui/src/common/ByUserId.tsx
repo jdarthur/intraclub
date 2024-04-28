@@ -1,0 +1,3 @@
+type ByUserId = {
+    UserId: string
+}

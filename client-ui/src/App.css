@@ -1,0 +1,4 @@
+#root {
+    width: max(1280px, 100vw);
+    height: 100vh;
+}

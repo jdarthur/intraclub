@@ -28,7 +28,7 @@ func TestEmptyWeekId(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error on invalid week ID")
 	} else {
-		ValidateErrorContains(t, err, "invalid object id")
+		ValidateErrorContains(t, err, "Invalid object ID")
 	}
 }
 
@@ -39,7 +39,7 @@ func TestInvalidWeekId(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error on invalid week ID")
 	} else {
-		ValidateErrorContains(t, err, "invalid object id")
+		ValidateErrorContains(t, err, "Invalid object ID")
 	}
 }
 
@@ -56,7 +56,7 @@ func TestInvalidUserId(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error on invalid user ID")
 	} else {
-		ValidateErrorContains(t, err, "invalid object id")
+		ValidateErrorContains(t, err, "Invalid object ID")
 	}
 }
 

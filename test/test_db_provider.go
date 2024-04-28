@@ -88,10 +88,10 @@ func (u UnitTestDbProvider) Disconnect() error {
 	return nil
 }
 
-func (u UnitTestDbProvider) GetAll(record common.CrudRecord) (objects interface{}, err error) {
+func (u UnitTestDbProvider) GetAll(record common.CrudRecord) (objects common.ListOfCrudRecords, err error) {
 	rootKey := record.RecordType()
 
-	output := make([]interface{}, 0)
+	output := make(listOfAny, 0)
 
 	v, ok := u.Map[rootKey]
 	if !ok {

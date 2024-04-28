@@ -1,35 +1,35 @@
 package model
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"intraclub/common"
-	"net/http"
 )
 
 func AsAdminUser(c *gin.Context) {
 	token, err := GetTokenFromContext(c)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		common.RespondWithError(c, err)
 		return
 	}
 
-	userId := token.UserId
-	id, err := primitive.ObjectIDFromHex(userId)
+	id, err := common.TryParsingObjectId(token.UserId)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		common.RespondWithError(c, err)
 		return
 	}
 
 	user, err := getUser(common.GlobalDbProvider, id)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		common.RespondWithError(c, err)
 		return
 	}
 
 	if !user.IsAdmin {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": fmt.Errorf("user %s is not admin", userId)})
+		common.RespondWithApiError(c, common.ApiError{
+			References: token.UserId,
+			Code:       common.UserIsNotAdmin,
+		})
 		return
 	}
 

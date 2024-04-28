@@ -22,9 +22,30 @@ func newLeague() *model.League {
 	}
 
 	CommissionerId = u.(*model.User).ID
+	return NewLeagueWithCommish(commish)
+}
+
+func NewLeagueWithCommish(commish *model.User) *model.League {
 
 	return &model.League{
+		Facility:     newFacility().ID.Hex(),
 		Colors:       make([]model.TeamColor, 0),
-		Commissioner: CommissionerId.Hex(),
+		Commissioner: commish.ID.Hex(),
 	}
+}
+
+func newFacility() *model.Facility {
+	facility := &model.Facility{
+		Address:     "1221 Riverside Rd., Roswell, GA 30076",
+		Name:        "Martin's Landing River Club",
+		Courts:      9,
+		LayoutImage: "",
+	}
+
+	v, err := common.Create(common.GlobalDbProvider, facility)
+	if err != nil {
+		panic(err)
+	}
+
+	return v.(*model.Facility)
 }

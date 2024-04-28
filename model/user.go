@@ -99,11 +99,17 @@ func GetUserByEmail(db common.DbProvider, email string) (*User, error) {
 	}
 
 	if users.Length() == 0 {
-		return nil, fmt.Errorf("user with email %s was not found", email)
+		return nil, common.ApiError{
+			References: email,
+			Code:       common.UserWithEmailDoesNotExist,
+		}
 	}
 
 	if users.Length() > 1 {
-		return nil, fmt.Errorf("user with email %s was not found", email)
+		return nil, common.ApiError{
+			References: email,
+			Code:       common.MultipleUsersExistForEmail,
+		}
 	}
 
 	return users.Get(0).(*User), nil

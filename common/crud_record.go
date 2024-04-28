@@ -1,7 +1,6 @@
 package common
 
 import (
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -34,9 +33,9 @@ func CheckExistenceOrError(provider DbProvider, record CrudRecord) error {
 
 func CheckExistenceOrErrorByStringId(provider DbProvider, record CrudRecord, id string) error {
 
-	objId, err := primitive.ObjectIDFromHex(id)
+	objId, err := TryParsingObjectId(id)
 	if err != nil {
-		return fmt.Errorf("invalid object id %s", id)
+		return err
 	}
 
 	record.SetId(objId)
@@ -54,5 +53,8 @@ func CheckExistenceOrErrorByStringId(provider DbProvider, record CrudRecord, id 
 }
 
 func RecordDoesNotExist(record CrudRecord) error {
-	return fmt.Errorf("%s with ID %s does not exist", record.RecordType(), record.GetId().Hex())
+	return ApiError{
+		References: []string{record.RecordType(), record.GetId().Hex()},
+		Code:       CrudRecordWithObjectIdDoesNotExist,
+	}
 }

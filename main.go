@@ -31,15 +31,25 @@ func main() {
 
 	userCtl := common.CrudController{Controller: controllers.UserController{}, Database: common.GlobalDbProvider}
 	apiAuthAndAccess.Handle("GET", "/users", userCtl.GetAll)
-	apiAuthAndAccess.Handle("GET", "/users/:id", userCtl.GetOne)
+	noAuth.Handle("GET", "/users/:id", userCtl.GetOne)
 
 	// you can only delete your own user
 	ownedByUser := middleware.OwnedByUserWrapper{Record: &model.User{}}
 	apiAuthAndAccess.Handle("DELETE", "/users/:id", ownedByUser.OwnedByUser, userCtl.Delete)
 
 	leagueCtl := common.CrudController{Controller: controllers.LeagueController{}, Database: common.GlobalDbProvider}
-	apiAuthAndAccess.Handle("GET", "/users", userCtl.GetAll)
-	apiAuthAndAccess.Handle("GET", "/users/:id", userCtl.GetOne)
+	apiAuthAndAccess.Handle("GET", "/leagues", leagueCtl.GetAll)
+
+	// get league by ID is a no-auth route so you can view basic league info without being logged in
+	noAuth.Handle("GET", "/league/:id", leagueCtl.GetOne)
+
+	apiAuthAndAccess.Handle("GET", "/whoami", controllers.WhoAmI)
+
+	noAuth.Handle("GET", "/teams_for_user/:id", controllers.GetTeamsForUser)
+	noAuth.Handle("GET", "/leagues_for_user/:id", controllers.GetLeaguesForUser)
+
+	//
+	apiAuthAndAccess.Handle("GET", "/leagues_commissioned_by_user/:id", controllers.GetCommissionedLeaguesForUser)
 
 	err = router.Run(":8080")
 	if err != nil {
