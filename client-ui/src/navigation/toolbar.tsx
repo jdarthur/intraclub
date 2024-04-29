@@ -1,8 +1,8 @@
-import {FlagOutlined, HomeOutlined, TrophyOutlined} from "@ant-design/icons";
+import {FlagOutlined, HomeOutlined, SettingOutlined, TrophyOutlined} from "@ant-design/icons";
 import {Link, useLocation} from "react-router-dom";
 import * as React from "react";
 import {Menu} from "antd";
-import {ROOT, LEAGUE, TEAM} from "./router"
+import {ROOT, LEAGUE, TEAM, SETTINGS} from "./router"
 import {useToken} from "../redux/auth.js";
 import {UserIconSelfFetching} from "./NavBarUserIcon";
 
@@ -21,6 +21,9 @@ export function NavMenu() {
         <Menu.Item key={TEAM} icon={<FlagOutlined/>}>
             <Link to={TEAM}>Teams</Link>
         </Menu.Item>
+        {auth ? <Menu.Item key={SETTINGS} icon={<SettingOutlined/>}>
+            <Link to={SETTINGS}>Settings</Link>
+        </Menu.Item> : null}
         {auth ? <Menu.Item key="user">
             <UserIconSelfFetching/>
         </Menu.Item> : null}

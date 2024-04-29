@@ -19,6 +19,7 @@ func main() {
 	router := gin.Default()
 
 	noAuth := router.Group("/api")
+	apiAuthAndAccess := router.Group("/api", middleware.WithToken)
 
 	otpManager := controllers.OneTimePasswordManager{Map: &sync.Map{}}
 	noAuth.POST("/token", otpManager.GetToken)
@@ -26,8 +27,6 @@ func main() {
 
 	registerManager := controllers.NewUserController{}
 	noAuth.POST("/register", registerManager.Register)
-
-	apiAuthAndAccess := router.Group("/api", middleware.WithToken)
 
 	userCtl := common.CrudController{Controller: controllers.UserController{}, Database: common.GlobalDbProvider}
 	apiAuthAndAccess.Handle("GET", "/users", userCtl.GetAll)
@@ -48,7 +47,18 @@ func main() {
 	noAuth.Handle("GET", "/teams_for_user/:id", controllers.GetTeamsForUser)
 	noAuth.Handle("GET", "/leagues_for_user/:id", controllers.GetLeaguesForUser)
 
-	//
+	facilityCtl := common.CrudController{Controller: controllers.FacilityController{}, Database: common.GlobalDbProvider}
+
+	apiAuthAndAccess.Handle("GET", "/facilities", facilityCtl.GetAll)
+	apiAuthAndAccess.Handle("POST", "/facilities", facilityCtl.Create)
+
+	// get facility by ID without authentication
+	noAuth.Handle("GET", "/facilities/:id", facilityCtl.GetOne)
+
+	facilityOwnedByUser := middleware.OwnedByUserWrapper{Record: &model.Facility{}}
+	apiAuthAndAccess.Handle("DELETE", "/facilities/:id", facilityOwnedByUser.OwnedByUser, facilityCtl.Delete)
+	apiAuthAndAccess.Handle("PUT", "/facilities/:id", facilityOwnedByUser.OwnedByUser, facilityCtl.Update)
+
 	apiAuthAndAccess.Handle("GET", "/leagues_commissioned_by_user/:id", controllers.GetCommissionedLeaguesForUser)
 
 	err = router.Run(":8080")

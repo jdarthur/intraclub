@@ -1,15 +1,14 @@
 package middleware
 
 import (
-	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"intraclub/common"
 	"intraclub/model"
 	"net/http"
 )
 
 var TokenHeaderKey = "x-session-token"
-var TokenContextKey = "token"
 
 func WithToken(c *gin.Context) {
 
@@ -26,18 +25,6 @@ func WithToken(c *gin.Context) {
 		return
 	}
 
-	c.Set(TokenContextKey, token)
+	c.Set(common.TokenContextKey, token)
 	c.Next()
-}
-
-// GetTokenFromAuthMiddleware retrieves the "token" key that was set on
-// the WithToken middleware function. This function must be called after
-// WithToken in the order of the middleware chain.
-func GetTokenFromAuthMiddleware(c *gin.Context) (*model.Token, error) {
-	token, exists := c.Get(TokenContextKey)
-	if !exists {
-		return nil, errors.New("token was not found in the gin context")
-	}
-
-	return token.(*model.Token), nil
 }

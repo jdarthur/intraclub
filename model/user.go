@@ -15,6 +15,8 @@ type User struct {
 	Email     string             `json:"email" bson:"email"`
 }
 
+func (u *User) SetUserId(userId string) {}
+
 func (u *User) GetUserId() string {
 	return u.ID.Hex()
 }

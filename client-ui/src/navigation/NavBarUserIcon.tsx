@@ -3,6 +3,8 @@ import * as React from "react";
 import {useToken} from "../redux/auth.js";
 import {useWhoAmIQuery} from "../redux/api.js";
 import {UserIcon} from "../user/UserIcon";
+import {Button} from "antd";
+import {SettingOutlined} from "@ant-design/icons";
 
 
 export function UserIconSelfFetching() {

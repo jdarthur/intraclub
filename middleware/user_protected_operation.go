@@ -8,12 +8,7 @@ import (
 	"net/http"
 )
 
-type UserBasedRecord interface {
-	GetUserId() string
-	common.CrudRecord
-}
-
-func ValidateRecordIsOwnedByUser(r UserBasedRecord, userIdInToken string) error {
+func ValidateRecordIsOwnedByUser(r common.UserBasedRecord, userIdInToken string) error {
 	if r.GetUserId() != userIdInToken {
 		return fmt.Errorf("user %s cannot modify record owned by user %s", userIdInToken, r.GetUserId())
 	}
@@ -22,7 +17,7 @@ func ValidateRecordIsOwnedByUser(r UserBasedRecord, userIdInToken string) error 
 }
 
 type OwnedByUserWrapper struct {
-	Record UserBasedRecord
+	Record common.UserBasedRecord
 }
 
 func (w *OwnedByUserWrapper) Bind(c *gin.Context) (common.CrudRecord, error) {
@@ -37,7 +32,7 @@ func (w *OwnedByUserWrapper) Bind(c *gin.Context) (common.CrudRecord, error) {
 }
 
 func (w *OwnedByUserWrapper) OwnedByUser(c *gin.Context) {
-	token, err := GetTokenFromAuthMiddleware(c)
+	token, err := common.GetTokenFromAuthMiddleware(c)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -71,7 +66,7 @@ func (w *OwnedByUserWrapper) OwnedByUser(c *gin.Context) {
 		return
 	}
 
-	err = ValidateRecordIsOwnedByUser(record.(UserBasedRecord), token.UserId)
+	err = ValidateRecordIsOwnedByUser(record.(common.UserBasedRecord), token.UserId)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return

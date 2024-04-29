@@ -7,6 +7,8 @@ import {AuthPage} from "../login/AuthPage.js";
 import {UserPage} from "../user/UserPage";
 import {AllLeaguesPage} from "../league/AllLeaguesPage";
 import {TeamsPage} from "../team/TeamsPage";
+import {Facilities} from "../settings/Facilities";
+import {SettingsPage} from "../settings/SettingsPage";
 
 export const ROOT = "/"
 export const LOGIN = "/login"
@@ -14,6 +16,7 @@ export const LEAGUE = "/league"
 export const TEAM = "/team"
 export const AUTH = "/auth"
 export const USER = "/user/:id"
+export const SETTINGS = "/settings"
 
 
 export const router = createBrowserRouter([
@@ -40,6 +43,10 @@ export const router = createBrowserRouter([
     {
         path: USER,
         element: <MainLayout content={<UserPage/>}/>
+    },
+    {
+        path: SETTINGS,
+        element: <MainLayout content={<SettingsPage/>}/>
     }
 
 ]);

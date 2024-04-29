@@ -7,7 +7,7 @@ import (
 )
 
 func AsAdminUser(c *gin.Context) {
-	token, err := GetTokenFromContext(c)
+	token, err := common.GetTokenFromAuthMiddleware(c)
 	if err != nil {
 		common.RespondWithError(c, err)
 		return

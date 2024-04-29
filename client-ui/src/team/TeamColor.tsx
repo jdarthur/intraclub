@@ -16,7 +16,7 @@ type TeamNameAndColorProps = {
 
 export function TeamNameAndColor({name, color}: TeamNameAndColorProps) {
     return <span>
-        <TeamColor name={name} hex={color.hex} />
+        <TeamColor name={name} hex={color.hex}/>
         {name}
     </span>
 }

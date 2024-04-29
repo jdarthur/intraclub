@@ -45,6 +45,18 @@ export const mainApi = createApi({
         }),
         getLeaguesCommissionedByUserId: builder.query({
             query: (userId) => ({url: `leagues_commissioned_by_user/${userId}`}),
+        }),
+        getFacilities: builder.query({
+            query: () => ({url: `facilities`}),
+            providesTags: ["facilities"]
+        }),
+        createFacility: builder.mutation({
+            query: (body) => ({url: `facilities`, body: body, method: 'POST'}),
+            invalidatesTags: ["facilities"]
+        }),
+        deleteFacility: builder.mutation({
+            query: (id) => ({url: `facilities/${id}`, method: 'DELETE'}),
+            invalidatesTags: ["facilities"]
         })
     })
 });
@@ -57,5 +69,8 @@ export const {
     useGetUserByIdQuery,
     useGetTeamsByUserIdQuery,
     useGetLeaguesByUserIdQuery,
-    useGetLeaguesCommissionedByUserIdQuery
+    useGetLeaguesCommissionedByUserIdQuery,
+    useGetFacilitiesQuery,
+    useCreateFacilityMutation,
+    useDeleteFacilityMutation,
 } = mainApi

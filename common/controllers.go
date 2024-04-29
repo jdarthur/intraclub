@@ -7,6 +7,12 @@ import (
 	"net/http"
 )
 
+type UserBasedRecord interface {
+	GetUserId() string
+	SetUserId(userId string)
+	CrudRecord
+}
+
 var ResourceKey = "resource"
 
 type ControllerType interface {
@@ -61,14 +67,14 @@ func (cc *CrudController) GetAll(c *gin.Context) {
 
 func (cc *CrudController) Update(c *gin.Context) {
 
-	model := cc.Controller.Model()
-	err := c.Bind(model)
+	schema := cc.Controller.Model()
+	err := c.Bind(schema)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	record, err := cc.Controller.ValidateRequest(model, true, cc.Database)
+	record, err := cc.Controller.ValidateRequest(schema, true, cc.Database)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -78,6 +84,19 @@ func (cc *CrudController) Update(c *gin.Context) {
 	existingRecord := cc.idValidation(c)
 	if existingRecord == nil {
 		return
+	}
+
+	// we will automatically set the user ID on this record based off of the user
+	// in the token if this record is a UserBasedRecord
+	_, ok := record.(UserBasedRecord)
+	if ok {
+		token, err := GetTokenFromAuthMiddleware(c)
+		if err != nil {
+			RespondWithError(c, err)
+			return
+		}
+
+		record.(UserBasedRecord).SetUserId(token.UserId)
 	}
 
 	err = Update(cc.Database, record)
@@ -91,23 +110,36 @@ func (cc *CrudController) Update(c *gin.Context) {
 
 func (cc *CrudController) Create(c *gin.Context) {
 
-	model := cc.Controller.Model()
-	err := c.Bind(model)
+	schema := cc.Controller.Model()
+	err := c.Bind(schema)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	// validate the payload first for illegal values
-	record, err := cc.Controller.ValidateRequest(model, false, cc.Database)
+	record, err := cc.Controller.ValidateRequest(schema, false, cc.Database)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if record.GetId().String() != "" {
+	if !record.GetId().IsZero() {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "id field must not be set in create request"})
 		return
+	}
+
+	// we will automatically set the user ID on this record based off of the user
+	// in the token if this record is a UserBasedRecord
+	_, ok := record.(UserBasedRecord)
+	if ok {
+		token, err := GetTokenFromAuthMiddleware(c)
+		if err != nil {
+			RespondWithError(c, err)
+			return
+		}
+
+		record.(UserBasedRecord).SetUserId(token.UserId)
 	}
 
 	created, err := Create(cc.Database, record)
@@ -155,12 +187,12 @@ func (cc *CrudController) idValidation(c *gin.Context) (recordIfExists CrudRecor
 		return nil
 	}
 
-	model := cc.Controller.Model()
-	model.SetId(id)
+	schema := cc.Controller.Model()
+	schema.SetId(id)
 
-	record, exists, err := GetOne(cc.Database, model)
+	record, exists, err := GetOne(cc.Database, schema)
 	if !exists {
-		c.JSON(http.StatusNotFound, gin.H{"error": RecordDoesNotExist(model).Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": RecordDoesNotExist(schema).Error()})
 		return nil
 	}
 	if err != nil {

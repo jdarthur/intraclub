@@ -23,7 +23,7 @@ func (u UserController) GetAllFilter(c *gin.Context) (map[string]interface{}, er
 }
 
 func WhoAmI(c *gin.Context) {
-	token, err := model.GetTokenFromContext(c)
+	token, err := common.GetTokenFromAuthMiddleware(c)
 	if err != nil {
 		common.RespondWithError(c, err)
 		return

@@ -12,6 +12,15 @@ type Facility struct {
 	Name        string             `json:"name" bson:"name"`
 	Courts      int                `json:"courts" bson:"courts"`
 	LayoutImage string             `json:"layout_image" bson:"layout_image"`
+	UserId      string             `json:"-" bson:"user_id"`
+}
+
+func (f *Facility) SetUserId(userId string) {
+	f.UserId = userId
+}
+
+func (f *Facility) GetUserId() string {
+	return f.UserId
 }
 
 func (f *Facility) RecordType() string {
@@ -70,5 +79,5 @@ func (f *Facility) ValidateDynamic(db common.DbProvider, isUpdate bool, previous
 		}
 	}
 
-	return nil
+	return common.CheckExistenceOrErrorByStringId(db, &User{}, f.UserId)
 }
