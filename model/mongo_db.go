@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"errors"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -85,8 +86,21 @@ func (m *MongoDb) Create(object common.CrudRecord) (common.CrudRecord, error) {
 }
 
 func (m *MongoDb) Update(object common.CrudRecord) error {
-	//TODO implement me
-	panic("implement me")
+	ctx, cancel := defaultTimeout()
+	defer cancel()
+
+	v, err := m.Connection.Collection(object.RecordType()).UpdateOne(ctx, byId(object.GetId()), bson.M{"$set": object})
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(v)
+
+	if v.ModifiedCount == 0 {
+		return errors.New("updated count was 0")
+	}
+
+	return nil
 }
 
 func (m *MongoDb) Delete(record common.CrudRecord) error {

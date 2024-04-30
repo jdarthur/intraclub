@@ -3,12 +3,25 @@ import {Link, useLocation} from "react-router-dom";
 import * as React from "react";
 import {Menu} from "antd";
 import {ROOT, LEAGUE, TEAM, SETTINGS} from "./router"
-import {useToken} from "../redux/auth.js";
+import {IntraclubTokenKey, setCredentials, useToken} from "../redux/auth.js";
 import {UserIconSelfFetching} from "./NavBarUserIcon";
+import {useEffect} from "react";
+import {useDispatch} from "react-redux";
 
 export function NavMenu() {
-
     const {pathname} = useLocation()
+
+    const dispatch = useDispatch();
+
+    useEffect(() => {
+        const token = sessionStorage.getItem(IntraclubTokenKey)
+        if (token != null) {
+            dispatch(
+                setCredentials({token})
+            )
+        }
+
+    }, [])
 
     const auth = useToken()
     return <Menu theme="dark" mode="horizontal" style={{flex: 1, minWidth: 0}} selectedKeys={[pathname]}>

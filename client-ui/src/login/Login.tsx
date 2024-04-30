@@ -43,7 +43,7 @@ export function Login() {
     return <Card title={title} style={{width: 300}}>
         <div style={{display: "flex", flexDirection: "column", padding: "0.5em"}}>
             <LabeledInput label={"Email address"} value={email} setValue={setEmail} placeholder={"Enter email"}
-                          style={{marginBottom: "1em"}} disabled={success}/>
+                          style={{marginBottom: "1em"}} disabled={success} onEnter={login}/>
             {error ? <Alert type={"error"} message={error} style={{marginBottom: "1em"}}/> : null}
             {success ? <Alert type={"success"} message={LoginCodeMessage(email)} style={{marginBottom: "1em"}}/> : null}
             <Button onClick={login} type={"primary"} disabled={buttonDisabled} loading={isLoading}>Send login

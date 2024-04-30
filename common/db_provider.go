@@ -1,5 +1,7 @@
 package common
 
+import "fmt"
+
 var GlobalDbProvider DbProvider
 
 type DbProvider interface {
@@ -83,6 +85,8 @@ func Update(db DbProvider, record CrudRecord) (err error) {
 			return err
 		}
 	}
+
+	fmt.Println("record pre update: ", record)
 
 	return db.Update(record)
 }

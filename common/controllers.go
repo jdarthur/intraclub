@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
@@ -67,14 +68,19 @@ func (cc *CrudController) GetAll(c *gin.Context) {
 
 func (cc *CrudController) Update(c *gin.Context) {
 
-	schema := cc.Controller.Model()
-	err := c.Bind(schema)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	request, ok := IsPostOwnedByUser(c)
+	if !ok {
+		request = cc.Controller.Model()
+		err := c.Bind(request)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 	}
 
-	record, err := cc.Controller.ValidateRequest(schema, true, cc.Database)
+	fmt.Println(request)
+
+	record, err := cc.Controller.ValidateRequest(request, true, cc.Database)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -86,9 +92,14 @@ func (cc *CrudController) Update(c *gin.Context) {
 		return
 	}
 
+	// make sure that the record has its ID set based off of what
+	// we just pulled from the DB. This will prevent us from taking in
+	// an object ID from the request that doesn't match the :id param
+	record.SetId(existingRecord.GetId())
+
 	// we will automatically set the user ID on this record based off of the user
 	// in the token if this record is a UserBasedRecord
-	_, ok := record.(UserBasedRecord)
+	_, ok = record.(UserBasedRecord)
 	if ok {
 		token, err := GetTokenFromAuthMiddleware(c)
 		if err != nil {
@@ -201,5 +212,26 @@ func (cc *CrudController) idValidation(c *gin.Context) (recordIfExists CrudRecor
 	}
 
 	return record
+}
 
+var UsingOwnedByUser = "using_owned_by_user"      // mark on the gin.Context that we are using this middleware
+var OwnedByUserRecordKey = "owned_by_user_record" // store the common.CrudRecord that we parsed here
+
+// IsPostOwnedByUser is a check to see if we have already called the OwnedByUserWrapper.OwnedByUser
+// middleware on this particular gin.Context. In this situation, we don't want to call c.Bind(model)
+// a second time, so we will just pull the common.CrudRecord off of the gin.Context instead.
+func IsPostOwnedByUser(c *gin.Context) (CrudRecord, bool) {
+
+	v, ok := c.Get(UsingOwnedByUser)
+	if ok && v.(bool) == true {
+
+		v2, ok := c.Get(OwnedByUserRecordKey)
+		if !ok {
+			panic("UsingOwnedByUser was set but OwnedByUserRecordKey was not")
+		}
+
+		return v2.(CrudRecord), true
+	}
+
+	return nil, false
 }

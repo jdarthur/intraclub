@@ -1,10 +1,11 @@
 import {Link} from "react-router-dom";
 import * as React from "react";
-import {useToken} from "../redux/auth.js";
+import {logoutUser, useToken} from "../redux/auth.js";
 import {useWhoAmIQuery} from "../redux/api.js";
 import {UserIcon} from "../user/UserIcon";
 import {Button} from "antd";
-import {SettingOutlined} from "@ant-design/icons";
+import {LogoutOutlined, SettingOutlined} from "@ant-design/icons";
+import {useDispatch} from "react-redux";
 
 
 export function UserIconSelfFetching() {
@@ -20,9 +21,8 @@ export function UserIconSelfFetching() {
     const show = token && data
 
     return <div>
-        {show ? <Link to={`/user/${user_id}`}>
-            <UserIcon UserId={user_id} Email={email} FirstName={first_name} LastName={last_name}/>
-        </Link> : null}
+        {show ? <UserIcon UserId={user_id} Email={email} FirstName={first_name}
+                          LastName={last_name} UseLink ShowLogout/> : null}
     </div>
 
 }

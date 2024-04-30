@@ -5,6 +5,7 @@ import {PlusSquareOutlined} from "@ant-design/icons";
 import {TeamColorProps} from "../team/TeamColor";
 import dayjs from 'dayjs'
 import {useWhoAmIQuery} from "../redux/api";
+import {Facility} from "../settings/Facilities";
 
 export type League = {
     league_id?: string
@@ -24,7 +25,12 @@ type Week = {
     original_date: string
 }
 
-export function NewLeague() {
+type LeagueFormProps = {
+    Update?: boolean
+    InitialState?: League
+}
+
+export function LeagueForm() {
 
     const [open, setOpen] = React.useState<boolean>(false);
 

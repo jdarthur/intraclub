@@ -54,6 +54,10 @@ export const mainApi = createApi({
             query: (body) => ({url: `facilities`, body: body, method: 'POST'}),
             invalidatesTags: ["facilities"]
         }),
+        updateFacility: builder.mutation({
+            query: (req) => ({url: `facilities/${req.id}`, body: req.body, method: 'put'}),
+            invalidatesTags: ["facilities"]
+        }),
         deleteFacility: builder.mutation({
             query: (id) => ({url: `facilities/${id}`, method: 'DELETE'}),
             invalidatesTags: ["facilities"]
@@ -73,4 +77,5 @@ export const {
     useGetFacilitiesQuery,
     useCreateFacilityMutation,
     useDeleteFacilityMutation,
+    useUpdateFacilityMutation,
 } = mainApi

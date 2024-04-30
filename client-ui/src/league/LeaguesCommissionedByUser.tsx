@@ -4,7 +4,7 @@ import {Button, Empty} from "antd";
 import {useToken} from "../redux/auth.js";
 import {OneLeague, OneLeagueProps} from "./OneLeague";
 import {PlusSquareOutlined} from "@ant-design/icons";
-import {NewLeague} from "./NewLeague";
+import {LeagueForm} from "./LeagueForm";
 
 
 export function LeaguesCommissionedByUser({UserId}: ByUserId) {
@@ -23,7 +23,7 @@ export function LeaguesCommissionedByUser({UserId}: ByUserId) {
         <div style={{display: "flex", flexWrap: 'wrap', paddingTop: "1em"}}>
             {data?.resource?.length ? leagues : <Empty/>}
         </div>
-        <NewLeague/>
+        <LeagueForm/>
     </div>
 
 }

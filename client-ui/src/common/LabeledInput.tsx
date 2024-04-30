@@ -9,9 +9,10 @@ type LabeledInputArgs = {
     style?: {},
     placeholder?: string,
     disabled?: boolean
+    onEnter?: () => void
 }
 
-function LabeledInput({label, value, setValue, style, placeholder, disabled}: LabeledInputArgs) {
+function LabeledInput({label, value, setValue, style, placeholder, disabled, onEnter}: LabeledInputArgs) {
     const s = {display: "flex", flexDirection: 'column' as 'column', alignItems: "flex-start"}
 
     if (style) {
@@ -26,13 +27,19 @@ function LabeledInput({label, value, setValue, style, placeholder, disabled}: La
         actualPlaceholder = label
     }
 
+    const onHitEnter = () => {
+        if (onEnter) {
+            onEnter()
+        }
+    }
+
     return (
         <div style={s}>
             <span style={{marginRight: "1em", fontWeight: "bold", fontSize: "0.9em", marginBottom: "0.2em"}}>
                 {label}
             </span>
             <Input value={value} onChange={(e) => setValue(e.target.value)} placeholder={actualPlaceholder}
-                   disabled={disabled}/>
+                   disabled={disabled} onPressEnter={onHitEnter}/>
         </div>
 
     )

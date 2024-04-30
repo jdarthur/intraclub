@@ -5,6 +5,7 @@ import {Card, Divider} from "antd";
 import {NavigationBreadcrumb} from "../navigation/NavigationBreadcrumb";
 import {NameAndUserIcon} from "./UserIcon";
 import {TeamsForUser} from "./TeamsForUser";
+import {LabeledValue} from "../common/LabeledValue";
 
 export function UserPage() {
     const {id} = useParams()
@@ -23,7 +24,7 @@ export function UserPage() {
         <NavigationBreadcrumb items={["Users", name]}/>
 
         <Card title={title} style={{width: 300}}>
-            {email}
+            <LabeledValue label={"Email"} value={email} vertical/>
         </Card>
 
         <div style={{height: "1em"}}/>

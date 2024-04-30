@@ -38,7 +38,7 @@ func (w *OwnedByUserWrapper) OwnedByUser(c *gin.Context) {
 		return
 	}
 
-	record, err := w.Bind(c)
+	request, err := w.Bind(c)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -51,18 +51,16 @@ func (w *OwnedByUserWrapper) OwnedByUser(c *gin.Context) {
 		return
 	}
 
-	record.SetId(objectId)
+	request.SetId(objectId)
 
-	record, exists, err := common.GetOne(common.GlobalDbProvider, record)
+	record, exists, err := common.GetOne(common.GlobalDbProvider, request)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	fmt.Println(record)
-
 	if !exists {
-		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": common.RecordDoesNotExist(record)})
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": common.RecordDoesNotExist(request)})
 		return
 	}
 
@@ -71,6 +69,9 @@ func (w *OwnedByUserWrapper) OwnedByUser(c *gin.Context) {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
+
+	c.Set(common.UsingOwnedByUser, true)
+	c.Set(common.OwnedByUserRecordKey, request)
 
 	c.Next()
 }

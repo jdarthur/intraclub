@@ -11,7 +11,6 @@ type Team = {
 export function TeamsForUser({UserId}: ByUserId) {
 
     const {data} = useGetTeamsByUserIdQuery(UserId)
-    console.log(data)
 
     let content = <Empty/>
     if (data?.resource?.length > 0) {
