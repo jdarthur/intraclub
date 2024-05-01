@@ -1,7 +1,6 @@
 package model
 
 import (
-	"errors"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"intraclub/common"
 )
@@ -56,15 +55,23 @@ func (f *Facility) GetId() primitive.ObjectID {
 func (f *Facility) ValidateStatic() error {
 
 	if f.Name == "" {
-		return errors.New("name is required")
+		return common.ApiError{
+			References: "Name",
+			Code:       common.FieldIsRequired,
+		}
 	}
 
 	if f.Address == "" {
-		return errors.New("address is required")
+		return common.ApiError{
+			References: "Address",
+			Code:       common.FieldIsRequired,
+		}
 	}
 
 	if f.Courts == 0 {
-		return errors.New("facility must have at least 1 court")
+		return common.ApiError{
+			Code: common.FacilityMustHaveAtLeastOneCourt,
+		}
 	}
 
 	return nil

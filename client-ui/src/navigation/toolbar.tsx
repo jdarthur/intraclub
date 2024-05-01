@@ -2,11 +2,12 @@ import {FlagOutlined, HomeOutlined, SettingOutlined, TrophyOutlined} from "@ant-
 import {Link, useLocation} from "react-router-dom";
 import * as React from "react";
 import {Menu} from "antd";
-import {ROOT, LEAGUE, TEAM, SETTINGS} from "./router"
+import {ROOT, LEAGUE, TEAM, SETTINGS, LOGIN} from "./router"
 import {IntraclubTokenKey, setCredentials, useToken} from "../redux/auth.js";
 import {UserIconSelfFetching} from "./NavBarUserIcon";
 import {useEffect} from "react";
 import {useDispatch} from "react-redux";
+import {NavBarLogin} from "./NavBarLogin";
 
 export function NavMenu() {
     const {pathname} = useLocation()
@@ -37,8 +38,8 @@ export function NavMenu() {
         {auth ? <Menu.Item key={SETTINGS} icon={<SettingOutlined/>}>
             <Link to={SETTINGS}>Settings</Link>
         </Menu.Item> : null}
-        {auth ? <Menu.Item key="user">
-            <UserIconSelfFetching/>
-        </Menu.Item> : null}
+        <Menu.Item key="user">
+            {auth ? <UserIconSelfFetching/> : pathname == LOGIN ? null : <NavBarLogin/>}
+        </Menu.Item>
     </Menu>
 }

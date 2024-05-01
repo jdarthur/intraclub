@@ -9,8 +9,8 @@ import (
 
 type Week struct {
 	ID           primitive.ObjectID `json:"week_id" bson:"_id"`
-	Date         time.Time          `json:"date" bson:"date"`                   // date when this week was actually played
-	OriginalDate time.Time          `json:"original_date" bson:"original_date"` // date when this week was originally scheduled to play (e.g. before a rain day)
+	Date         YyyyMmDdDate       `json:"date" bson:"date"`                   // date when this week was actually played
+	OriginalDate YyyyMmDdDate       `json:"original_date" bson:"original_date"` // date when this week was originally scheduled to play (e.g. before a rain day)
 }
 
 func (w *Week) RecordType() string {
@@ -60,5 +60,5 @@ func (w *Week) ValidateDynamic(db common.DbProvider, isUpdate bool, previousStat
 }
 
 func (w *Week) PushBack(weeks int) {
-	w.Date = w.Date.Add(time.Duration(weeks) * oneWeek)
+	w.Date.Time = w.Date.Time.Add(time.Duration(weeks) * oneWeek)
 }

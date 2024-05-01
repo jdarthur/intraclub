@@ -2,9 +2,9 @@ import * as React from 'react';
 import {useGetLeaguesCommissionedByUserIdQuery} from "../redux/api.js";
 import {Button, Empty} from "antd";
 import {useToken} from "../redux/auth.js";
-import {OneLeague, OneLeagueProps} from "./OneLeague";
+import {OneLeague} from "./OneLeague";
 import {PlusSquareOutlined} from "@ant-design/icons";
-import {LeagueForm} from "./LeagueForm";
+import {League, LeagueForm} from "./LeagueForm";
 
 
 export function LeaguesCommissionedByUser({UserId}: ByUserId) {
@@ -13,10 +13,14 @@ export function LeaguesCommissionedByUser({UserId}: ByUserId) {
     const {data} = useGetLeaguesCommissionedByUserIdQuery(UserId, {skip: !token})
     console.log(data)
 
-    const leagues = data?.resource.map((league: OneLeagueProps) => {
+    const leagues = data?.resource?.map((league: League) => {
         return <OneLeague league_id={league.league_id}
                           name={league.name}
-                          colors={league.colors}/>
+                          colors={league.colors}
+                          facility={league.facility}
+                          weeks={league.weeks}
+                          commissioner={league.commissioner}
+                          start_time={league.start_time}/>
     })
 
     return <div>

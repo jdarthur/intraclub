@@ -61,7 +61,22 @@ export const mainApi = createApi({
         deleteFacility: builder.mutation({
             query: (id) => ({url: `facilities/${id}`, method: 'DELETE'}),
             invalidatesTags: ["facilities"]
-        })
+        }),
+        createWeek: builder.mutation({
+            query: (body) => ({url: `weeks`, method: 'POST', body: body}),
+            invalidatesTags: ["weeks"]
+        }),
+        createLeague: builder.mutation({
+            query: (body) => ({url: `leagues`, method: 'POST', body: body}),
+            invalidatesTags: ["leagues"]
+        }),
+        getWeekById: builder.query({
+            query: (id) => ({url: `weeks/${id}`}),
+        }),
+        getFacilityById: builder.query({
+            query: (id) => ({url: `facilities/${id}`}),
+        }),
+
     })
 });
 
@@ -78,4 +93,8 @@ export const {
     useCreateFacilityMutation,
     useDeleteFacilityMutation,
     useUpdateFacilityMutation,
+    useCreateWeekMutation,
+    useCreateLeagueMutation,
+    useGetWeekByIdQuery,
+    useGetFacilityByIdQuery,
 } = mainApi

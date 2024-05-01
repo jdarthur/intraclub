@@ -1,10 +1,14 @@
 import * as React from 'react';
-import {useToken} from "../redux/auth.js";
-import {Button, DatePicker, Form, Input, Modal, Select, TimePicker} from "antd";
-import {PlusSquareOutlined} from "@ant-design/icons";
+import {Form} from "antd";
 import {TeamColorProps} from "../team/TeamColor";
-import dayjs from 'dayjs'
-import {useWhoAmIQuery} from "../redux/api";
+import {useCreateLeagueMutation, useCreateWeekMutation, useGetFacilitiesQuery, useWhoAmIQuery} from "../redux/api.js";
+import {CommonModal} from "../common/CommonModal";
+import {
+    DatePickerFormItem,
+    InputFormItem,
+    SelectFormItem,
+    TimePickerFormItem
+} from "../common/FormItem";
 import {Facility} from "../settings/Facilities";
 
 export type League = {
@@ -32,72 +36,85 @@ type LeagueFormProps = {
 
 export function LeagueForm() {
 
-    const [open, setOpen] = React.useState<boolean>(false);
-
     const [form] = Form.useForm()
 
     const {data} = useWhoAmIQuery()
 
-    const token = useToken()
+    const [createWeek] = useCreateWeekMutation()
+    const [createLeague] = useCreateLeagueMutation()
+    const {data: facilities} = useGetFacilitiesQuery()
 
-    const onSave = (v: any) => {
+    const facilityOptions = facilities?.resource?.map((facility: Facility) => ({
+        label: facility.name,
+        value: facility.id
+    }))
+
+
+    const onSave = async () => {
         const formValues = form.getFieldsValue();
-        console.log(formValues, v)
 
-        const weeks: string[] = []
-        for (let i = 0; i < formValues.weeks.length; i++) {
-            const w = formValues.weeks[i]?.format("YYYY-MM-DD")
-            const week = CreateWeek(w)
-            weeks.push(week.week_id)
+        const createWeeks = await CreateWeek(formValues.weeks, createWeek)
+        if (!createWeeks.success) {
+            return {
+                error: createWeeks.error
+            }
         }
 
         const body: League = {
             name: formValues.name,
             commissioner: data?.user_id,
-            weeks: weeks,
+            weeks: createWeeks.weekIds,
             start_time: formValues.start_time?.format("HH:mm"),
             facility: formValues.facility,
         }
 
-        console.log(body)
+        return await createLeague(body)
     }
 
-    return <div>
-        <Modal open={open} title={"Create a new league"} onCancel={() => setOpen(false)}>
-            <Form form={form}
-                  onFinish={onSave}>
-                <Form.Item name={"name"} label={"Name"}>
-                    <Input placeholder={"League name"}/>
-                </Form.Item>
-                <Form.Item name={"facility"} label={"Facility"}>
-                    <Select options={[{label: "Facility 1", value: "1"}, {label: "Facility 2", value: "2"}]}/>
-                </Form.Item>
-                <Form.Item name={"start_time"} label={"Start time"}>
-                    <TimePicker use12Hours minuteStep={15} format={"HH:mm"}
-                                showNow={false} needConfirm={false}/>
-                </Form.Item>
-                <Form.Item name={"weeks"} label={"Weeks"}>
-                    <DatePicker multiple minDate={dayjs()}/>
-                </Form.Item>
-                <Form.Item>
-                    <Button type="primary" htmlType="submit">
-                        Submit
-                    </Button>
-                </Form.Item>
-            </Form>
-        </Modal>
-        {token ? <Button style={{marginTop: "2em"}} type={"primary"} onClick={() => setOpen(true)}>
-            <PlusSquareOutlined style={{marginRight: "0.5em"}}/>
-            Create a new league
-        </Button> : null}
-    </div>
+    return <CommonModal ObjectType={"league"} OnSubmit={onSave} IsUpdate={false}>
+        <Form form={form}>
+            <InputFormItem name={"name"} label={"Name"}/>
+            <SelectFormItem name={"facility"} label={"Facility"} options={facilityOptions}/>
+            <TimePickerFormItem name={"start_time"} label={"Start time"}/>
+            <DatePickerFormItem name={"weeks"} label={"Weeks"} future multiple/>
+        </Form>
+    </CommonModal>
 }
 
+type CreateWeeksResult = {
+    success: boolean
+    error?: string
+    weekIds?: string[]
+}
 
-function CreateWeek(date: string): Week {
+async function CreateWeek(weeks: any[], createWeek: (v: any) => Promise<any>): Promise<CreateWeeksResult> {
+
+    const weekIds: string[] = []
+
+    for (let i = 0; i < weeks.length; i++) {
+        // format the dayjs value as a YYYY-MM-DD date
+        const date = weeks[i]?.format("YYYY-MM-DD")
+
+        // create a POST body for a new Week record
+        const body: Week = {
+            date: date,
+            original_date: date
+        }
+
+        const res = await createWeek(body)
+        if (res.error) {
+            return {
+                success: false,
+                error: res.error
+            }
+        }
+
+        weekIds.push(res?.data?.resource?.week_id)
+    }
+
     return {
-        week_id: "test",
-        date: date,
-        original_date: date,
+        success: true,
+        weekIds: weekIds,
     }
 }
+

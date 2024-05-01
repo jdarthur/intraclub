@@ -15,7 +15,7 @@ type League struct {
 	Commissioner string             `json:"commissioner" bson:"commissioner"` // The main owner of this league
 	Reporters    []string           `json:"reporters" bson:"reporters"`       // Reporters are eligible to create a Blurb for this league
 	Facility     string             `json:"facility" bson:"facility"`         // id of the Facility where this league plays
-	StartTime    time.Time          `json:"start_time" bson:"start_time"`
+	StartTime    hhMmTime           `json:"start_time" bson:"start_time"`
 	Weeks        []string           `json:"weeks" bson:"weeks"`
 	Active       bool               `json:"active,omitempty" bson:"-"`
 }
@@ -77,9 +77,11 @@ func (l *League) ValidateStatic() error {
 		return l.checkDuplicateColors()
 	}
 
+	fmt.Println(l.StartTime)
+
 	year, month, day := l.StartTime.Date()
 
-	if year != 1 {
+	if year > 1 {
 		return errors.New("year must not be set in start time")
 	}
 
@@ -353,7 +355,7 @@ func (l *League) IsActive(db common.DbProvider) (bool, error) {
 	lastWeekDate := time.Time{}
 	for _, week := range weeks {
 		if week.Date.After(lastWeekDate) {
-			lastWeekDate = week.Date
+			lastWeekDate = week.Date.Time
 		}
 	}
 

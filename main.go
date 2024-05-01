@@ -36,30 +36,39 @@ func main() {
 	ownedByUser := middleware.OwnedByUserWrapper{Record: &model.User{}}
 	apiAuthAndAccess.Handle("DELETE", "/users/:id", ownedByUser.OwnedByUser, userCtl.Delete)
 
+	// special route that we can use to retrieve the active user from a token
+	apiAuthAndAccess.Handle("GET", "/whoami", controllers.WhoAmI)
+
+	// league CRUD controller
 	leagueCtl := common.CrudController{Controller: controllers.LeagueController{}, Database: common.GlobalDbProvider}
 	apiAuthAndAccess.Handle("GET", "/leagues", leagueCtl.GetAll)
+	apiAuthAndAccess.Handle("POST", "/leagues", leagueCtl.Create)
 
 	// get league by ID is a no-auth route so you can view basic league info without being logged in
 	noAuth.Handle("GET", "/league/:id", leagueCtl.GetOne)
 
-	apiAuthAndAccess.Handle("GET", "/whoami", controllers.WhoAmI)
-
+	// Get relevant records by user ID
 	noAuth.Handle("GET", "/teams_for_user/:id", controllers.GetTeamsForUser)
 	noAuth.Handle("GET", "/leagues_for_user/:id", controllers.GetLeaguesForUser)
+	apiAuthAndAccess.Handle("GET", "/leagues_commissioned_by_user/:id", controllers.GetCommissionedLeaguesForUser)
 
+	// facility CRUD controller
 	facilityCtl := common.CrudController{Controller: controllers.FacilityController{}, Database: common.GlobalDbProvider}
-
 	apiAuthAndAccess.Handle("GET", "/facilities", facilityCtl.GetAll)
 	apiAuthAndAccess.Handle("POST", "/facilities", facilityCtl.Create)
 
 	// get facility by ID without authentication
 	noAuth.Handle("GET", "/facilities/:id", facilityCtl.GetOne)
 
+	// Delete / Update facility endpoints are protected by OwnedByUser middleware
 	facilityOwnedByUser := middleware.OwnedByUserWrapper{Record: &model.Facility{}}
 	apiAuthAndAccess.Handle("DELETE", "/facilities/:id", facilityOwnedByUser.OwnedByUser, facilityCtl.Delete)
 	apiAuthAndAccess.Handle("PUT", "/facilities/:id", facilityOwnedByUser.OwnedByUser, facilityCtl.Update)
 
-	apiAuthAndAccess.Handle("GET", "/leagues_commissioned_by_user/:id", controllers.GetCommissionedLeaguesForUser)
+	// week CRUD controller
+	weekCtl := common.CrudController{Controller: controllers.WeekController{}, Database: common.GlobalDbProvider}
+	apiAuthAndAccess.Handle("POST", "/weeks", weekCtl.Create)
+	apiAuthAndAccess.Handle("GET", "/weeks/:id", weekCtl.GetOne)
 
 	err = router.Run(":8080")
 	if err != nil {

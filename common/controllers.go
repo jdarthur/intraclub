@@ -53,13 +53,13 @@ func (cc *CrudController) GetOne(c *gin.Context) {
 func (cc *CrudController) GetAll(c *gin.Context) {
 	filter, err := cc.Controller.GetAllFilter(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		RespondWithError(c, err)
 		return
 	}
 
 	v, err := GetAllWhere(cc.Database, cc.Controller.Model(), filter)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		RespondWithError(c, err)
 		return
 	}
 
@@ -73,7 +73,7 @@ func (cc *CrudController) Update(c *gin.Context) {
 		request = cc.Controller.Model()
 		err := c.Bind(request)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			RespondWithBadRequest(c, err)
 			return
 		}
 	}
@@ -82,7 +82,7 @@ func (cc *CrudController) Update(c *gin.Context) {
 
 	record, err := cc.Controller.ValidateRequest(request, true, cc.Database)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		RespondWithError(c, err)
 		return
 	}
 
@@ -112,7 +112,7 @@ func (cc *CrudController) Update(c *gin.Context) {
 
 	err = Update(cc.Database, record)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		RespondWithError(c, err)
 		return
 	}
 
@@ -124,19 +124,19 @@ func (cc *CrudController) Create(c *gin.Context) {
 	schema := cc.Controller.Model()
 	err := c.Bind(schema)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		RespondWithBadRequest(c, err)
 		return
 	}
 
 	// validate the payload first for illegal values
 	record, err := cc.Controller.ValidateRequest(schema, false, cc.Database)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		RespondWithBadRequest(c, err)
 		return
 	}
 
 	if !record.GetId().IsZero() {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "id field must not be set in create request"})
+		RespondWithBadRequest(c, err)
 		return
 	}
 
@@ -155,7 +155,7 @@ func (cc *CrudController) Create(c *gin.Context) {
 
 	created, err := Create(cc.Database, record)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		RespondWithError(c, err)
 		return
 	}
 
@@ -172,7 +172,7 @@ func (cc *CrudController) Delete(c *gin.Context) {
 
 	err := Delete(cc.Database, existingRecord)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		RespondWithError(c, err)
 		return
 	}
 
@@ -194,7 +194,7 @@ func getId(c *gin.Context) (primitive.ObjectID, error) {
 func (cc *CrudController) idValidation(c *gin.Context) (recordIfExists CrudRecord) {
 	id, err := getId(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		RespondWithBadRequest(c, err)
 		return nil
 	}
 
@@ -203,11 +203,12 @@ func (cc *CrudController) idValidation(c *gin.Context) (recordIfExists CrudRecor
 
 	record, exists, err := GetOne(cc.Database, schema)
 	if !exists {
-		c.JSON(http.StatusNotFound, gin.H{"error": RecordDoesNotExist(schema).Error()})
+		RespondWithError(c, RecordDoesNotExist(schema))
 		return nil
 	}
+
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		RespondWithError(c, err)
 		return nil
 	}
 

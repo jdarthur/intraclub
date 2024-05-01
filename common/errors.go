@@ -37,6 +37,8 @@ const (
 	FieldNotUpdatable                                   // Attempted to update a field in violation of the HasNonUpdatable rules
 	FieldMustBeGloballyUnique                           // Attempted to create or update a record in violation of a ValueMustBeGloballyUnique constraint
 	UserIsNotAdmin                                      // User attempted to call a route protected by middleware.AsAdminUser but was not an admin user
+	FieldIsRequired                                     // User did not provide a value for a required field
+	FacilityMustHaveAtLeastOneCourt                     // create or update a model.Facility where `courts` = 0
 )
 
 func (e ErrorCode) String(references ...any) string {
@@ -51,6 +53,8 @@ func (e ErrorCode) String(references ...any) string {
 		fmt.Sprintf("Field %s is not updatable", references...),                  // FieldNotUpdatable
 		fmt.Sprintf("%s with %s %v already exists", references...),               //FieldMustBeGloballyUnique
 		fmt.Sprintf("User %+v is not an admin user", references...),              // UserIsNotAdmin
+		fmt.Sprintf("Field '%s' is required", references...),                     // FieldIsRequired
+		"Facility must have at least 1 court",                                    // FacilityMustHaveAtLeastOneCourt
 	}[e]
 }
 
@@ -66,6 +70,8 @@ func (e ErrorCode) HttpStatus() int {
 		http.StatusBadRequest,          // FieldNotUpdatable
 		http.StatusBadRequest,          // FieldMustBeGloballyUnique
 		http.StatusUnauthorized,        // UserIsNotAdmin
+		http.StatusBadRequest,          // FieldIsRequired
+		http.StatusBadRequest,          // FacilityMustHaveAtLeastOneCourt
 	}[e]
 }
 
@@ -80,6 +86,10 @@ func RespondWithError(c *gin.Context, err error) {
 
 func RespondWithApiError(c *gin.Context, apiError ApiError) {
 	c.JSON(apiError.Code.HttpStatus(), gin.H{"error": apiError.Error(), "code": int(apiError.Code)})
+}
+
+func RespondWithBadRequest(c *gin.Context, err error) {
+	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 }
 
 func TryParsingObjectId(objectId string) (primitive.ObjectID, error) {

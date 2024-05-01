@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"errors"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -94,10 +93,8 @@ func (m *MongoDb) Update(object common.CrudRecord) error {
 		return err
 	}
 
-	fmt.Println(v)
-
-	if v.ModifiedCount == 0 {
-		return errors.New("updated count was 0")
+	if v.MatchedCount == 0 {
+		return errors.New("matched count was 0")
 	}
 
 	return nil

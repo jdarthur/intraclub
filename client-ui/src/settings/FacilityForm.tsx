@@ -1,78 +1,65 @@
 import * as React from 'react';
-import {Button, Form, Input, InputNumber, Modal} from "antd";
-import {FormItem} from "../common/FormItem";
-import {PlusSquareOutlined} from "@ant-design/icons";
+import {Form} from "antd";
+import {InputFormItem, NumberInputFormItem} from "../common/FormItem";
 import {useCreateFacilityMutation, useUpdateFacilityMutation} from "../redux/api.js" ;
 import {Facility} from "./Facilities";
+import {CommonModal} from "../common/CommonModal";
 
 type FacilityFormProps = {
-    Update?: boolean
-    FacilityId?: string
-    InitialState?: Facility
-    button?: React.ReactNode
+    Update?: boolean // is this updating an existing record or creating a new record
+    FacilityId?: string // this will be provided on an update
+    InitialState?: Facility // this will be provided on an update
+    button?: React.ReactNode // this is the button that you click to open the modal
 }
 
 export function FacilityForm({Update, InitialState, FacilityId, button}: FacilityFormProps) {
-    const [open, setOpen] = React.useState<boolean>(false);
+
     const [form] = Form.useForm()
 
     const [createFacility] = useCreateFacilityMutation()
     const [updateFacility] = useUpdateFacilityMutation()
 
-    const onSubmit = (v: any) => {
+    const onSubmit = async () => {
         const values = form.getFieldsValue();
-
         const body: Facility = {
             name: values.name,
             address: values.address,
             courts: values.courts
         }
 
+        let func = () => createFacility(body)
         if (Update) {
-            updateFacility({id: FacilityId, body}).then((res: { error: any; data: any }) => {
-                if (res.error) {
-                    console.log(res.error)
-                } else if (res.data) {
-                    setOpen(false)
-                }
-            })
-        } else {
-            createFacility(body).then((res: { error: any; data: any }) => {
-                if (res.error) {
-                    console.log(res.error)
-                } else if (res.data) {
-                    setOpen(false)
-                }
-            })
+            func = () => updateFacility({id: FacilityId, body: body})
         }
+
+        return await func();
     }
 
-    const DefaultButton = <Button type={"primary"}>
-        <PlusSquareOutlined/>
-        New Facility
-    </Button>
+    return <CommonModal ObjectType={"facility"} IsUpdate={Update} OnSubmit={onSubmit}>
+        <Form form={form} layout={"horizontal"} initialValues={InitialState}>
+            <InputFormItem name={"name"} label={"Name"}/>
+            <InputFormItem name={"address"} label={"Address"}/>
+            <NumberInputFormItem name={"courts"} label={"Number of courts"}/>
+        </Form>
+    </CommonModal>
+}
 
-    const actionButton = <div onClick={() => setOpen(true)}>
-        {button ? button : DefaultButton}
-    </div>
-    return <div>
-        <Modal open={open} title={"Create a new facility"} onCancel={() => setOpen(false)} onOk={onSubmit}>
-            <div style={{height: "1em"}}/>
-            <Form form={form}
-                  style={{display: "flex", flexDirection: "column"}}
-                  layout={"horizontal"}
-                  initialValues={InitialState}>
-                <FormItem name={"name"} label={"Name"}>
-                    <Input/>
-                </FormItem>
-                <FormItem name={"address"} label={"Address"}>
-                    <Input/>
-                </FormItem>
-                <FormItem name={"courts"} label={"Number of courts"}>
-                    <InputNumber/>
-                </FormItem>
-            </Form>
-        </Modal>
-        {actionButton}
-    </div>
+
+type FacilitySubmitArgs = {
+    body: Facility
+    Update: boolean
+    FacilityId: string
+    createFacility: ({}) => any
+    updateFacility: ({}) => any
+}
+
+async function facilitySubmit({
+                                  body,
+                                  Update,
+                                  FacilityId,
+                                  updateFacility,
+                                  createFacility
+                              }: FacilitySubmitArgs) {
+
+
 }
