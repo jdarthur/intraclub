@@ -1,15 +1,23 @@
 import * as React from 'react';
-import {Form} from "antd";
 import {TeamColorProps} from "../team/TeamColor";
-import {useCreateLeagueMutation, useCreateWeekMutation, useGetFacilitiesQuery, useWhoAmIQuery} from "../redux/api.js";
-import {CommonModal} from "../common/CommonModal";
 import {
-    DatePickerFormItem,
+    useCreateLeagueMutation,
+    useGetFacilitiesQuery,
+    useUpdateLeagueMutation,
+    useWhoAmIQuery
+} from "../redux/api.js";
+import {CommonFormModal} from "../common/CommonFormModal";
+import {
     InputFormItem,
     SelectFormItem,
     TimePickerFormItem
 } from "../common/FormItem";
 import {Facility} from "../settings/Facilities";
+import dayjs from "dayjs";
+import {useState} from "react";
+import {WeekSelect} from "./WeekSelect";
+import {Button, Steps} from "antd";
+import {ColorSelect, TeamColor} from "./ColorSelect";
 
 export type League = {
     league_id?: string
@@ -23,98 +31,116 @@ export type League = {
     active?: boolean
 }
 
-type Week = {
-    week_id?: string
-    date: string
-    original_date: string
-}
-
 type LeagueFormProps = {
     Update?: boolean
     InitialState?: League
+    LeagueId?: string
 }
 
-export function LeagueForm() {
+const MAIN_INFO = 0
+const WEEKS = 1
+const COLORS = 2
+const REVIEW = 3
 
-    const [form] = Form.useForm()
+export function LeagueForm({Update, InitialState, LeagueId}: LeagueFormProps) {
+
+    const [weekIds, setWeekIds] = useState<string[]>(InitialState?.weeks || [])
+    const [colors, setColors] = useState<TeamColor[]>(InitialState?.colors || [])
+
+    const [step, setStep] = useState<number>(0);
+
+    const disabled = step == REVIEW
 
     const {data} = useWhoAmIQuery()
 
-    const [createWeek] = useCreateWeekMutation()
     const [createLeague] = useCreateLeagueMutation()
+    const [updateLeague] = useUpdateLeagueMutation()
     const {data: facilities} = useGetFacilitiesQuery()
+
+    const newInitialState = transformState(InitialState)
 
     const facilityOptions = facilities?.resource?.map((facility: Facility) => ({
         label: facility.name,
         value: facility.id
     }))
 
-
-    const onSave = async () => {
-        const formValues = form.getFieldsValue();
-
-        const createWeeks = await CreateWeek(formValues.weeks, createWeek)
-        if (!createWeeks.success) {
-            return {
-                error: createWeeks.error
-            }
-        }
-
+    const onSave = async (formValues: any) => {
         const body: League = {
             name: formValues.name,
             commissioner: data?.user_id,
-            weeks: createWeeks.weekIds,
+            weeks: weekIds,
             start_time: formValues.start_time?.format("HH:mm"),
             facility: formValues.facility,
+            colors: colors,
         }
 
-        return await createLeague(body)
+        let func = () => createLeague(body)
+        if (Update) {
+            func = () => updateLeague({id: LeagueId, body: body})
+        }
+
+        return await func()
     }
 
-    return <CommonModal ObjectType={"league"} OnSubmit={onSave} IsUpdate={false}>
-        <Form form={form}>
-            <InputFormItem name={"name"} label={"Name"}/>
-            <SelectFormItem name={"facility"} label={"Facility"} options={facilityOptions}/>
-            <TimePickerFormItem name={"start_time"} label={"Start time"}/>
-            <DatePickerFormItem name={"weeks"} label={"Weeks"} future multiple/>
-        </Form>
-    </CommonModal>
-}
+    const mainInfo = <div>
+        <InputFormItem name={"name"} label={"League name"} disabled={disabled}/>
+        <SelectFormItem name={"facility"} label={"Facility"} options={facilityOptions} disabled={disabled}/>
+        <TimePickerFormItem name={"start_time"} label={"Start time"} disabled={disabled}/>
+    </div>
 
-type CreateWeeksResult = {
-    success: boolean
-    error?: string
-    weekIds?: string[]
-}
+    const weekSelect = <WeekSelect originalWeekIds={weekIds} setWeekIds={setWeekIds}
+                                   leagueId={LeagueId} update={Update} disabled={disabled}/>
 
-async function CreateWeek(weeks: any[], createWeek: (v: any) => Promise<any>): Promise<CreateWeeksResult> {
+    const colorSelect = <ColorSelect colors={colors} setColors={setColors} disabled={disabled}/>
 
-    const weekIds: string[] = []
+    const review = <div>
+        {mainInfo}
+        {weekSelect}
+        {colorSelect}
+    </div>
 
-    for (let i = 0; i < weeks.length; i++) {
-        // format the dayjs value as a YYYY-MM-DD date
-        const date = weeks[i]?.format("YYYY-MM-DD")
 
-        // create a POST body for a new Week record
-        const body: Week = {
-            date: date,
-            original_date: date
-        }
+    const steps = [
+        {title: "Basic information"},
+        {title: "Weeks"},
+        {title: "Colors"},
+        {title: "Review"}
+    ]
 
-        const res = await createWeek(body)
-        if (res.error) {
-            return {
-                success: false,
-                error: res.error
-            }
-        }
+    const next = () => {
 
-        weekIds.push(res?.data?.resource?.week_id)
     }
 
+    return <CommonFormModal ObjectType={"league"} OnSubmit={onSave} IsUpdate={Update} InitialState={newInitialState}>
+        <Steps items={steps} current={step}/>
+        <div style={{marginBottom: "1.5em"}}/>
+
+        {step == MAIN_INFO ? mainInfo : null}
+        {step == WEEKS ? weekSelect : null}
+        {step == COLORS ? colorSelect : null}
+        {step == REVIEW ? review : null}
+
+        <Button onClick={() => setStep(step - 1)} disabled={step == MAIN_INFO}>
+            Back
+        </Button>
+        <Button onClick={() => setStep(step + 1)} disabled={step == REVIEW}>
+            Next
+        </Button>
+
+    </CommonFormModal>
+}
+
+type RealFormState = {
+    name: string
+    facility: string
+    start_time: dayjs.Dayjs
+}
+
+function transformState(original: League): RealFormState {
     return {
-        success: true,
-        weekIds: weekIds,
+        name: original?.name,
+        facility: original?.facility,
+        start_time: original?.start_time ? dayjs(original?.start_time, "HH:mm") : dayjs("08:30", "HH:mm"),
     }
 }
 

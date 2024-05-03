@@ -4,8 +4,7 @@ import {LeaguesForUser} from "./LeaguesForUser";
 import {useWhoAmIQuery} from "../redux/api";
 import {useToken} from "../redux/auth";
 import {LoginRequired} from "../login/LoginRequired";
-import {Button, Tabs, TabsProps} from "antd";
-import {PlusOutlined, PlusSquareFilled, PlusSquareOutlined} from "@ant-design/icons";
+import {    Tabs, TabsProps} from "antd";
 import {LeaguesCommissionedByUser} from "./LeaguesCommissionedByUser";
 
 export function AllLeaguesPage() {

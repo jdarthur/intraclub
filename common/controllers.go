@@ -192,16 +192,19 @@ func getId(c *gin.Context) (primitive.ObjectID, error) {
 // object ID for the CrudController's ControllerType.Model. If not valid, this
 // function will respond with an error code on the *gin.Context and return nil
 func (cc *CrudController) idValidation(c *gin.Context) (recordIfExists CrudRecord) {
+	return IdValidation(c, cc.Controller.Model(), cc.Database)
+}
+
+func IdValidation(c *gin.Context, schema CrudRecord, db DbProvider) (recordIfExists CrudRecord) {
 	id, err := getId(c)
 	if err != nil {
 		RespondWithBadRequest(c, err)
 		return nil
 	}
 
-	schema := cc.Controller.Model()
 	schema.SetId(id)
 
-	record, exists, err := GetOne(cc.Database, schema)
+	record, exists, err := GetOne(db, schema)
 	if !exists {
 		RespondWithError(c, RecordDoesNotExist(schema))
 		return nil

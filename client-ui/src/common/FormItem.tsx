@@ -7,23 +7,24 @@ type FormItemProps = {
     label: string
     children?: React.ReactNode
     inputType?: string
+    disabled?: boolean
 }
 
 const INPUT = "input"
 const NUMBER_INPUT = "number_input"
 const TEXT_AREA = "text_area"
 
-export function FormItem({name, label, children, inputType}: FormItemProps) {
+export function FormItem({name, label, children, inputType, disabled}: FormItemProps) {
 
     let content = children
     if (!content && inputType) {
 
         if (inputType == INPUT) {
-            content = <Input/>
+            content = <Input disabled={disabled}/>
         } else if (inputType == NUMBER_INPUT) {
-            content = <InputNumber/>
+            content = <InputNumber disabled={disabled}/>
         } else if (inputType == TEXT_AREA) {
-            content = <Input.TextArea/>
+            content = <Input.TextArea disabled={disabled}/>
         }
     }
 
@@ -42,10 +43,11 @@ export function FormItem({name, label, children, inputType}: FormItemProps) {
 type NameAndLabel = {
     name: string
     label: string
+    disabled?: boolean
 }
 
-export function InputFormItem({name, label}: NameAndLabel) {
-    return <FormItem name={name} label={label} inputType={INPUT}/>
+export function InputFormItem({name, label, disabled}: NameAndLabel) {
+    return <FormItem name={name} label={label} inputType={INPUT} disabled={disabled}/>
 }
 
 
@@ -62,16 +64,16 @@ type SelectProps = NameAndLabel & {
     options: { label: string, value: string }[]
 }
 
-export function SelectFormItem({name, label, options}: SelectProps) {
+export function SelectFormItem({name, label, options, disabled}: SelectProps) {
     return <FormItem name={name} label={label}>
-        <Select options={options}/>
+        <Select options={options} disabled={disabled}/>
     </FormItem>
 }
 
-export function TimePickerFormItem({name, label}: NameAndLabel) {
+export function TimePickerFormItem({name, label, disabled}: NameAndLabel) {
     return <FormItem name={name} label={label}>
         <TimePicker use12Hours minuteStep={15} format={"HH:mm"}
-                    showNow={false} needConfirm={false}/>
+                    showNow={false} needConfirm={false} disabled={disabled}/>
     </FormItem>
 }
 
@@ -80,9 +82,9 @@ type DatePickerProps = NameAndLabel & {
     future?: boolean
 }
 
-export function DatePickerFormItem({name, label, multiple, future}: DatePickerProps) {
+export function DatePickerFormItem({name, label, multiple, future, disabled}: DatePickerProps) {
     return <FormItem name={name} label={label}>
-        <DatePicker multiple={multiple} minDate={future ? dayjs() : null}/>
+        <DatePicker multiple={multiple} minDate={future ? dayjs() : null} format={"YYYY-MM-DD"} disabled={disabled}/>
     </FormItem>
 }
 

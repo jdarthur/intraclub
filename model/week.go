@@ -11,6 +11,15 @@ type Week struct {
 	ID           primitive.ObjectID `json:"week_id" bson:"_id"`
 	Date         YyyyMmDdDate       `json:"date" bson:"date"`                   // date when this week was actually played
 	OriginalDate YyyyMmDdDate       `json:"original_date" bson:"original_date"` // date when this week was originally scheduled to play (e.g. before a rain day)
+	UserId       string             `json:"-" bson:"user_id"`                   // user ID of the user that created this week (the league commissioner)
+}
+
+func (w *Week) GetUserId() string {
+	return w.UserId
+}
+
+func (w *Week) SetUserId(userId string) {
+	w.UserId = userId
 }
 
 func (w *Week) RecordType() string {

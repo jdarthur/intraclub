@@ -15,7 +15,7 @@ export function NavMenu() {
     const dispatch = useDispatch();
 
     useEffect(() => {
-        const token = sessionStorage.getItem(IntraclubTokenKey)
+        const token = localStorage.getItem(IntraclubTokenKey)
         if (token != null) {
             dispatch(
                 setCredentials({token})

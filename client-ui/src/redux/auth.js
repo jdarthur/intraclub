@@ -10,11 +10,11 @@ const slice = createSlice({
     reducers: {
         setCredentials: (state, {payload: {token}}) => {
             state.token = token;
-            sessionStorage.setItem(IntraclubTokenKey, token);
+            localStorage.setItem(IntraclubTokenKey, token);
         },
         logoutUser: (state) => {
             state.token = "";
-            sessionStorage.removeItem(IntraclubTokenKey);
+            localStorage.removeItem(IntraclubTokenKey);
         }
     }
 });

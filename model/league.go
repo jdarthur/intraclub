@@ -20,6 +20,10 @@ type League struct {
 	Active       bool               `json:"active,omitempty" bson:"-"`
 }
 
+func (l *League) SetUserId(userId string) {
+	l.Commissioner = userId
+}
+
 func (l *League) VerifyUpdatable(c common.CrudRecord) (illegalUpdate bool, field string) {
 	existingLeague := c.(*League)
 

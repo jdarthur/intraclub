@@ -46,6 +46,11 @@ func main() {
 
 	// get league by ID is a no-auth route so you can view basic league info without being logged in
 	noAuth.Handle("GET", "/league/:id", leagueCtl.GetOne)
+	apiAuthAndAccess.Handle("GET", "/league/:id/weeks", controllers.GetWeeksForLeague)
+
+	leagueOwnedByUser := middleware.OwnedByUserWrapper{Record: &model.League{}}
+	apiAuthAndAccess.Handle("DELETE", "/leagues/:id", leagueOwnedByUser.OwnedByUser, leagueCtl.Delete)
+	apiAuthAndAccess.Handle("PUT", "/leagues/:id", leagueOwnedByUser.OwnedByUser, leagueCtl.Update)
 
 	// Get relevant records by user ID
 	noAuth.Handle("GET", "/teams_for_user/:id", controllers.GetTeamsForUser)
@@ -69,6 +74,9 @@ func main() {
 	weekCtl := common.CrudController{Controller: controllers.WeekController{}, Database: common.GlobalDbProvider}
 	apiAuthAndAccess.Handle("POST", "/weeks", weekCtl.Create)
 	apiAuthAndAccess.Handle("GET", "/weeks/:id", weekCtl.GetOne)
+
+	weekOwnedByUser := middleware.OwnedByUserWrapper{Record: &model.Week{}}
+	apiAuthAndAccess.Handle("DELETE", "/weeks/:id", weekOwnedByUser.OwnedByUser, weekCtl.Delete)
 
 	err = router.Run(":8080")
 	if err != nil {

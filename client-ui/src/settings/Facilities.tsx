@@ -53,8 +53,7 @@ export function OneFacility({id, name, address, courts, layout_image}: Facility)
         id, name, address, courts, layout_image
     }
 
-    const editButton = <EditOutlined style={{cursor: "pointer"}}/>
-    const editForm = <FacilityForm FacilityId={id} InitialState={initialState} Update button={editButton}/>
+    const editForm = <FacilityForm FacilityId={id} InitialState={initialState} Update/>
 
     const title = <Ellipsis fullValue={name} maxLength={20}/>
 

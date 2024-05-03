@@ -42,9 +42,11 @@ export const mainApi = createApi({
         }),
         getLeaguesByUserId: builder.query({
             query: (userId) => ({url: `leagues_for_user/${userId}`}),
+            providesTags: ["leagues"]
         }),
         getLeaguesCommissionedByUserId: builder.query({
             query: (userId) => ({url: `leagues_commissioned_by_user/${userId}`}),
+            providesTags: ["leagues"]
         }),
         getFacilities: builder.query({
             query: () => ({url: `facilities`}),
@@ -64,17 +66,33 @@ export const mainApi = createApi({
         }),
         createWeek: builder.mutation({
             query: (body) => ({url: `weeks`, method: 'POST', body: body}),
-            invalidatesTags: ["weeks"]
+            invalidatesTags: ["weeks", "league_weeks"]
         }),
         createLeague: builder.mutation({
             query: (body) => ({url: `leagues`, method: 'POST', body: body}),
             invalidatesTags: ["leagues"]
         }),
+        updateLeague: builder.mutation({
+            query: (args) => ({url: `leagues/${args.id}`, method: 'PUT', body: args.body}),
+            invalidatesTags: ["leagues"]
+        }),
         getWeekById: builder.query({
             query: (id) => ({url: `weeks/${id}`}),
         }),
+        getWeeksByLeagueId: builder.query({
+            query: (id) => ({url: `league/${id}/weeks`}),
+            providesTags: ["league_weeks"]
+        }),
+        deleteWeek: builder.mutation({
+            query: (id) => ({url: `weeks/${id}`, method: 'DELETE'}),
+            invalidatesTags: ["weeks", "league_weeks"]
+        }),
         getFacilityById: builder.query({
             query: (id) => ({url: `facilities/${id}`}),
+        }),
+        deleteLeague: builder.mutation({
+            query: (id) => ({url: `leagues/${id}`, method: 'DELETE'}),
+            invalidatesTags: ["leagues"]
         }),
 
     })
@@ -95,6 +113,10 @@ export const {
     useUpdateFacilityMutation,
     useCreateWeekMutation,
     useCreateLeagueMutation,
+    useUpdateLeagueMutation,
     useGetWeekByIdQuery,
     useGetFacilityByIdQuery,
+    useDeleteLeagueMutation,
+    useGetWeeksByLeagueIdQuery,
+    useDeleteWeekMutation,
 } = mainApi
