@@ -7,7 +7,7 @@ import {useGetMatchScoresQuery} from "../redux/api.js";
 import {PlayerProps} from "./Player";
 import {OneTeamScore} from "./OneTeamScore";
 
-export const CARD_WIDTH = 270
+export const CARD_WIDTH = 300
 export const CARD_GAP_EM = 2.5
 
 
@@ -171,14 +171,25 @@ export function Scoreboard() {
         }
     )
 
-    return <div style={{height: "100%", overflowY: "auto"}}>
+    const mainStyle = {
+        height: "100%", overflowY: "auto",
+    }
+
+    if (!narrowScreen) {
+        mainStyle["display"] = "flex"
+        mainStyle["alignItems"] = "center"
+        mainStyle["justifyContent"] = "center"
+    }
+
+    // @ts-ignore
+    return <div style={mainStyle}>
         <div style={{
             display: "flex",
             flexDirection: "column",
             flexWrap: "wrap",
             overflowY: "auto",
             justifyContent: "stretch",
-            maxWidth: 1000,
+            maxWidth: `calc(${CARD_WIDTH} + ${CARD_GAP_EM}em)`,
         }}>
             <div style={{
                 padding: "0.5em",
