@@ -144,6 +144,8 @@ export function Scoreboard() {
         };
     }, []);
 
+    const narrowScreen = width < breakpoint
+
     const {data, isLoading} = useGetMatchScoresQuery(null, {
         pollingInterval: 15000
     })
@@ -163,7 +165,7 @@ export function Scoreboard() {
 
             return <Matchup HomePairing={m.HomePairing} AwayPairing={m.AwayPairing}
                             HomeTeam={HomeTeam} AwayTeam={AwayTeam} Result={m.Result}
-                            NarrowScreen={width < breakpoint} key={`matchup${i}`}
+                            NarrowScreen={narrowScreen} key={`matchup${i}`}
             />
 
         }
@@ -175,9 +177,16 @@ export function Scoreboard() {
             flexDirection: "column",
             flexWrap: "wrap",
             overflowY: "auto",
+            justifyContent: "stretch",
+            maxWidth: 1000,
         }}>
-            <div style={{padding: "0.5em"}}>
+            <div style={{
+                padding: "0.5em",
+                display: "flex",
+                justifyContent: narrowScreen ? "flex-start" : "space-around"
+            }}>
                 <OneTeamScore Matchups={Matchups} Team={HomeTeam} Home={true}/>
+                <span style={{width: narrowScreen ? 0 : "1em"}}/>
                 <OneTeamScore Matchups={Matchups} Team={AwayTeam} Home={false}/>
             </div>
             <div style={{
@@ -187,9 +196,8 @@ export function Scoreboard() {
                 gap: `${CARD_GAP_EM}em`,
                 overflowY: "auto",
                 flexGrow: 1,
-                maxWidth: 1000,
                 alignItems: "stretch",
-                justifyContent: width > breakpoint ? "flex-start" : "space-evenly",
+                justifyContent: narrowScreen ? "space-evenly" : "space-around",
                 padding: "0.5em"
             }}>
                 {matchups}
