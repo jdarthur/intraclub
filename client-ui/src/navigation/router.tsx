@@ -7,17 +7,19 @@ import {AuthPage} from "../login/AuthPage.js";
 import {UserPage} from "../user/UserPage";
 import {AllLeaguesPage} from "../league/AllLeaguesPage";
 import {TeamsPage} from "../team/TeamsPage";
-import {Facilities} from "../settings/Facilities";
 import {SettingsPage} from "../settings/SettingsPage";
+import {Register} from "../login/Register";
+import {DefaultScoreboard} from "../match_scoreboard/DefaultScoreboard";
 
 export const ROOT = "/"
 export const LOGIN = "/login"
+export const REGISTER = "/register"
 export const LEAGUE = "/league"
 export const TEAM = "/team"
 export const AUTH = "/auth"
 export const USER = "/user/:id"
 export const SETTINGS = "/settings"
-
+export const SCOREBOARD = "/scoreboard"
 
 export const router = createBrowserRouter([
     {
@@ -27,6 +29,10 @@ export const router = createBrowserRouter([
     {
         path: LOGIN,
         element: <MainLayout content={<Login/>}/>
+    },
+    {
+        path: REGISTER,
+        element: <MainLayout content={<Register/>}/>
     },
     {
         path: LEAGUE,
@@ -47,6 +53,10 @@ export const router = createBrowserRouter([
     {
         path: SETTINGS,
         element: <MainLayout content={<SettingsPage/>}/>
+    },
+    {
+        path: SCOREBOARD,
+        element: <DefaultScoreboard/>
     }
 
 ]);

@@ -15,7 +15,7 @@ type League struct {
 	Commissioner string             `json:"commissioner" bson:"commissioner"` // The main owner of this league
 	Reporters    []string           `json:"reporters" bson:"reporters"`       // Reporters are eligible to create a Blurb for this league
 	Facility     string             `json:"facility" bson:"facility"`         // id of the Facility where this league plays
-	StartTime    hhMmTime           `json:"start_time" bson:"start_time"`
+	StartTime    HhMmTime           `json:"start_time" bson:"start_time"`
 	Weeks        []string           `json:"weeks" bson:"weeks"`
 	Active       bool               `json:"active,omitempty" bson:"-"`
 }

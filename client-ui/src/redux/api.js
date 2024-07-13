@@ -19,6 +19,9 @@ export const mainApi = createApi({
         createOneTimePassword: builder.mutation({
             query: (body) => ({url: `one_time_password`, method: 'POST', body: body}),
         }),
+        register: builder.mutation({
+            query: (body) => ({url: `register`, method: 'POST', body: body}),
+        }),
         getToken: builder.mutation({
             query: (body) => ({
                 url: 'token',
@@ -94,7 +97,40 @@ export const mainApi = createApi({
             query: (id) => ({url: `leagues/${id}`, method: 'DELETE'}),
             invalidatesTags: ["leagues"]
         }),
-
+        // get multiple weeks by a list of IDs
+        getWeeksByIds: builder.query({
+            query: (weekIds) => ({url: `weeks_search`, method: "POST", body: weekIds}),
+            providesTags: ["league_weeks"]
+        }),
+        importUsers: builder.mutation({
+            query: (body) => {
+                const f = new FormData()
+                f.append("file", body)
+                return {
+                    url: `import_users_from_csv`,
+                    method: "POST",
+                    body: f,
+                    formData: true
+                }
+            },
+            invalidatesTags: ["users"]
+        }),
+        getMatchScores: builder.query({
+            query: () => ({url: `match_scores`}),
+            providesTags: ["match_scores"]
+        }),
+        updateMatchScoresForLine: builder.mutation({
+            query: (body) => ({url: `match_scores?key=${body.key}`, method: "PUT", body: body}),
+            invalidatesTags: ["match_scores"]
+        }),
+        updateNameForLine: builder.mutation({
+            query: (body) => ({url: `match_player_names?key=${body.key}`, method: "PUT", body: body}),
+            invalidatesTags: ["match_scores"]
+        }),
+        updateTeamInfo: builder.mutation({
+            query: (body) => ({url: `match_team_info?key=${body.key}`, method: "PUT", body: body}),
+            invalidatesTags: ["match_scores"]
+        }),
     })
 });
 
@@ -102,6 +138,7 @@ export const {
     useGetUsersQuery,
     useCreateOneTimePasswordMutation,
     useGetTokenMutation,
+    useRegisterMutation,
     useWhoAmIQuery,
     useGetUserByIdQuery,
     useGetTeamsByUserIdQuery,
@@ -117,6 +154,11 @@ export const {
     useGetWeekByIdQuery,
     useGetFacilityByIdQuery,
     useDeleteLeagueMutation,
-    useGetWeeksByLeagueIdQuery,
     useDeleteWeekMutation,
+    useGetWeeksByIdsQuery,
+    useImportUsersMutation,
+    useGetMatchScoresQuery,
+    useUpdateMatchScoresForLineMutation,
+    useUpdateNameForLineMutation,
+    useUpdateTeamInfoMutation,
 } = mainApi

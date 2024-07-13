@@ -35,7 +35,7 @@ func TestRainDelay(t *testing.T) {
 
 	season := &model.League{
 		ID:        primitive.NewObjectID(),
-		StartTime: time.Date(0, 0, 0, 80, 30, 0, 0, time.UTC),
+		StartTime: model.HhMmTime{Time: time.Date(0, 0, 0, 80, 30, 0, 0, time.UTC)},
 		Weeks:     weekIds,
 	}
 
@@ -68,18 +68,18 @@ func TestRainDelay(t *testing.T) {
 }
 
 func expectWeek(week *model.Week, origDate, newDate time.Time, t *testing.T) {
-	if week.OriginalDate != origDate {
+	if week.OriginalDate.Time != origDate {
 		t.Errorf("Expected week %s original date to be %s (got %s)", week.ID, origDate.Format(model.TimeFormat), week.OriginalDate.Format(model.TimeFormat))
 	}
 
-	if week.Date != newDate {
+	if week.Date.Time != newDate {
 		t.Errorf("Expected week %s date to be %s (got %s)", week.ID, newDate.Format(model.TimeFormat), week.Date.Format(model.TimeFormat))
 	}
 }
 
 func WeekAt(t time.Time) *model.Week {
 	return &model.Week{
-		Date:         t,
-		OriginalDate: t,
+		Date:         model.YyyyMmDdDate{Time: t},
+		OriginalDate: model.YyyyMmDdDate{Time: t},
 	}
 }

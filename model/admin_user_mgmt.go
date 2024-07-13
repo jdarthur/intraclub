@@ -27,7 +27,7 @@ func AsAdminUser(c *gin.Context) {
 
 	if !user.IsAdmin {
 		common.RespondWithApiError(c, common.ApiError{
-			References: token.UserId,
+			References: []any{token.UserId},
 			Code:       common.UserIsNotAdmin,
 		})
 		return

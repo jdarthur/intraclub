@@ -74,9 +74,17 @@ func main() {
 	weekCtl := common.CrudController{Controller: controllers.WeekController{}, Database: common.GlobalDbProvider}
 	apiAuthAndAccess.Handle("POST", "/weeks", weekCtl.Create)
 	apiAuthAndAccess.Handle("GET", "/weeks/:id", weekCtl.GetOne)
+	apiAuthAndAccess.Handle("POST", "/weeks_search", controllers.GetWeeksByIds)
 
 	weekOwnedByUser := middleware.OwnedByUserWrapper{Record: &model.Week{}}
 	apiAuthAndAccess.Handle("DELETE", "/weeks/:id", weekOwnedByUser.OwnedByUser, weekCtl.Delete)
+
+	apiAuthAndAccess.Handle("POST", "import_users_from_csv", controllers.ParseUserCsv)
+
+	noAuth.Handle("GET", "/match_scores", controllers.GetMatchScoreboard)
+	noAuth.Handle("PUT", "/match_scores", controllers.UpdateMatchScore)
+	noAuth.Handle("PUT", "/match_player_names", controllers.UpdateMatchNames)
+	noAuth.Handle("PUT", "/match_team_info", controllers.UpdateMatchTeam)
 
 	err = router.Run(":8080")
 	if err != nil {

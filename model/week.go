@@ -71,3 +71,38 @@ func (w *Week) ValidateDynamic(db common.DbProvider, isUpdate bool, previousStat
 func (w *Week) PushBack(weeks int) {
 	w.Date.Time = w.Date.Time.Add(time.Duration(weeks) * oneWeek)
 }
+
+func (w *Week) OnDelete(db common.DbProvider) error {
+
+	leagues, err := GetCommissionedLeaguesByUserId(db, w.UserId)
+	if err != nil {
+		return err
+	}
+
+	for _, league := range leagues {
+		weekInLeague := false
+		for _, weekId := range league.Weeks {
+			if weekId == w.ID.Hex() {
+				weekInLeague = true
+				break
+			}
+		}
+
+		if weekInLeague {
+			newWeekIds := make([]string, 0)
+			for _, weekId := range league.Weeks {
+				if weekId != w.ID.Hex() {
+					newWeekIds = append(newWeekIds, weekId)
+				}
+			}
+
+			league.Weeks = newWeekIds
+			err = common.Update(db, league)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}

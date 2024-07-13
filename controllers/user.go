@@ -32,7 +32,7 @@ func WhoAmI(c *gin.Context) {
 	user, err := common.GetOneByStringId(common.GlobalDbProvider, u, token.UserId)
 	if err != nil {
 		common.RespondWithApiError(c, common.ApiError{
-			References: []string{u.RecordType(), token.UserId},
+			References: []any{u.RecordType(), token.UserId},
 			Code:       common.CrudRecordWithObjectIdDoesNotExist,
 		})
 		return

@@ -56,14 +56,14 @@ func (f *Facility) ValidateStatic() error {
 
 	if f.Name == "" {
 		return common.ApiError{
-			References: "Name",
+			References: []any{"Name"},
 			Code:       common.FieldIsRequired,
 		}
 	}
 
 	if f.Address == "" {
 		return common.ApiError{
-			References: "Address",
+			References: []any{"Address"},
 			Code:       common.FieldIsRequired,
 		}
 	}

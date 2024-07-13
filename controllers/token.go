@@ -22,7 +22,7 @@ func (m *OneTimePasswordManager) GetOneTimePassword(userId string) (model.OneTim
 	v, ok := m.Map.Load(userId)
 	if !ok {
 		return model.OneTimePassword{}, common.ApiError{
-			References: userId,
+			References: []any{userId},
 			Code:       common.UserHasNoActiveOneTimePasswords,
 		}
 	}
@@ -68,7 +68,7 @@ func (m *OneTimePasswordManager) ValidateUUID(username, uuid string) (err error)
 	// if UUID doesn't match, return an error
 	if uuid != otp.UUID {
 		return common.ApiError{
-			References: username,
+			References: []any{username},
 			Code:       common.InvalidUuidForUsername,
 		}
 	}

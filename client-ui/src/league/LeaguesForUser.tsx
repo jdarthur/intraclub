@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {useGetLeaguesByUserIdQuery} from "../redux/api";
+import {useGetLeaguesByUserIdQuery} from "../redux/api.js";
 import {Empty} from "antd";
 import {useToken} from "../redux/auth.js";
 import {OneLeague} from "./OneLeague";
@@ -9,7 +9,6 @@ export function LeaguesForUser({UserId}: ByUserId) {
 
     const token = useToken()
     const {data} = useGetLeaguesByUserIdQuery(UserId, {skip: !token})
-    //console.log(data)
 
     const leagues = data?.resource.map((league: League) => {
         return <OneLeague league_id={league.league_id}

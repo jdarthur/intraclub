@@ -110,6 +110,8 @@ func (cc *CrudController) Update(c *gin.Context) {
 		record.(UserBasedRecord).SetUserId(token.UserId)
 	}
 
+	fmt.Println(record)
+
 	err = Update(cc.Database, record)
 	if err != nil {
 		RespondWithError(c, err)

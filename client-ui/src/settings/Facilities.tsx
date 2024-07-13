@@ -23,11 +23,11 @@ export function Facilities() {
         <OneFacility key={f.id} id={f.id} user_id={f.user_id} address={f.address} name={f.name} courts={f.courts}/>
     ))
 
-    return <Card title={"Facilities"} style={{width: 'max(400, 95vw)'}}>
+    return <div>
         {facilities?.length ? facilities : <Empty/>}
         <div style={{height: "1em"}}/>
         <FacilityForm/>
-    </Card>
+    </div>
 
 }
 

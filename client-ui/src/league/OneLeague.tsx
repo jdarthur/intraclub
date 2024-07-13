@@ -78,7 +78,7 @@ type ColorsInLeagueProps = {
 
 function ColorsInLeague({Colors}: ColorsInLeagueProps) {
 
-    const colors = Colors?.map((c) => <ColorDisplay name={c.name} hex={c.hex}/>)
+    const colors = Colors?.map((c) => <ColorDisplay name={c.name} hex={c.hex} key={c.hex}/>)
     const value = colors?.length ? colors : <Tag>None</Tag>
 
     const wrappedValue = <Space style={{display: "flex", flexWrap: "wrap"}}>

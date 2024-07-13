@@ -4,6 +4,10 @@ import "fmt"
 
 var GlobalDbProvider DbProvider
 
+type HasOnDelete interface {
+	OnDelete(provider DbProvider) error
+}
+
 type DbProvider interface {
 	Connect() error
 	Disconnect() error
@@ -92,5 +96,14 @@ func Update(db DbProvider, record CrudRecord) (err error) {
 }
 
 func Delete(db DbProvider, record CrudRecord) (err error) {
+
+	v, ok := record.(HasOnDelete)
+	if ok {
+		err = v.OnDelete(db)
+		if err != nil {
+			return err
+		}
+	}
+
 	return db.Delete(record)
 }

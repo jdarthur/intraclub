@@ -8,8 +8,8 @@ import (
 
 func createWeek() *model.Week {
 	week := &model.Week{
-		Date:         time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
-		OriginalDate: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC),
+		Date:         model.YyyyMmDdDate{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)},
+		OriginalDate: model.YyyyMmDdDate{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)},
 	}
 
 	v, err := common.Create(common.GlobalDbProvider, week)

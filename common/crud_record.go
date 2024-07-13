@@ -32,10 +32,9 @@ func CheckExistenceOrError(provider DbProvider, record CrudRecord) error {
 }
 
 func CheckExistenceOrErrorByStringId(provider DbProvider, record CrudRecord, id string) error {
-
 	objId, err := TryParsingObjectId(id)
 	if err != nil {
-		return err
+		return ApiError{References: []any{record.RecordType(), id}, Code: InvalidNestedObjectId}
 	}
 
 	record.SetId(objId)
@@ -54,7 +53,7 @@ func CheckExistenceOrErrorByStringId(provider DbProvider, record CrudRecord, id 
 
 func RecordDoesNotExist(record CrudRecord) error {
 	return ApiError{
-		References: []string{record.RecordType(), record.GetId().Hex()},
+		References: []any{record.RecordType(), record.GetId().Hex()},
 		Code:       CrudRecordWithObjectIdDoesNotExist,
 	}
 }

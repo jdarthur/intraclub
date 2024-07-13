@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"intraclub/common"
 	"intraclub/model"
@@ -14,13 +15,19 @@ func (ctl *NewUserController) Register(c *gin.Context) {
 	req := &model.User{}
 	err := c.Bind(req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		common.RespondWithBadRequest(c, err)
+		return
+	}
+
+	if req.IsAdmin {
+		err = fmt.Errorf("cannot create user and set is_admin=true")
+		common.RespondWithBadRequest(c, err)
 		return
 	}
 
 	created, err := common.Create(common.GlobalDbProvider, req)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		common.RespondWithBadRequest(c, err)
 		return
 	}
 

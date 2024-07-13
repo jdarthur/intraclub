@@ -14,7 +14,6 @@ func (w WeekController) Model() common.CrudRecord {
 
 func (w WeekController) ValidateRequest(c common.CrudRecord, isUpdate bool, provider common.DbProvider) (common.CrudRecord, error) {
 	return c, nil
-
 }
 
 func (w WeekController) GetAllFilter(c *gin.Context) (map[string]interface{}, error) {

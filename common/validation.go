@@ -57,7 +57,7 @@ func CheckNonUpdatableFields(request HasNonUpdatable, db DbProvider) error {
 	illegalUpdate, field := request.VerifyUpdatable(recordInDb)
 	if illegalUpdate {
 		return ApiError{
-			References: field,
+			References: []any{field},
 			Code:       FieldNotUpdatable,
 		}
 	}
