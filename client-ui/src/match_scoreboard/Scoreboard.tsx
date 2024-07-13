@@ -7,7 +7,7 @@ import {useGetMatchScoresQuery} from "../redux/api.js";
 import {PlayerProps} from "./Player";
 import {OneTeamScore} from "./OneTeamScore";
 
-export const CARD_WIDTH = 300
+export const CARD_WIDTH = 270
 export const CARD_GAP_EM = 2.5
 
 
@@ -189,7 +189,7 @@ export function Scoreboard() {
             flexWrap: "wrap",
             overflowY: "auto",
             justifyContent: "stretch",
-            maxWidth: `calc(${CARD_WIDTH} + ${CARD_GAP_EM}em)`,
+            maxWidth: 1000,
         }}>
             <div style={{
                 padding: "0.5em",
