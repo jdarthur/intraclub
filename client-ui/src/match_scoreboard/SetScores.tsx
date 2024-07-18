@@ -49,6 +49,7 @@ function scoreStyle(last: boolean, won: boolean, lost: boolean) {
         x["borderRight"] = "1px solid rgba(0, 0, 0, 0.1)"
     } else {
         x["fontWeight"] = "bold"
+        x["fontSize"] = "1.1em"
         x["borderRadius"] = "0px 7px 0px 0px"
         x["padding"] = "0.5em"
 
@@ -174,9 +175,12 @@ export function SetScores({Us, Them, MatchId, Home, PlayoffMode, Player1, Player
             display: "flex",
             flexDirection: "row",
             justifyContent: "space-evenly",
-            alignItems: "center"
+            alignItems: "center",
+            fontSize: "1.6em"
         }}>
-        <div style={scoreStyle(false, false, false)}>Scores</div>
+        <div style={scoreStyle(false, false, false)}>
+            Scores
+        </div>
         <div style={scoreStyle(false, false, false)}>
             <OneSetScore
                 value={setValues.Set1Value}

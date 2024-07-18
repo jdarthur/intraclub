@@ -26,7 +26,7 @@ function NameDisplay({value, setValue, onSave, readOnly}: stringEditorDisplayTyp
     }
 
     let nameValue = value ? value : <span style={{color: "#bfbfbf"}}>Name not set</span>
-    const name = <span style={{cursor: readOnly ? "auto" : "pointer"}}>
+    const name = <span style={{cursor: readOnly ? "auto" : "pointer", fontSize: "1.5em"}}>
         {nameValue}
     </span>
 
@@ -60,14 +60,16 @@ function LineNumber({
                         PlayerProps
 ) {
     return <div style={{
-        color: "rgba(0, 0, 0, 0.6)",
-        border: "1px solid rgba(0, 0, 0, 0.6)",
-        width: 22,
-        height: 22,
-        borderRadius: 11,
+        color: "rgba(0, 0, 0, 0.5)",
+        border: "1px solid rgba(0, 0, 0, 0.5)",
+        width: 30,
+        height: 30,
+        borderRadius: 15,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        fontSize: "1.4em",
+        fontWeight: "bold"
     }}>
         {line}
     </div>

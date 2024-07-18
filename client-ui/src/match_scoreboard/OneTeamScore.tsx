@@ -22,7 +22,8 @@ function TeamColorDisplay({value, setValue, onSave, readOnly}: stringEditorDispl
         }
     }
 
-    return <ColorPicker value={value} onChange={onChange} disabled={readOnly} onOpenChange={onOpenChange}/>
+    return <ColorPicker value={value} onChange={onChange} disabled={readOnly} onOpenChange={onOpenChange}
+                        size={"large"}/>
 }
 
 function TeamNameDisplay({value, setValue, onSave, readOnly}: stringEditorDisplayType) {
@@ -104,13 +105,13 @@ export function OneTeamScore({Matchups, Team, Home}: OneTeamScoreProps) {
     }
 
 
-    return <Card style={{marginBottom: "0.5em", width: `min(100%, calc(${2 * CARD_WIDTH}px + ${CARD_GAP_EM}em))`}}
+    return <Card style={{marginBottom: "0.5em", flexGrow: 1}}
                  styles={{body: {padding: "0.25em 1em"}}}>
         <div style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            fontSize: "2em",
+            fontSize: "3em",
             background: "white",
             padding: 0
         }}>

@@ -2,7 +2,7 @@ import {Team} from "./TeamName";
 import * as React from "react";
 import {Pairing, PairingProps} from "./Pairing"
 import {MatchProps} from "./SetScores";
-import {CARD_WIDTH} from "./Scoreboard";
+import {CARD_GAP_EM, CARD_WIDTH, TOP_LINE_HEIGHT} from "./Scoreboard";
 
 export type MatchupProps = {
     HomePairing: PairingProps
@@ -11,15 +11,29 @@ export type MatchupProps = {
     AwayTeam?: Team
     Result?: MatchProps
     NarrowScreen?: boolean
+    WindowWidth?: number
+    WindowHeight?: number
 }
 
-export function Matchup({HomePairing, AwayPairing, Result, HomeTeam, AwayTeam, NarrowScreen}: MatchupProps) {
+export function Matchup({
+                            HomePairing,
+                            AwayPairing,
+                            Result,
+                            HomeTeam,
+                            AwayTeam,
+                            NarrowScreen,
+                            WindowWidth,
+                        }: MatchupProps) {
+
+    console.log(`card size: ${WindowWidth / 3} - ${CARD_GAP_EM}em `)
+    const width = WindowWidth ? (`calc(${WindowWidth / 3}px - ${CARD_GAP_EM + 1}em)`) : CARD_WIDTH
+
     return <div style={{
         display: "flex",
         alignItems: "center",
         flexWrap: "wrap",
         flexDirection: "column",
-        width: NarrowScreen ? "100%" : CARD_WIDTH,
+        width: NarrowScreen ? "100%" : width,
     }}>
         <Pairing Result={Result}
                  Home={true}
@@ -28,9 +42,7 @@ export function Matchup({HomePairing, AwayPairing, Result, HomeTeam, AwayTeam, N
                  player1={HomePairing.player1}
                  player2={HomePairing.player2}
         />
-        <span style={{fontSize: "0.8em", color: "rgba(0,0,0,0.6)"}}>
-            vs.
-        </span>
+        <span style={{height: "0.25em"}}/>
         <Pairing Result={Result}
                  Home={false}
                  Color={AwayTeam.color}

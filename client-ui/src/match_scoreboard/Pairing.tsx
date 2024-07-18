@@ -17,19 +17,6 @@ export function Pairing({Result, Home, Color, NarrowScreen, player1, player2}: P
 
     const pairing: PairingProps = {Color: Color, Home: Home, player1: player1, player2: player2}
 
-    const m: MatchupProps = {
-        // @ts-ignore
-        AwayPairing: Home ? {} : pairing,
-        AwayTeam: undefined,
-        // @ts-ignore
-        HomePairing: Home ? pairing : {},
-        HomeTeam: {
-            name: "",
-            color: Color
-        },
-        Result: Result
-    }
-
     const title = <SetScores Us={Home ? Result.Us : Result.Them}
                              Them={Home ? Result.Them : Result.Us}
                              MatchId={"default"}
@@ -44,34 +31,42 @@ export function Pairing({Result, Home, Color, NarrowScreen, player1, player2}: P
     return <Card style={{width: "100%"}} title={title}
                  styles={{header: {padding: 0, fontWeight: "normal"}}}
                  size={"small"}>
-        <div style={{display: "flex", flexDirection: "row"}}>
-            <div style={{
-                display: "flex",
-                justifyContent: "center",
-                marginRight: "0.5em",
-                width: NarrowScreen ? "30%" : 30
-            }}>
-                <div style={{
-                    background: Color, width: "min(100%, 50px)", height: "100%",
-                    borderRadius: 5,
-                    border: "1px solid rgba(0, 0, 0, 0.1)",
-                }}/>
-            </div>
-            <div style={{display: "flex", flexDirection: "column"}}>
-                <span style={{marginBottom: "0.5em"}}>
+        <div style={{
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
+            justifyContent: "space-between",
+        }}>
+            <div style={{display: "flex", paddingBottom: "0.5em"}}>
+                <div style={{width: "50%"}}>
                     <Player player1={true}
                             player_line={player1.line}
                             home={Home}
                             matchup_line={lineString}
                             initialName={player1.name}
                     />
-                </span>
-                <Player player1={false}
-                        player_line={player2.line}
-                        home={Home}
-                        matchup_line={lineString}
-                        initialName={player2.name}
-                />
+                </div>
+                <div style={{width: "50%"}}>
+                    <Player player1={false}
+                            player_line={player2.line}
+                            home={Home}
+                            matchup_line={lineString}
+                            initialName={player2.name}
+                    />
+                </div>
+            </div>
+            <div style={{
+                display: "flex",
+                justifyContent: "center",
+                marginRight: "1em",
+                width: "100%",
+            }}>
+                <div style={{
+                    background: Color, width: "100%",
+                    height: 5,
+                    borderRadius: 5,
+                    border: "1px solid rgba(0, 0, 0, 0.1)",
+                }}/>
             </div>
         </div>
 

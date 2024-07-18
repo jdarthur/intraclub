@@ -28,7 +28,7 @@ export function OneSetScore({value, setValue, max, onSave, readOnly}: OneSetScor
         display: "flex",
         justifyContent: "center",
         padding: "0.5em",
-        cursor: readOnly ? "auto" : "pointer"
+        cursor: readOnly ? "auto" : "pointer",
     }}>
         {v}
     </div>
