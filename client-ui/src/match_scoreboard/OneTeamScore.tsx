@@ -1,11 +1,17 @@
 import {MatchupProps} from "./Matchup";
-import {Team} from "./TeamName";
 import {Card, ColorPicker, Input, Popover} from "antd";
 import * as React from "react";
 import {calculateScores, CARD_GAP_EM, CARD_WIDTH} from "./Scoreboard";
 import {useUpdateTeamInfoMutation} from "../redux/api";
 import {useSearchParams} from "react-router-dom";
 import {stringEditorDisplayType} from "./Player";
+import {HomeOutlined, TruckOutlined} from "@ant-design/icons";
+import {WonLostTopLine} from "./WonLostTopLine";
+
+export type Team = {
+    name: string
+    color: string
+}
 
 function TeamColorDisplay({value, setValue, onSave, readOnly}: stringEditorDisplayType) {
 
@@ -117,15 +123,31 @@ export function OneTeamScore({Matchups, Team, Home, NarrowScreen}: OneTeamScoreP
             padding: NarrowScreen ? "0em" : "0.25em"
         }}>
             <div style={{display: "flex", alignItems: "center"}}>
+                <div style={{
+                    color: "rgba(0, 0, 0, 0.5)",
+                    fontSize: "0.7em",
+                    marginRight: "0.5em",
+                }}>
+                    {Home ? <HomeOutlined style={{marginTop: "0.4em"}}/> :
+                        <TruckOutlined style={{marginTop: "0.4em", fontSize: "1.2em"}}/>}
+                </div>
+
                 <div style={{marginRight: "0.5em", display: "flex", alignItems: "center"}}>
                     <TeamColorDisplay value={team.color} setValue={setColor} onSave={onSave} readOnly={!key}/>
                 </div>
+
                 <div>
                     <TeamNameDisplay value={team.name} setValue={setName} onSave={onSave} readOnly={!key}/>
                 </div>
+
             </div>
 
-            <div style={{fontWeight: "bold"}}>
+
+            <div style={{fontWeight: "bold", display: "inline-flex", alignItems: "center"}}>
+                <span style={{color: "rgba(0, 0, 0, 0.5)", fontSize: "0.6em", marginTop: "0.2em", marginRight: "1em"}}>
+                    <WonLostTopLine Matchups={Matchups} Home={Home}/>
+                </span>
+
                 {calculateScores(Matchups, Home)}
             </div>
         </div>

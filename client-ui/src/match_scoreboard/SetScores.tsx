@@ -27,7 +27,7 @@ export function getLineString(player1: PlayerProps, player2: PlayerProps): strin
     return `${player1.line}-${player2.line}`
 }
 
-function isMatchWon(us: SetScoreProps, them: SetScoreProps): boolean {
+export function isMatchWon(us: SetScoreProps, them: SetScoreProps): boolean {
     if (us.set3_games > 0) {
         return true
     }

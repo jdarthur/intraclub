@@ -1,8 +1,8 @@
-import {Team} from "./TeamName";
+import {Team} from "./OneTeamScore";
 import * as React from "react";
 import {Pairing, PairingProps} from "./Pairing"
 import {MatchProps} from "./SetScores";
-import {CARD_GAP_EM, CARD_WIDTH, TOP_LINE_HEIGHT} from "./Scoreboard";
+import {CARD_GAP_EM, CARD_WIDTH} from "./Scoreboard";
 
 export type MatchupProps = {
     HomePairing: PairingProps

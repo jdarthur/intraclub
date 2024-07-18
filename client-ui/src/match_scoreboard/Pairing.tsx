@@ -2,7 +2,6 @@ import * as React from "react"
 import {Player, PlayerProps} from "./Player";
 import {getLineString, MatchProps, SetScores} from "./SetScores";
 import {Card} from "antd";
-import {MatchupProps} from "./Matchup";
 
 export type PairingProps = {
     player1: PlayerProps
@@ -13,9 +12,7 @@ export type PairingProps = {
     NarrowScreen?: boolean
 }
 
-export function Pairing({Result, Home, Color, NarrowScreen, player1, player2}: PairingProps) {
-
-    const pairing: PairingProps = {Color: Color, Home: Home, player1: player1, player2: player2}
+export function Pairing({Result, Home, Color, player1, player2}: PairingProps) {
 
     const title = <SetScores Us={Home ? Result.Us : Result.Them}
                              Them={Home ? Result.Them : Result.Us}
