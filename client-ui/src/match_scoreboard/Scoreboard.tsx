@@ -193,20 +193,21 @@ export function Scoreboard() {
             flexWrap: "wrap",
             overflowY: "auto",
             justifyContent: "space-around",
-            height: "100%"
+            height: narrowScreen ? "" : "100%"
         }}>
             <div style={{
                 padding: "0.5em",
                 display: "flex",
+                flexDirection: narrowScreen ? "column" : "row",
                 justifyContent: narrowScreen ? "flex-start" : "space-between"
             }}>
-                <OneTeamScore Matchups={Matchups} Team={HomeTeam} Home={true}/>
+                <OneTeamScore Matchups={Matchups} Team={HomeTeam} Home={true} NarrowScreen={narrowScreen}/>
                 <span style={{width: narrowScreen ? "0.25em" : "1em"}}/>
-                <OneTeamScore Matchups={Matchups} Team={AwayTeam} Home={false}/>
+                <OneTeamScore Matchups={Matchups} Team={AwayTeam} Home={false} NarrowScreen={narrowScreen}/>
             </div>
             <div style={{
                 display: "flex",
-                flexDirection: "row",
+                flexDirection: narrowScreen ? "column" : "row",
                 flexWrap: "wrap",
                 columnGap: `${CARD_GAP_EM}em`,
                 // rowGap: `${CARD_GAP_EM / 2}em`,

@@ -70,9 +70,10 @@ type OneTeamScoreProps = {
     Matchups: MatchupProps[]
     Team: Team,
     Home: boolean
+    NarrowScreen?: boolean
 }
 
-export function OneTeamScore({Matchups, Team, Home}: OneTeamScoreProps) {
+export function OneTeamScore({Matchups, Team, Home, NarrowScreen}: OneTeamScoreProps) {
 
     const [team, setTeam] = React.useState<Team>(Team)
     const [updateTeam] = useUpdateTeamInfoMutation()
@@ -111,9 +112,9 @@ export function OneTeamScore({Matchups, Team, Home}: OneTeamScoreProps) {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            fontSize: "3em",
+            fontSize: NarrowScreen ? "2.5em" : "3em",
             background: "white",
-            padding: 0
+            padding: NarrowScreen ? "0em" : "0.25em"
         }}>
             <div style={{display: "flex", alignItems: "center"}}>
                 <div style={{marginRight: "0.5em", display: "flex", alignItems: "center"}}>
