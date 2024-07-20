@@ -145,7 +145,12 @@ export function OneTeamScore({Matchups, Team, Home, NarrowScreen}: OneTeamScoreP
 
             <div style={{fontWeight: "bold", display: "inline-flex", alignItems: "center"}}>
                 <span
-                    style={{color: "rgba(0, 0, 0, 0.4)", fontSize: "0.6em", marginTop: "0.2em", marginRight: "1em"}}>
+                    style={{
+                        color: "rgba(0, 0, 0, 0.3)",
+                        fontSize: "0.6em",
+                        marginTop: "0.2em",
+                        marginRight: "1em",
+                    }}>
                     <WonLostTopLine Matchups={Matchups} Home={Home}/>
                 </span>
 
