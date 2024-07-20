@@ -195,9 +195,10 @@ export function Scoreboard() {
             height: narrowScreen ? "" : "100%"
         }}>
             <div style={{
-                padding: "0.5em",
+                padding: "1em",
+                paddingBottom: narrowScreen ? "0em" : "0.5em",
                 display: "flex",
-                width: "calc(100% - 1em)",
+                width: "calc(100% - 2em)",
                 flexDirection: narrowScreen ? "column" : "row",
                 justifyContent: narrowScreen ? "flex-start" : "space-between",
             }}>

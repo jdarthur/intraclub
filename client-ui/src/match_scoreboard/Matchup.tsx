@@ -34,7 +34,7 @@ export function Matchup({
         flexWrap: "wrap",
         flexDirection: "column",
         width: NarrowScreen ? "100%" : width,
-        marginBottom: NarrowScreen ? "1em" : "0em"
+        margin: NarrowScreen ? "1em" : "0em"
     }}>
         <Pairing Result={Result}
                  Home={true}

@@ -10,7 +10,6 @@ type MatchupGroupProps = {
 export function MatchupGroup({Matchups, NarrowScreen, ScreenWidth}: MatchupGroupProps) {
 
     const matchups = Matchups?.map((m, i) => {
-
             return <Matchup HomePairing={m.HomePairing}
                             AwayPairing={m.AwayPairing}
                             HomeTeam={m.HomeTeam}

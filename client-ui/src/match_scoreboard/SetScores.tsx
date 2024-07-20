@@ -1,11 +1,12 @@
 import * as React from "react"
-import {CheckCircleOutlined, CloseCircleOutlined} from "@ant-design/icons";
+import {CheckCircleFilled, CheckCircleOutlined, CloseCircleFilled, CloseCircleOutlined} from "@ant-design/icons";
 import {PlayerProps} from "./Player";
 import {OneSetScore} from "./OneSetScore";
 import {useSearchParams} from "react-router-dom";
 import {useUpdateMatchScoresForLineMutation} from "../redux/api.js";
 import {useEffect} from "react";
 import {IntraclubTokenKey, setCredentials} from "../redux/auth";
+import {Space} from "antd";
 
 export type SetScoreProps = {
     set1_games: number,
@@ -128,15 +129,24 @@ export function SetScores({Us, Them, MatchId, Home, PlayoffMode, Player1, Player
 
     let wonLostDisplay = null
     if (won) {
-        wonLostDisplay = <CheckCircleOutlined/>
+        wonLostDisplay = <CheckCircleFilled/>
     } else if (lost) {
-        wonLostDisplay = <CloseCircleOutlined/>
+        wonLostDisplay = <CloseCircleFilled/>
     }
 
     const totalDisplay = <div style={{display: "flex", alignItems: "center"}}>
-        {total}
-        <span style={{width: "0.5em"}}/>
-        {wonLostDisplay}
+        <span>
+                    {total}
+
+        </span>
+        <span style={{
+            color: "rgba(0, 0, 0, 0.4)",
+            fontSize: "max(1.2vw, 0.7em)",
+            marginLeft: "0.5em",
+            verticalAlign: "middle"
+        }}>
+            {wonLostDisplay}
+        </span>
     </div>
 
     const onSave = () => {
@@ -175,8 +185,9 @@ export function SetScores({Us, Them, MatchId, Home, PlayoffMode, Player1, Player
             display: "flex",
             flexDirection: "row",
             justifyContent: "space-evenly",
-            alignItems: "center",
-            fontSize: "max(1.5vw, 1.6em)"
+            alignItems: "stretch",
+            fontSize: "max(1.5vw, 1.6em)",
+            fontWeight: "bold"
         }}>
         <div style={scoreStyle(false, false, false)}>
             Scores
@@ -207,7 +218,13 @@ export function SetScores({Us, Them, MatchId, Home, PlayoffMode, Player1, Player
                 onSave={onSave}
                 readOnly={!key}/>
         </div>
-        <div style={scoreStyle(false, false, false)}>{won ? "+5" : "-"}</div>
+
+        {/* '+5' or '-' indicator if the match is won */}
+        <div style={scoreStyle(false, false, false)}>
+            <span style={{color: "rgba(0, 0, 0, 0.3)", fontWeight: "lighter"}}>
+                {won ? "+5" : "--"}
+            </span>
+        </div>
         <div style={scoreStyle(true, won, lost)}>{totalDisplay}</div>
     </div>
 }

@@ -30,14 +30,16 @@ export function WonLostTopLine({Matchups, Home}: WonLostTopLineProps) {
     }
 
     return <Space>
-        <Space>
+        <div style={{display: "flex", alignItems: "center"}}>
             {wonCount}
-            <CheckCircleFilled style={{}}/>
-        </Space>
-        <Space>
+            <span style={{width: "0.25em"}}/>
+            <CheckCircleFilled style={{fontSize: "0.75em"}}/>
+        </div>
+        <div style={{display: "flex", alignItems: "center"}}>
             {lostCount}
-            <CloseCircleFilled/>
-        </Space>
+            <span style={{width: "0.25em"}}/>
+            <CloseCircleFilled style={{fontSize: "0.75em"}}/>
+        </div>
 
     </Space>
 
