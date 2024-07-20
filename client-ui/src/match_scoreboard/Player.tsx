@@ -3,6 +3,8 @@ import {Input, Popover, Space} from "antd";
 import {useUpdateNameForLineMutation} from "../redux/api.js";
 import {useSearchParams} from "react-router-dom";
 import {useEffect} from "react";
+import {Simulate} from "react-dom/test-utils";
+import play = Simulate.play;
 
 
 export type PlayerProps = {
@@ -26,7 +28,14 @@ function NameDisplay({value, setValue, onSave, readOnly}: stringEditorDisplayTyp
     }
 
     let nameValue = value ? value : <span style={{color: "#bfbfbf"}}>Name not set</span>
-    const name = <span style={{cursor: readOnly ? "auto" : "pointer", fontSize: "1.5em"}}>
+    const name = <span style={{
+        cursor: readOnly ? "auto" : "pointer",
+        fontSize: "max(1.3vw, 1.5em)",
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center"
+    }}>
         {nameValue}
     </span>
 
@@ -53,22 +62,17 @@ function NameDisplay({value, setValue, onSave, readOnly}: stringEditorDisplayTyp
     </Popover>
 }
 
-function LineNumber({
-                        line
-                    }
-                        :
-                        PlayerProps
-) {
+function LineNumber({line}: PlayerProps) {
     return <div style={{
         color: "rgba(0, 0, 0, 0.5)",
         border: "1px solid rgba(0, 0, 0, 0.5)",
-        width: 30,
-        height: 30,
-        borderRadius: 15,
+        width: "max(2.3vw, 24px)",
+        height: "max(2.3vw, 24px)",
+        borderRadius: "max(1.15vw, 12px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontSize: "1.4em",
+        fontSize: "max(1.5vw, 1.2em)",
         fontWeight: "bold"
     }}>
         {line}
@@ -108,8 +112,20 @@ export function Player({matchup_line, player1, player_line, home, initialName}: 
         updateName(body)
     }
 
-    return <Space>
-        <LineNumber line={player_line} name={""}/>
+    return <span style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        textAlign: player1 ? "right" : "left"
+    }}>
+
+        <span style={{marginRight: player1 ? 0 : "0.5em"}}>
+            {player1 ? null : <LineNumber line={player_line} name={""}/>}
+        </span>
         <NameDisplay value={name} setValue={setName} onSave={onSave} readOnly={!key}/>
-    </Space>
+
+        <span style={{marginLeft: player1 ? "0.5em" : 0}}>
+            {player1 ? <LineNumber line={player_line} name={""}/> : null}
+        </span>
+    </span>
 }

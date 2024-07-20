@@ -43,7 +43,7 @@ export function Matchup({
                  player1={HomePairing.player1}
                  player2={HomePairing.player2}
         />
-        <span style={{height: "0.25em"}}/>
+        <span style={{height: "0.5em"}}/>
         <Pairing Result={Result}
                  Home={false}
                  Color={AwayTeam.color}

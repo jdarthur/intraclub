@@ -6,9 +6,9 @@ import {PairingProps} from "./Pairing";
 import {useGetMatchScoresQuery} from "../redux/api.js";
 import {PlayerProps} from "./Player";
 import {OneTeamScore} from "./OneTeamScore";
+import {MatchupGroup} from "./MatchupGroup";
 
-export const TOP_LINE_HEIGHT = 90
-export const CARD_WIDTH = 270
+export const CARD_WIDTH = 300
 export const CARD_GAP_EM = 2
 
 
@@ -136,7 +136,7 @@ export function Scoreboard() {
     const [width, setWidth] = React.useState(window.innerWidth);
     const [height, setHeight] = React.useState(window.innerHeight);
 
-    const breakpoint = CARD_WIDTH * 2 + 70;
+    const breakpoint = CARD_WIDTH * 3;
     React.useEffect(() => {
         const handleResizeWindow = () => {
             setWidth(window.innerWidth);
@@ -165,59 +165,50 @@ export function Scoreboard() {
     const AwayTeam = data?.away_team
 
     const Matchups = getAllMatchups(data)
-    const matchups = Matchups?.map((_, i) => {
-            const m = getMatchup(data, i, true)
-            return <Matchup HomePairing={m.HomePairing}
-                            AwayPairing={m.AwayPairing}
-                            HomeTeam={HomeTeam}
-                            AwayTeam={AwayTeam}
-                            Result={m.Result}
-                            NarrowScreen={narrowScreen}
-                            key={`matchup${i}`}
-                            WindowWidth={width}
-                            WindowHeight={height}
-            />
-
-        }
-    )
 
     const mainStyle = {
         height: "100%", overflowY: "auto",
     }
 
+    const row1 = [
+        getMatchup(data, 0, true),
+        getMatchup(data, 1, true),
+        getMatchup(data, 2, true),
+    ]
+
+    const row2 = [
+        getMatchup(data, 3, true),
+        getMatchup(data, 4, true),
+        getMatchup(data, 5, true),
+    ]
+
+
     // @ts-ignore
     return <div style={mainStyle}>
         <div style={{
-            display: "flex",
+            display: "block",
             flexDirection: "column",
             flexWrap: "wrap",
-            overflowY: "auto",
+            overflowY: narrowScreen ? "auto" : "clip",
             justifyContent: "space-around",
+            width: "100%",
             height: narrowScreen ? "" : "100%"
         }}>
             <div style={{
                 padding: "0.5em",
                 display: "flex",
+                width: "calc(100% - 1em)",
                 flexDirection: narrowScreen ? "column" : "row",
-                justifyContent: narrowScreen ? "flex-start" : "space-between"
+                justifyContent: narrowScreen ? "flex-start" : "space-between",
             }}>
                 <OneTeamScore Matchups={Matchups} Team={HomeTeam} Home={true} NarrowScreen={narrowScreen}/>
                 <span style={{width: narrowScreen ? "0.25em" : "1em"}}/>
                 <OneTeamScore Matchups={Matchups} Team={AwayTeam} Home={false} NarrowScreen={narrowScreen}/>
             </div>
-            <div style={{
-                display: "flex",
-                flexDirection: narrowScreen ? "column" : "row",
-                flexWrap: "wrap",
-                columnGap: `${CARD_GAP_EM}em`,
-                // rowGap: `${CARD_GAP_EM / 2}em`,
-                overflowY: "auto",
-                flexGrow: 1,
-                alignItems: "center",
-                justifyContent: "space-evenly",
-                padding: "0.5em"
-            }}>
-                {matchups}
+            <div style={{height: "90%", width: "100%"}}>
+                <MatchupGroup Matchups={row1} NarrowScreen={narrowScreen} ScreenWidth={width}/>
+                <div style={{height: "2em"}}/>
+                <MatchupGroup Matchups={row2} NarrowScreen={narrowScreen} ScreenWidth={width}/>
             </div>
 
         </div>

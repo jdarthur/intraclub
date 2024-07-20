@@ -2,12 +2,10 @@ import * as React from "react"
 import {isMatchWon} from "./SetScores";
 import {MatchupProps} from "./Matchup";
 import {
-    CheckCircleOutlined,
-    ClockCircleFilled,
-    ClockCircleOutlined,
-    CloseCircleOutlined,
-    HistoryOutlined
+    CheckCircleFilled,
+    CloseCircleFilled,
 } from "@ant-design/icons";
+import {Space} from "antd";
 
 type WonLostTopLineProps = {
     Matchups: MatchupProps[]
@@ -16,22 +14,32 @@ type WonLostTopLineProps = {
 
 export function WonLostTopLine({Matchups, Home}: WonLostTopLineProps) {
 
-    return Matchups?.map((m) => {
+    let wonCount = 0
+    let lostCount = 0
+
+    for (let i = 0; i < Matchups?.length; i++) {
+        const m = Matchups[i]
         const us = Home ? m.Result.Us : m.Result.Them
         const them = Home ? m.Result.Them : m.Result.Us
 
-
-        const won = isMatchWon(us, them)
-        const lost = isMatchWon(them, us)
-
-        let v = null
-        if (won) {
-            v = <CheckCircleOutlined/>
-        } else if (lost) {
-            v = <CloseCircleOutlined/>
+        if (isMatchWon(us, them)) {
+            wonCount += 1
+        } else if (isMatchWon(them, us)) {
+            lostCount += 1
         }
-        return <span style={{marginRight: (won || lost) ? "0.25em" : 0}}>
-            {v}
-        </span>
-    })
+    }
+
+    return <Space>
+        <Space>
+            {wonCount}
+            <CheckCircleFilled style={{}}/>
+        </Space>
+        <Space>
+            {lostCount}
+            <CloseCircleFilled/>
+        </Space>
+
+    </Space>
+
+
 }

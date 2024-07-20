@@ -176,7 +176,7 @@ export function SetScores({Us, Them, MatchId, Home, PlayoffMode, Player1, Player
             flexDirection: "row",
             justifyContent: "space-evenly",
             alignItems: "center",
-            fontSize: "1.6em"
+            fontSize: "max(1.5vw, 1.6em)"
         }}>
         <div style={scoreStyle(false, false, false)}>
             Scores

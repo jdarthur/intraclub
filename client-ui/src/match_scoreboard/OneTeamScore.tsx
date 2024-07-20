@@ -113,19 +113,19 @@ export function OneTeamScore({Matchups, Team, Home, NarrowScreen}: OneTeamScoreP
 
 
     return <Card style={{marginBottom: "0.5em", flexGrow: 1}}
-                 styles={{body: {padding: "0.25em 1em"}}}>
+                 styles={{body: {padding: "0.25em 0.5em"}}}>
         <div style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             fontSize: NarrowScreen ? "2.5em" : "3em",
             background: "white",
-            padding: NarrowScreen ? "0em" : "0.25em"
+            padding: NarrowScreen ? "0em" : "0em 0.25em"
         }}>
             <div style={{display: "flex", alignItems: "center"}}>
                 <div style={{
                     color: "rgba(0, 0, 0, 0.5)",
-                    fontSize: "0.7em",
+                    fontSize: "0.5em",
                     marginRight: "0.5em",
                 }}>
                     {Home ? <HomeOutlined style={{marginTop: "0.4em"}}/> :
@@ -144,7 +144,8 @@ export function OneTeamScore({Matchups, Team, Home, NarrowScreen}: OneTeamScoreP
 
 
             <div style={{fontWeight: "bold", display: "inline-flex", alignItems: "center"}}>
-                <span style={{color: "rgba(0, 0, 0, 0.5)", fontSize: "0.6em", marginTop: "0.2em", marginRight: "1em"}}>
+                <span
+                    style={{color: "rgba(0, 0, 0, 0.4)", fontSize: "0.5em", marginTop: "0.2em", marginRight: "1em"}}>
                     <WonLostTopLine Matchups={Matchups} Home={Home}/>
                 </span>
 
