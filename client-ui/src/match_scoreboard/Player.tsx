@@ -5,6 +5,7 @@ import {useSearchParams} from "react-router-dom";
 import {useEffect} from "react";
 import {Simulate} from "react-dom/test-utils";
 import play = Simulate.play;
+import {TooltipPlacement} from "antd/es/tooltip";
 
 
 export type PlayerProps = {
@@ -19,7 +20,12 @@ export type stringEditorDisplayType = {
     readOnly: boolean
 }
 
-function NameDisplay({value, setValue, onSave, readOnly}: stringEditorDisplayType) {
+type NameDisplayProps = stringEditorDisplayType & {
+    Player1: boolean
+    NarrowScreen: boolean
+}
+
+function NameDisplay({value, setValue, onSave, readOnly, Player1, NarrowScreen}: NameDisplayProps) {
     const onOpenChange = (open: boolean) => {
         if (!open) {
             console.log("close the set player name popover")
@@ -34,7 +40,8 @@ function NameDisplay({value, setValue, onSave, readOnly}: stringEditorDisplayTyp
         flex: 1,
         display: "flex",
         flexDirection: "column",
-        alignItems: "center"
+        alignItems: "center",
+        textAlign: "center"
     }}>
         {nameValue}
     </span>
@@ -48,16 +55,31 @@ function NameDisplay({value, setValue, onSave, readOnly}: stringEditorDisplayTyp
     }
 
     const content = <Input value={value}
+                           style={{fontSize: "1.4em"}}
                            onChange={onChange}
                            ref={el => {
                                setTimeout(() => el?.focus(), 0);
                            }}
     />
 
-    return <Popover title={"Set player name"}
+    const title = <span style={{fontSize: "1.4em"}}>Set player name</span>
+
+    let placement: TooltipPlacement = undefined
+    if (NarrowScreen) {
+        if (Player1) {
+            placement = "topRight"
+        } else {
+            placement = "topLeft"
+        }
+    }
+
+    return <Popover title={title}
                     content={content}
                     onOpenChange={onOpenChange}
-                    trigger={"click"}>
+                    trigger={"click"}
+                    placement={placement}
+
+    >
         {name}
     </Popover>
 }
@@ -85,9 +107,10 @@ type PlayerDisplayProps = {
     player_line: number
     home: boolean
     initialName: string
+    narrowScreen: boolean
 }
 
-export function Player({matchup_line, player1, player_line, home, initialName}: PlayerDisplayProps) {
+export function Player({matchup_line, player1, player_line, home, initialName, narrowScreen}: PlayerDisplayProps) {
     const [name, setName] = React.useState<string>(initialName)
     const [updateName] = useUpdateNameForLineMutation()
 
@@ -122,7 +145,8 @@ export function Player({matchup_line, player1, player_line, home, initialName}: 
         <span style={{marginRight: player1 ? 0 : "0.5em"}}>
             {player1 ? null : <LineNumber line={player_line} name={""}/>}
         </span>
-        <NameDisplay value={name} setValue={setName} onSave={onSave} readOnly={!key}/>
+        <NameDisplay value={name} setValue={setName} onSave={onSave} readOnly={!key}
+                     Player1={player1} NarrowScreen={narrowScreen}/>
 
         <span style={{marginLeft: player1 ? "0.5em" : 0}}>
             {player1 ? <LineNumber line={player_line} name={""}/> : null}

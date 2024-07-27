@@ -12,7 +12,7 @@ export type PairingProps = {
     NarrowScreen?: boolean
 }
 
-export function Pairing({Result, Home, Color, player1, player2}: PairingProps) {
+export function Pairing({Result, Home, Color, player1, player2, NarrowScreen}: PairingProps) {
 
     const title = <SetScores Us={Home ? Result.Us : Result.Them}
                              Them={Home ? Result.Them : Result.Us}
@@ -49,6 +49,7 @@ export function Pairing({Result, Home, Color, player1, player2}: PairingProps) {
                             home={Home}
                             matchup_line={lineString}
                             initialName={player1.name}
+                            narrowScreen={NarrowScreen}
                     />
                 </div>
                 <span style={{
@@ -62,6 +63,7 @@ export function Pairing({Result, Home, Color, player1, player2}: PairingProps) {
                             home={Home}
                             matchup_line={lineString}
                             initialName={player2.name}
+                            narrowScreen={NarrowScreen}
                     />
                 </div>
             </div>

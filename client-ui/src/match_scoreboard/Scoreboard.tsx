@@ -228,16 +228,16 @@ export function Scoreboard() {
     // @ts-ignore
     return <div style={mainStyle}>
         <div style={{
-            display: "block",
+            display: "flex",
             flexDirection: "column",
-            flexWrap: "wrap",
+            flexWrap: narrowScreen ? "wrap" : "nowrap",
             overflowY: narrowScreen ? "auto" : "clip",
             justifyContent: "space-around",
             width: "100%",
             height: narrowScreen ? "" : "100%"
         }}>
             <div style={{
-                padding: "1em",
+                padding: "1.5em 1em",
                 paddingBottom: narrowScreen ? "0em" : "0.5em",
                 display: "flex",
                 width: "calc(100% - 2em)",

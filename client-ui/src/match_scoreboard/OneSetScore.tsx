@@ -11,8 +11,10 @@ type OneSetScoreProps = {
 
 export function OneSetScore({value, setValue, max, onSave, readOnly}: OneSetScoreProps) {
 
-    const content = <InputNumber size={"large"} value={value} onChange={(v) => setValue(v)} min={0} max={max}
-                                 style={{width: "100%"}}/>
+    const content = <InputNumber size={"large"}
+                                 value={value} onChange={(v) => setValue(v)}
+                                 min={0} max={max}
+                                 style={{width: "100%", fontSize: "1.4em"}}/>
 
     const onOpenChange = (open: boolean) => {
         if (!open) {
@@ -37,7 +39,9 @@ export function OneSetScore({value, setValue, max, onSave, readOnly}: OneSetScor
         return displayValue
     }
 
-    return <Popover title={"Games won"} content={content} trigger={"click"} overlayStyle={{width: 200, fontSize: "1vw"}}
+    const title = <span style={{fontSize: "1.4em"}}>Games won</span>
+
+    return <Popover title={title} content={content} trigger={"click"} overlayStyle={{width: 200}}
                     onOpenChange={onOpenChange}>
         {displayValue}
     </Popover>
