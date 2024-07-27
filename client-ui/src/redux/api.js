@@ -157,7 +157,7 @@ export const {
     useDeleteWeekMutation,
     useGetWeeksByIdsQuery,
     useImportUsersMutation,
-    useGetMatchScoresQuery,
+    useLazyGetMatchScoresQuery,
     useUpdateMatchScoresForLineMutation,
     useUpdateNameForLineMutation,
     useUpdateTeamInfoMutation,

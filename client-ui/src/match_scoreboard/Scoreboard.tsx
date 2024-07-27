@@ -1,16 +1,16 @@
 import * as React from "react";
-import {Matchup, MatchupProps} from "./Matchup";
+import {MatchupProps} from "./Matchup";
 import {Skeleton} from "antd";
 import {calcTotal, MatchProps} from "./SetScores";
 import {PairingProps} from "./Pairing";
-import {useGetMatchScoresQuery} from "../redux/api.js";
+import {useLazyGetMatchScoresQuery} from "../redux/api.js";
 import {PlayerProps} from "./Player";
 import {OneTeamScore} from "./OneTeamScore";
 import {MatchupGroup} from "./MatchupGroup";
 
 export const CARD_WIDTH = 300
 export const CARD_GAP_EM = 2
-
+const WEBSOCKET_PING_INTERVAL_MS = 60000 // * 15
 
 export function calculateScores(matchups: MatchupProps[], home: boolean): number {
     let total = 0
@@ -63,6 +63,10 @@ function getMatchup(object: any, index: number, home: boolean): MatchupProps {
 }
 
 function getAllMatchups(object: any): MatchupProps[] {
+    if (!object) {
+        return []
+    }
+
     const output: MatchupProps[] = []
     for (let i = 0; i < 6; i++) {
         const m = getMatchup(object, i, true)
@@ -95,6 +99,19 @@ type LineValue = {
 }
 
 function getLineValue(object: any, home: boolean, index: number): LineValue {
+    if (!object) {
+        const p: PairingProps = {
+            Color: "", Home: false, player1: {
+                line: 0,
+                name: ""
+            }, player2: {
+                line: 0,
+                name: ""
+            }
+        }
+        return {pairing: p, set_scores: {set1_games: 0, set2_games: 0, set3_games: 0}}
+    }
+
     let root = object?.home_scores
     if (!home) {
         root = object?.away_scores
@@ -134,30 +151,55 @@ function getResult(object: any, index: number, home: boolean): MatchProps {
 export function Scoreboard() {
 
     const [width, setWidth] = React.useState(window.innerWidth);
-    const [height, setHeight] = React.useState(window.innerHeight);
+
+    let socket: WebSocket = null
 
     const breakpoint = CARD_WIDTH * 3;
     React.useEffect(() => {
         const handleResizeWindow = () => {
             setWidth(window.innerWidth);
-            setHeight(window.innerHeight)
         }
 
         // subscribe to window resize event "onComponentDidMount"
         window.addEventListener("resize", handleResizeWindow);
+
+        websocketFunc()
+
+        setInterval(() => {
+            console.log("send ping")
+            socket.send("p")
+        }, WEBSOCKET_PING_INTERVAL_MS)
+
         return () => {
             // unsubscribe "onComponentDestroy"
             window.removeEventListener("resize", handleResizeWindow);
         };
     }, []);
 
+    const websocketFunc = () => {
+        socket = new WebSocket(`ws://${window.location.host}/api/ws`);
+
+        // Connection opened
+        socket.addEventListener("open", (event) => {
+            trigger()
+        });
+
+        // Listen for messages
+        socket.addEventListener("message", (event) => {
+            trigger()
+        });
+
+        socket.onclose = () => {
+            console.log("socket closed")
+        }
+
+    }
+
     const narrowScreen = width < breakpoint
 
-    const {data, isLoading} = useGetMatchScoresQuery(null, {
-        pollingInterval: 15000
-    })
-
-    if (isLoading) {
+    const [trigger, result] = useLazyGetMatchScoresQuery()
+    const data = result?.data
+    if (result.isUninitialized || result.isLoading) {
         return <Skeleton/>
     }
 
@@ -202,9 +244,16 @@ export function Scoreboard() {
                 flexDirection: narrowScreen ? "column" : "row",
                 justifyContent: narrowScreen ? "flex-start" : "space-between",
             }}>
-                <OneTeamScore Matchups={Matchups} Team={HomeTeam} Home={true} NarrowScreen={narrowScreen}/>
+                <OneTeamScore Matchups={Matchups}
+                              Team={HomeTeam}
+                              Home={true}
+                              NarrowScreen={narrowScreen}/>
                 <span style={{width: narrowScreen ? "0.25em" : "1em"}}/>
-                <OneTeamScore Matchups={Matchups} Team={AwayTeam} Home={false} NarrowScreen={narrowScreen}/>
+                <OneTeamScore Matchups={Matchups}
+                              Team={AwayTeam}
+                              NarrowScreen={narrowScreen}
+                              Home={false}
+                />
             </div>
             <div style={{height: "90%", width: "100%"}}>
                 <MatchupGroup Matchups={row1} NarrowScreen={narrowScreen} ScreenWidth={width}/>

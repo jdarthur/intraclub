@@ -7,6 +7,7 @@ import {useSearchParams} from "react-router-dom";
 import {stringEditorDisplayType} from "./Player";
 import {HomeOutlined, TruckOutlined} from "@ant-design/icons";
 import {WonLostTopLine} from "./WonLostTopLine";
+import {useEffect} from "react";
 
 export type Team = {
     name: string
@@ -80,9 +81,16 @@ type OneTeamScoreProps = {
 }
 
 export function OneTeamScore({Matchups, Team, Home, NarrowScreen}: OneTeamScoreProps) {
-
     const [team, setTeam] = React.useState<Team>(Team)
     const [updateTeam] = useUpdateTeamInfoMutation()
+
+    useEffect(() => {
+        const v: Team = {
+            name: Team.name,
+            color: Team.color,
+        }
+        setTeam(v)
+    }, [Team])
 
     // get the `key` value from the query params which determines if we are in read-only mode
     const [searchParams] = useSearchParams()

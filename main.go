@@ -86,6 +86,13 @@ func main() {
 	noAuth.Handle("PUT", "/match_player_names", controllers.UpdateMatchNames)
 	noAuth.Handle("PUT", "/match_team_info", controllers.UpdateMatchTeam)
 
+	// initialize the websocket server + serve a websocket connection func on the /api/ws path.
+	// this is used for notifications on the client side as opposed to a polling loop which
+	// can be kind of wasteful if we have a lot of clients connected or a client connected for
+	// a long amount of time without any updates actually occurring to the scoreboard
+	controllers.WebsocketInit()
+	noAuth.Handle("GET", "/ws", controllers.WebSocketServer)
+
 	err = router.Run(":8080")
 	if err != nil {
 		panic(err)

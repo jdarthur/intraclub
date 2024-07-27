@@ -1,6 +1,5 @@
 import {InputNumber, Popover} from "antd";
 import * as React from "react";
-import {useSearchParams} from "react-router-dom";
 
 type OneSetScoreProps = {
     value: number

@@ -25,7 +25,6 @@ export function Matchup({
                             WindowWidth,
                         }: MatchupProps) {
 
-    console.log(`card size: ${WindowWidth / 3} - ${CARD_GAP_EM}em `)
     const width = WindowWidth ? (`calc(${WindowWidth / 3}px - ${CARD_GAP_EM + 1}em)`) : CARD_WIDTH
 
     return <div style={{

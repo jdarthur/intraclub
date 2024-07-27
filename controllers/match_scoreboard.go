@@ -8,6 +8,54 @@ import (
 
 var tempKey = "5df41d43-5893-4101-8126-b5148e5f3185"
 
+func DummyHome() *MatchScores {
+	m := NewMatchScores()
+
+	m.OneOne.Pairing.Player1.Name = "Clay DeFriece"
+	m.OneOne.Pairing.Player2.Name = "Austin Reynolds"
+
+	m.OneTwo.Pairing.Player1.Name = "Michael Bulostin"
+	m.OneTwo.Pairing.Player2.Name = "Chris Wilson"
+
+	m.OneThree.Pairing.Player1.Name = "JD Arthur"
+	m.OneThree.Pairing.Player2.Name = "Jake Maloch"
+
+	m.TwoTwo.Pairing.Player1.Name = "Hayden Van Dyke"
+	m.TwoTwo.Pairing.Player2.Name = "Connor DelPrete"
+
+	m.TwoThree.Pairing.Player1.Name = "Andy Lascik"
+	m.TwoThree.Pairing.Player2.Name = "Eli Cohen"
+
+	m.ThreeThree.Pairing.Player1.Name = "Don Schmal"
+	m.ThreeThree.Pairing.Player2.Name = "Scott Chenoweth"
+
+	return m
+}
+
+func DummyAway() *MatchScores {
+	m := NewMatchScores()
+
+	m.OneOne.Pairing.Player1.Name = "Ethan Moland"
+	m.OneOne.Pairing.Player2.Name = "Sean Pulanski"
+
+	m.OneTwo.Pairing.Player1.Name = "Josh Turknett"
+	m.OneTwo.Pairing.Player2.Name = "Sean Connelly"
+
+	m.OneThree.Pairing.Player1.Name = "Tomer Wagshal"
+	m.OneThree.Pairing.Player2.Name = "Justin Chan"
+
+	m.TwoTwo.Pairing.Player1.Name = "Jim Bernard"
+	m.TwoTwo.Pairing.Player2.Name = "Dave Lindsay"
+
+	m.TwoThree.Pairing.Player1.Name = "Dan Huber"
+	m.TwoThree.Pairing.Player2.Name = "Ami Busel"
+
+	m.ThreeThree.Pairing.Player1.Name = "Jim Byrd"
+	m.ThreeThree.Pairing.Player2.Name = "Jonathan Link"
+
+	return m
+}
+
 // MatchScores is a collection of all the Matchup s for a particular team,
 // i.e. a collection of six Pairing s each of which has a set of MatchSetScores
 type MatchScores struct {
@@ -122,10 +170,10 @@ type FullScores struct {
 
 // full is the in-memory running tally of all the matchups in the active match
 var full = FullScores{
-	Home:     NewMatchScores(),
-	Away:     NewMatchScores(),
-	HomeTeam: Team{},
-	AwayTeam: Team{},
+	Home:     DummyHome(),
+	Away:     DummyAway(),
+	HomeTeam: Team{Name: "Blue", Color: "blue"},
+	AwayTeam: Team{Name: "Green", Color: "green"},
 }
 
 func GetMatchScoreboard(c *gin.Context) {
@@ -193,6 +241,8 @@ func UpdateMatchScore(c *gin.Context) {
 		full.Away.SetMatchup(request.Line, m)
 	}
 
+	UpdateOccurred()
+
 	c.JSON(200, full)
 }
 
@@ -240,6 +290,8 @@ func UpdateMatchNames(c *gin.Context) {
 		full.Away.SetMatchup(request.Line, m)
 	}
 
+	UpdateOccurred()
+
 	c.JSON(200, full)
 }
 
@@ -275,6 +327,8 @@ func UpdateMatchTeam(c *gin.Context) {
 		full.AwayTeam.Color = request.Color
 		full.AwayTeam.Name = request.Name
 	}
+
+	UpdateOccurred()
 
 	c.JSON(200, full)
 }
