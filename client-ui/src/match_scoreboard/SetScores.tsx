@@ -195,7 +195,7 @@ export function SetScores({Us, Them, MatchId, Home, PlayoffMode, Player1, Player
         <div style={scoreStyle(false, false, false)}>
             <OneSetScore
                 value={setValues.Set1Value}
-                max={Them.set1_games == 5 ? 7 : 6}
+                max={Them.set1_games >= 5 ? 7 : 6}
                 setValue={(v) => updateSetValue(0, v)}
                 onSave={onSave}
                 readOnly={!key}
@@ -204,7 +204,7 @@ export function SetScores({Us, Them, MatchId, Home, PlayoffMode, Player1, Player
         <div style={scoreStyle(false, false, false)}>
             <OneSetScore
                 value={setValues.Set2Value}
-                max={Them.set2_games == 5 ? 7 : 6}
+                max={Them.set2_games >= 5 ? 7 : 6}
                 setValue={(v) => updateSetValue(1, v)}
                 onSave={onSave}
                 readOnly={!key}/>
@@ -221,8 +221,17 @@ export function SetScores({Us, Them, MatchId, Home, PlayoffMode, Player1, Player
 
         {/* '+5' or '-' indicator if the match is won */}
         <div style={scoreStyle(false, false, false)}>
-            <span style={{color: "rgba(0, 0, 0, 0.3)", fontWeight: "lighter"}}>
-                {won ? "+5" : "--"}
+            <span style={{
+                color: "rgba(0, 0, 0, 0.3)",
+                fontWeight: "lighter",
+                display: "flex",
+                alignItems: "center",
+                fontSize: "0.85em"
+            }}>
+                <span style={{fontSize: "max(1vw, 0.6em)"}}>
+                    {won ? "+" : ""}
+                </span>
+                {won ? "5" : "--"}
             </span>
         </div>
         <div style={scoreStyle(true, won, lost)}>{totalDisplay}</div>

@@ -6,6 +6,7 @@ import {
     CloseCircleFilled,
 } from "@ant-design/icons";
 import {Space} from "antd";
+import {WinLossIcon} from "./WinLossIcon";
 
 type WonLostTopLineProps = {
     Matchups: MatchupProps[]
@@ -34,11 +35,13 @@ export function WonLostTopLine({Matchups, Home}: WonLostTopLineProps) {
             {wonCount}
             <span style={{width: "0.25em"}}/>
             <CheckCircleFilled style={{fontSize: "0.75em"}}/>
+            {/*<WinLossIcon win={true} sizeEm={0.75}/>*/}
         </div>
         <div style={{display: "flex", alignItems: "center"}}>
             {lostCount}
             <span style={{width: "0.25em"}}/>
             <CloseCircleFilled style={{fontSize: "0.75em"}}/>
+            {/*<WinLossIcon win={false} sizeEm={0.75}/>*/}
         </div>
 
     </Space>

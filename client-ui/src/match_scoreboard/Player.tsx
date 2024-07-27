@@ -2,10 +2,12 @@ import * as React from "react"
 import {Input, Popover, Space} from "antd";
 import {useUpdateNameForLineMutation} from "../redux/api.js";
 import {useSearchParams} from "react-router-dom";
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 import {Simulate} from "react-dom/test-utils";
 import play = Simulate.play;
 import {TooltipPlacement} from "antd/es/tooltip";
+import {CloseOutlined} from "@ant-design/icons";
+import {TooltipFocus} from "./TooltipFocus";
 
 
 export type PlayerProps = {
@@ -26,23 +28,27 @@ type NameDisplayProps = stringEditorDisplayType & {
 }
 
 function NameDisplay({value, setValue, onSave, readOnly, Player1, NarrowScreen}: NameDisplayProps) {
-    const onOpenChange = (open: boolean) => {
-        if (!open) {
-            console.log("close the set player name popover")
-            onSave()
-        }
+    const [open, setOpen] = useState<boolean>(false)
+
+    const onClose = () => {
+        console.log("close the 'set player name' popover")
+        setOpen(false)
+        onSave()
     }
 
     let nameValue = value ? value : <span style={{color: "#bfbfbf"}}>Name not set</span>
-    const name = <span style={{
-        cursor: readOnly ? "auto" : "pointer",
-        fontSize: "max(1.3vw, 1.5em)",
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        textAlign: "center"
-    }}>
+    const name = <span
+        style={{
+            cursor: readOnly ? "auto" : "pointer",
+            fontSize: "max(1.3vw, 1.5em)",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center"
+        }}
+        onClick={() => setOpen(true)}
+    >
         {nameValue}
     </span>
 
@@ -62,7 +68,11 @@ function NameDisplay({value, setValue, onSave, readOnly, Player1, NarrowScreen}:
                            }}
     />
 
-    const title = <span style={{fontSize: "1.4em"}}>Set player name</span>
+    const title = <span
+        style={{fontSize: "1.4em", display: "flex", alignItems: "center", justifyContent: "space-between"}}>
+        Set player name
+        <CloseOutlined onClick={onClose} style={{color: "rgba(0, 0, 0, 0.3)"}}/>
+    </span>
 
     let placement: TooltipPlacement = undefined
     if (NarrowScreen) {
@@ -73,15 +83,19 @@ function NameDisplay({value, setValue, onSave, readOnly, Player1, NarrowScreen}:
         }
     }
 
-    return <Popover title={title}
-                    content={content}
-                    onOpenChange={onOpenChange}
-                    trigger={"click"}
-                    placement={placement}
+    return <div>
+        <TooltipFocus open={open} zIndex={3} onClose={onClose}/>
+        <Popover title={title}
+                 open={open}
+                 content={content}
+                 trigger={"click"}
+                 placement={placement}
+                 zIndex={4}
+        >
+            {name}
+        </Popover>
+    </div>
 
-    >
-        {name}
-    </Popover>
 }
 
 function LineNumber({line}: PlayerProps) {

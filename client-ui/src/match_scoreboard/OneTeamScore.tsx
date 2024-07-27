@@ -5,9 +5,10 @@ import {calculateScores, CARD_GAP_EM, CARD_WIDTH} from "./Scoreboard";
 import {useUpdateTeamInfoMutation} from "../redux/api";
 import {useSearchParams} from "react-router-dom";
 import {stringEditorDisplayType} from "./Player";
-import {HomeOutlined, TruckOutlined} from "@ant-design/icons";
+import {CloseOutlined, HomeOutlined, TruckOutlined} from "@ant-design/icons";
 import {WonLostTopLine} from "./WonLostTopLine";
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
+import {TooltipFocus} from "./TooltipFocus";
 
 export type Team = {
     name: string
@@ -21,16 +22,22 @@ function TeamColorDisplay({value, setValue, onSave, readOnly}: stringEditorDispl
         setValue(hex)
     }
 
-    // when the modal goes from open -> closed, we will save the data via the API
-    const onOpenChange = (open: boolean) => {
-        if (!open) {
-            console.log("close modal for team color picker")
-            onSave()
-        }
+    const [open, setOpen] = useState<boolean>(false)
+
+    const onClose = () => {
+        console.log("set color: ", value)
+        setOpen(false)
+        onSave()
     }
 
-    return <ColorPicker value={value} onChange={onChange} disabled={readOnly} onOpenChange={onOpenChange}
-                        size={"large"}/>
+    return <div style={{display: "flex", alignItems: "center"}}>
+        <TooltipFocus open={open} zIndex={3} onClose={onClose}/>
+
+        <div onClick={() => setOpen(true)} style={{display: "flex", alignItems: "center"}}>
+            <ColorPicker value={value} onChange={onChange} disabled={readOnly} open={open}
+                         size={"large"}/>
+        </div>
+    </div>
 }
 
 function TeamNameDisplay({value, setValue, onSave, readOnly}: stringEditorDisplayType) {
@@ -40,19 +47,22 @@ function TeamNameDisplay({value, setValue, onSave, readOnly}: stringEditorDispla
         setValue(event.target.value)
     }
 
-    // when the modal goes from open -> closed, we will save the data via the API
-    const onOpenChange = (open: boolean) => {
-        if (!open) {
-            console.log("close modal for team name input")
-            onSave()
-        }
+    const [open, setOpen] = useState<boolean>(false)
+
+    const onClose = () => {
+        console.log("Update team name: ", value)
+        setOpen(false)
+        onSave()
     }
+
 
     // name value will show a grey placeholder value when unset
     const nameValue = value ? value : <span style={{color: "#bfbfbf"}}> Name not set </span>
 
     // this is what's primarily displayed in the modal
-    const name = <span style={{minWidth: 100, minHeight: "50px", cursor: readOnly ? "auto" : "pointer"}}>
+    const name = <span
+        style={{minWidth: 100, minHeight: "50px", cursor: readOnly ? "auto" : "pointer"}}
+        onClick={() => setOpen(true)}>
         {nameValue}
     </span>
 
@@ -61,16 +71,28 @@ function TeamNameDisplay({value, setValue, onSave, readOnly}: stringEditorDispla
         return name
     }
 
+    const title = <span
+        style={{fontSize: "1.4em", display: "flex", alignItems: "center", justifyContent: "space-between"}}>
+        Set team name
+        <CloseOutlined onClick={onClose} style={{color: "rgba(0, 0, 0, 0.4)"}}/>
+    </span>
+
     // content inside of the popover
     const content = <Input value={value}
+                           style={{fontSize: "1.4em"}}
                            onChange={onChange}
                            ref={el => {
                                setTimeout(() => el?.focus(), 0); // autofocus the input
                            }}/>
 
-    return <Popover title={"Update team name"} content={content} onOpenChange={onOpenChange} trigger={"click"}>
-        {name}
-    </Popover>
+
+    return <div>
+        <TooltipFocus open={open} zIndex={3} onClose={onClose}/>
+        <Popover title={title} content={content} open={open} trigger={"click"} zIndex={4}>
+            {name}
+        </Popover>
+    </div>
+
 }
 
 type OneTeamScoreProps = {
@@ -128,7 +150,7 @@ export function OneTeamScore({Matchups, Team, Home, NarrowScreen}: OneTeamScoreP
             justifyContent: "space-between",
             fontSize: NarrowScreen ? "2.5em" : "3.5em",
             background: "white",
-            padding: NarrowScreen ? "0em" : "0em 0.25em"
+            padding: NarrowScreen ? "0em 0.1em" : "0em 0.25em"
         }}>
             <div style={{display: "flex", alignItems: "center"}}>
                 <div style={{
@@ -157,7 +179,7 @@ export function OneTeamScore({Matchups, Team, Home, NarrowScreen}: OneTeamScoreP
                         color: "rgba(0, 0, 0, 0.3)",
                         fontSize: "0.6em",
                         marginTop: "0.2em",
-                        marginRight: "1em",
+                        marginRight: NarrowScreen ? "0.7em" : "1em",
                     }}>
                     <WonLostTopLine Matchups={Matchups} Home={Home}/>
                 </span>
