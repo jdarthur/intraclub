@@ -217,7 +217,7 @@ export function SetScores({Us, Them, MatchId, Home, PlayoffMode, Player1, Player
         <div style={scoreStyle(false, false, false)}>
             <OneSetScore
                 value={setValues.Set3Value}
-                max={Them.set2_games >= 5 ? 7 : 6}
+                max={Them.set3_games >= 5 ? 7 : 6}
                 setValue={(v) => updateSetValue(2, v)}
                 onSave={onSave}
                 readOnly={!key}/>
