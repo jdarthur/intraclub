@@ -29,7 +29,11 @@ export function getLineString(player1: PlayerProps, player2: PlayerProps): strin
 }
 
 export function isMatchWon(us: SetScoreProps, them: SetScoreProps): boolean {
-    if (us.set3_games > 0) {
+    if (us.set3_games >= 6 && them.set3_games < 6) {
+        return true
+    }
+
+    if (us.set3_games == 7 && them.set3_games == 6) {
         return true
     }
 
@@ -213,7 +217,7 @@ export function SetScores({Us, Them, MatchId, Home, PlayoffMode, Player1, Player
         <div style={scoreStyle(false, false, false)}>
             <OneSetScore
                 value={setValues.Set3Value}
-                max={1}
+                max={Them.set2_games >= 5 ? 7 : 6}
                 setValue={(v) => updateSetValue(2, v)}
                 onSave={onSave}
                 readOnly={!key}/>
