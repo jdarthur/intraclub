@@ -41,6 +41,7 @@ const (
 	FieldIsRequired                                     // User did not provide a value for a required field
 	FacilityMustHaveAtLeastOneCourt                     // create or update a model.Facility where `courts` = 0
 	InvalidNestedObjectId                               // InvalidPrimitiveObjectId, but with a CrudRecord object type attached
+	EmptyObjectId                                       // InvalidPrimitiveObjectId, but the value is required-but-empty
 )
 
 func (e ErrorCode) String(references []any) string {
@@ -58,6 +59,7 @@ func (e ErrorCode) String(references []any) string {
 		fmt.Sprintf("Field '%s' is required", references...),                     // FieldIsRequired
 		"Facility must have at least 1 court",                                    // FacilityMustHaveAtLeastOneCourt
 		fmt.Sprintf("Invalid object ID for nested %s: '%s'", references...),      // InvalidNestedObjectId
+		"Object ID must not be empty",                                            // EmptyObjectId
 	}[e]
 }
 
@@ -76,6 +78,7 @@ func (e ErrorCode) HttpStatus() int {
 		http.StatusBadRequest,          // FieldIsRequired
 		http.StatusBadRequest,          // FacilityMustHaveAtLeastOneCourt
 		http.StatusBadRequest,          //InvalidNestedObjectId
+		http.StatusBadRequest,          //EmptyObjectId
 	}[e]
 }
 

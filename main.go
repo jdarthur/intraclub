@@ -86,6 +86,14 @@ func main() {
 	noAuth.Handle("PUT", "/match_player_names", controllers.UpdateMatchNames)
 	noAuth.Handle("PUT", "/match_team_info", controllers.UpdateMatchTeam)
 
+	noAuth.Handle("GET", "skill_info_options", controllers.GetSkillInfoOptions)
+
+	skillInfoCtl := common.CrudController{Controller: controllers.SkillInfoController{}, Database: common.GlobalDbProvider}
+	apiAuthAndAccess.Handle("POST", "skill_info", skillInfoCtl.Create)
+	noAuth.Handle("GET", "skill_info_for_user/:id", controllers.GetSkillInfoForUser)
+	skillInfoOwnedByUser := middleware.OwnedByUserWrapper{Record: &model.SkillInfo{}}
+	apiAuthAndAccess.Handle("DELETE", "/skill_info/:id", skillInfoOwnedByUser.OwnedByUser, skillInfoCtl.Delete)
+
 	// initialize the websocket server + serve a websocket connection func on the /api/ws path.
 	// this is used for notifications on the client side as opposed to a polling loop which
 	// can be kind of wasteful if we have a lot of clients connected or a client connected for

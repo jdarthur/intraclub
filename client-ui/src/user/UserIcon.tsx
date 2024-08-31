@@ -3,9 +3,8 @@ import {Avatar, Button, Divider, Popover} from "antd";
 import * as React from "react";
 import {ProduceCssColorFromHashedName} from "../navigation/NavBarUserIcon";
 import {Link} from "react-router-dom";
-import {logoutUser} from "../redux/auth";
+import {logoutUser} from "../redux/auth.js";
 import {useDispatch} from "react-redux";
-import {c} from "vite/dist/node/types.d-aGj9QkWt";
 
 type User = {
     FirstName: string

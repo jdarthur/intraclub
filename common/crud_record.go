@@ -9,6 +9,16 @@ type ListOfCrudRecords interface {
 	Get(index int) CrudRecord
 }
 
+// ForEachCrudRecord runs through all of the CrudRecord entries in the provided
+// ListOfCrudRecords and calls the user-specified function for each record. This
+// can be used to e.g. map/reduce operations on all of the records of a type
+func ForEachCrudRecord(l ListOfCrudRecords, f func(record CrudRecord)) {
+	for i := 0; i < l.Length(); i++ {
+		record := l.Get(i)
+		f(record)
+	}
+}
+
 type CrudRecord interface {
 	RecordType() string               // A string name for this record, used as the DB collection name
 	OneRecord() CrudRecord            // One instance of the CrudRecord's type. Must be a pointer

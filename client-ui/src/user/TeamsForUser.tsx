@@ -19,7 +19,7 @@ export function TeamsForUser({UserId}: ByUserId) {
         </div>)
     }
 
-    return <Card title={"Teams"} style={{width: 300}}>
+    return <Card title={"Teams"} style={{width: 500}}>
         {content}
     </Card>
 }

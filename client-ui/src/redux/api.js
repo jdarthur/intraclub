@@ -39,6 +39,7 @@ export const mainApi = createApi({
         }),
         getUserById: builder.query({
             query: (userId) => ({url: `users/${userId}`}),
+            providesTags: ["user_by_id"]
         }),
         getTeamsByUserId: builder.query({
             query: (userId) => ({url: `teams_for_user/${userId}`}),
@@ -131,6 +132,22 @@ export const mainApi = createApi({
             query: (body) => ({url: `match_team_info?key=${body.key}`, method: "PUT", body: body}),
             invalidatesTags: ["match_scores"]
         }),
+        getSkillInfo: builder.query({
+            query: (id) => ({url: `skill_info_for_user/${id}`}),
+            providesTags: ["skill_info"]
+        }),
+        getSkillInfoOptions: builder.query({
+            query: () => ({url: `skill_info_options`}),
+            providesTags: ["skill_info_options"]
+        }),
+        createSkillInfo: builder.mutation({
+            query: (body) => ({url: `skill_info`, method: "POST", body: body}),
+            invalidatesTags: ["skill_info"]
+        }),
+        deleteSkillInfo: builder.mutation({
+            query: (id) => ({url: `skill_info/${id}`, method: "DELETE"}),
+            invalidatesTags: ["skill_info"]
+        }),
     })
 });
 
@@ -161,4 +178,8 @@ export const {
     useUpdateMatchScoresForLineMutation,
     useUpdateNameForLineMutation,
     useUpdateTeamInfoMutation,
+    useGetSkillInfoQuery,
+    useCreateSkillInfoMutation,
+    useGetSkillInfoOptionsQuery,
+    useDeleteSkillInfoMutation,
 } = mainApi

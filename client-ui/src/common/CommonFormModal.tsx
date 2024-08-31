@@ -1,13 +1,14 @@
 import * as React from 'react';
 import {Alert, Button, Form, FormInstance, Modal} from "antd";
 import {EditOutlined, PlusSquareOutlined} from "@ant-design/icons";
-import {Simulate} from "react-dom/test-utils";
-import click = Simulate.click;
 
 export type CommonModalProps = {
     // name of the record, e.g. `"facility"`, `"league"`, etc.
     //  - this is used to populate the text in the create button / modal title
     ObjectType: string
+
+    // Custom title for the button that opens the modal
+    title?: string
 
     // `true` if this is an update call
     //   - used for submit button text / part of the modal's title)
@@ -89,14 +90,17 @@ export function CommonFormModal({...props}: CommonModalProps) {
 
 
     // title of the modal
-    const title = props.IsUpdate ? `Update ${props.ObjectType}` : `Create a new ${props.ObjectType}`
+    let title = props.IsUpdate ? `Update ${props.ObjectType}` : `Create a new ${props.ObjectType}`
+    if (props.title != "") {
+        title = props.title;
+    }
 
     // title of the submit button at the bottom of the modal
     const okText = props.IsUpdate ? "Update" : "Create"
 
     // default button to open the modal when IsUpdate == false
     const DefaultButton = <Button type={"primary"} icon={<PlusSquareOutlined/>}>
-        Create a new {props.ObjectType}
+        {title}
     </Button>
 
     // on update, we will just show an edit icon
