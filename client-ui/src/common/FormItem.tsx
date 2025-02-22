@@ -8,23 +8,27 @@ type FormItemProps = {
     children?: React.ReactNode
     inputType?: string
     disabled?: boolean
+    placeholder?: string
 }
 
 const INPUT = "input"
+const SUGGESTION_INPUT = "suggestion_input"
 const NUMBER_INPUT = "number_input"
 const TEXT_AREA = "text_area"
 
-export function FormItem({name, label, children, inputType, disabled}: FormItemProps) {
+export function FormItem({name, label, children, inputType, disabled, placeholder}: FormItemProps) {
 
     let content = children
     if (!content && inputType) {
 
         if (inputType == INPUT) {
-            content = <Input disabled={disabled}/>
+            content = <Input disabled={disabled} placeholder={placeholder}/>
         } else if (inputType == NUMBER_INPUT) {
-            content = <InputNumber disabled={disabled}/>
+            content = <InputNumber disabled={disabled} placeholder={placeholder}/>
         } else if (inputType == TEXT_AREA) {
-            content = <Input.TextArea disabled={disabled}/>
+            content = <Input.TextArea disabled={disabled} placeholder={placeholder}/>
+        } else if (inputType == SUGGESTION_INPUT) {
+            content = <Input disabled={disabled} placeholder={placeholder}/>
         }
     }
 
@@ -40,16 +44,16 @@ export function FormItem({name, label, children, inputType, disabled}: FormItemP
     </Form.Item>
 }
 
-type NameAndLabel = {
+export type NameAndLabel = {
     name: string
     label: string
     disabled?: boolean
+    placeholder?: string
 }
 
-export function InputFormItem({name, label, disabled}: NameAndLabel) {
-    return <FormItem name={name} label={label} inputType={INPUT} disabled={disabled}/>
+export function InputFormItem({name, label, disabled, placeholder}: NameAndLabel) {
+    return <FormItem name={name} label={label} inputType={INPUT} disabled={disabled} placeholder={placeholder}/>
 }
-
 
 export function NumberInputFormItem({name, label}: NameAndLabel) {
     return <FormItem name={name} label={label} inputType={NUMBER_INPUT}/>

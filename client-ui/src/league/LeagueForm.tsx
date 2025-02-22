@@ -6,7 +6,7 @@ import {
     useUpdateLeagueMutation,
     useWhoAmIQuery
 } from "../redux/api.js";
-import {CommonFormModal} from "../common/CommonFormModal";
+import {CommonFormModal, SubmitResult} from "../common/CommonFormModal";
 import {
     InputFormItem,
     SelectFormItem,
@@ -15,9 +15,11 @@ import {
 import {Facility} from "../settings/Facilities";
 import dayjs from "dayjs";
 import {useState} from "react";
-import {WeekSelect} from "./WeekSelect";
-import {Button, Steps} from "antd";
+import {WeekSelect, WeekSelectState} from "./WeekSelect";
+import {Form} from "antd";
 import {ColorSelect, TeamColor} from "./ColorSelect";
+import {StepForm, StepFormStep} from "../common/StepForm";
+import {StepFormModal} from "../common/StepFormModal";
 
 export type League = {
     league_id?: string
@@ -37,19 +39,14 @@ type LeagueFormProps = {
     LeagueId?: string
 }
 
-const MAIN_INFO = 0
-const WEEKS = 1
-const COLORS = 2
-const REVIEW = 3
-
 export function LeagueForm({Update, InitialState, LeagueId}: LeagueFormProps) {
 
     const [weekIds, setWeekIds] = useState<string[]>(InitialState?.weeks || [])
     const [colors, setColors] = useState<TeamColor[]>(InitialState?.colors || [])
+    const [disabled, setDisabled] = useState<boolean>(false)
 
-    const [step, setStep] = useState<number>(0);
-
-    const disabled = step == REVIEW
+    //const [formIsOpen, setFormIsOpen] = useState()
+    const [form] = Form.useForm()
 
     const {data} = useWhoAmIQuery()
 
@@ -64,7 +61,11 @@ export function LeagueForm({Update, InitialState, LeagueId}: LeagueFormProps) {
         value: facility.id
     }))
 
-    const onSave = async (formValues: any) => {
+    const onSave = async (): Promise<SubmitResult> => {
+
+        const formValues = form.getFieldsValue(true)
+        console.log(formValues)
+
         const body: League = {
             name: formValues.name,
             commissioner: data?.user_id,
@@ -79,7 +80,7 @@ export function LeagueForm({Update, InitialState, LeagueId}: LeagueFormProps) {
             func = () => updateLeague({id: LeagueId, body: body})
         }
 
-        return await func()
+        return func()
     }
 
     const mainInfo = <div>
@@ -89,7 +90,7 @@ export function LeagueForm({Update, InitialState, LeagueId}: LeagueFormProps) {
     </div>
 
     const weekSelect = <WeekSelect originalWeekIds={weekIds} setWeekIds={setWeekIds}
-                                   leagueId={LeagueId} update={Update} disabled={disabled}/>
+                                   update={Update} disabled={disabled}/>
 
     const colorSelect = <ColorSelect colors={colors} setColors={setColors} disabled={disabled}/>
 
@@ -100,34 +101,16 @@ export function LeagueForm({Update, InitialState, LeagueId}: LeagueFormProps) {
     </div>
 
 
-    const steps = [
-        {title: "Basic information"},
-        {title: "Weeks"},
-        {title: "Colors"},
-        {title: "Review"}
+    const steps: StepFormStep[] = [
+        {title: "Basic info", content: mainInfo},
+        {title: "Weeks", content: weekSelect},
+        {title: "Colors", content: colorSelect},
+        {title: "Review", content: review}
     ]
 
-    const next = () => {
-
-    }
-
-    return <CommonFormModal ObjectType={"league"} OnSubmit={onSave} IsUpdate={Update} InitialState={newInitialState}>
-        <Steps items={steps} current={step}/>
-        <div style={{marginBottom: "1.5em"}}/>
-
-        {step == MAIN_INFO ? mainInfo : null}
-        {step == WEEKS ? weekSelect : null}
-        {step == COLORS ? colorSelect : null}
-        {step == REVIEW ? review : null}
-
-        <Button onClick={() => setStep(step - 1)} disabled={step == MAIN_INFO}>
-            Back
-        </Button>
-        <Button onClick={() => setStep(step + 1)} disabled={step == REVIEW}>
-            Next
-        </Button>
-
-    </CommonFormModal>
+    return <StepFormModal ObjectType={"league"} IsUpdate={Update} InitialState={newInitialState}
+                          form={form} footer={null} onStepFormFinish={onSave} steps={steps}
+                          setDisabled={setDisabled} children={null} onCancel={onSave}/>
 }
 
 type RealFormState = {

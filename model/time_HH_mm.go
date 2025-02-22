@@ -6,13 +6,13 @@ import (
 	"time"
 )
 
-type hhMmTime struct {
+type HhMmTime struct {
 	time.Time
 }
 
 const hhMmLayout = "15:04"
 
-func (h *hhMmTime) UnmarshalJSON(b []byte) (err error) {
+func (h *HhMmTime) UnmarshalJSON(b []byte) (err error) {
 	s := strings.Trim(string(b), "\"")
 	if s == "null" {
 		h.Time = time.Time{}
@@ -22,7 +22,7 @@ func (h *hhMmTime) UnmarshalJSON(b []byte) (err error) {
 	return
 }
 
-func (h *hhMmTime) MarshalJSON() ([]byte, error) {
+func (h *HhMmTime) MarshalJSON() ([]byte, error) {
 	f := fmt.Sprintf("\"%s\"", h.Time.Format(hhMmLayout))
 	return []byte(f), nil
 }

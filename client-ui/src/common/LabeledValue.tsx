@@ -11,6 +11,7 @@ export function LabeledValue({label, value, vertical}: LabeledValueArgs) {
     return <span style={{
         display: "flex",
         justifyContent: "space-between",
+        alignItems: vertical ? "flex-start" : "center",
         flexDirection: vertical ? "column" : "row",
         paddingBottom: "0.5em"
     }}>

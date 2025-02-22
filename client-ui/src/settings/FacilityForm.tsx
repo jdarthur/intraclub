@@ -13,7 +13,6 @@ type FacilityFormProps = {
 
 export function FacilityForm({Update, InitialState, FacilityId,}: FacilityFormProps) {
 
-
     const [createFacility] = useCreateFacilityMutation()
     const [updateFacility] = useUpdateFacilityMutation()
 
@@ -31,6 +30,7 @@ export function FacilityForm({Update, InitialState, FacilityId,}: FacilityFormPr
 
         return await func();
     }
+
 
     return <CommonFormModal ObjectType={"facility"} IsUpdate={Update} OnSubmit={onSubmit} InitialState={InitialState}>
         <InputFormItem name={"name"} label={"Name"}/>

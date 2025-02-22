@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
+	"runtime"
 )
 
 // ApiError is an error wrapper that provides a common way to structure errors
@@ -13,7 +14,7 @@ import (
 type ApiError struct {
 	// References can be one or more values that will be passed into the ErrorCode.String
 	// function. These will most likely end up being fmt.Sprintf arguments
-	References interface{} `json:"references"`
+	References []interface{} `json:"references"`
 
 	// Code is the ErrorCode that this error represents. It allows us to provide
 	// an HTTP status code and a unique error ID
@@ -39,9 +40,11 @@ const (
 	UserIsNotAdmin                                      // User attempted to call a route protected by middleware.AsAdminUser but was not an admin user
 	FieldIsRequired                                     // User did not provide a value for a required field
 	FacilityMustHaveAtLeastOneCourt                     // create or update a model.Facility where `courts` = 0
+	InvalidNestedObjectId                               // InvalidPrimitiveObjectId, but with a CrudRecord object type attached
+	EmptyObjectId                                       // InvalidPrimitiveObjectId, but the value is required-but-empty
 )
 
-func (e ErrorCode) String(references ...any) string {
+func (e ErrorCode) String(references []any) string {
 	return [...]string{
 		fmt.Sprintf("User with email '%s' was not found", references...),         // UserWithEmailDoesNotExist
 		fmt.Sprintf("Multiple users exist with email '%s'", references...),       // MultipleUsersExistForEmail
@@ -55,6 +58,8 @@ func (e ErrorCode) String(references ...any) string {
 		fmt.Sprintf("User %+v is not an admin user", references...),              // UserIsNotAdmin
 		fmt.Sprintf("Field '%s' is required", references...),                     // FieldIsRequired
 		"Facility must have at least 1 court",                                    // FacilityMustHaveAtLeastOneCourt
+		fmt.Sprintf("Invalid object ID for nested %s: '%s'", references...),      // InvalidNestedObjectId
+		"Object ID must not be empty",                                            // EmptyObjectId
 	}[e]
 }
 
@@ -72,6 +77,8 @@ func (e ErrorCode) HttpStatus() int {
 		http.StatusUnauthorized,        // UserIsNotAdmin
 		http.StatusBadRequest,          // FieldIsRequired
 		http.StatusBadRequest,          // FacilityMustHaveAtLeastOneCourt
+		http.StatusBadRequest,          //InvalidNestedObjectId
+		http.StatusBadRequest,          //EmptyObjectId
 	}[e]
 }
 
@@ -85,11 +92,21 @@ func RespondWithError(c *gin.Context, err error) {
 }
 
 func RespondWithApiError(c *gin.Context, apiError ApiError) {
+
+	_, x, y, ok := runtime.Caller(2)
+	if ok {
+		fmt.Printf("ApiError at: %s:%d\n", x, y)
+	}
+
 	c.JSON(apiError.Code.HttpStatus(), gin.H{"error": apiError.Error(), "code": int(apiError.Code)})
 }
 
 func RespondWithBadRequest(c *gin.Context, err error) {
 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+}
+
+func RespondWithResource(c *gin.Context, resource interface{}) {
+	c.JSON(http.StatusOK, gin.H{"resource": resource})
 }
 
 func TryParsingObjectId(objectId string) (primitive.ObjectID, error) {
@@ -103,7 +120,7 @@ func TryParsingObjectId(objectId string) (primitive.ObjectID, error) {
 
 func InvalidObjectIdError(objectId string) ApiError {
 	return ApiError{
-		References: objectId,
+		References: []any{objectId},
 		Code:       InvalidPrimitiveObjectId,
 	}
 }

@@ -1,11 +1,14 @@
 import * as React from 'react';
-import {Alert, Button, Form, Modal} from "antd";
+import {Alert, Button, Form, FormInstance, Modal} from "antd";
 import {EditOutlined, PlusSquareOutlined} from "@ant-design/icons";
 
-type CommonModalProps = {
+export type CommonModalProps = {
     // name of the record, e.g. `"facility"`, `"league"`, etc.
     //  - this is used to populate the text in the create button / modal title
     ObjectType: string
+
+    // Custom title for the button that opens the modal
+    title?: string
 
     // `true` if this is an update call
     //   - used for submit button text / part of the modal's title)
@@ -14,13 +17,26 @@ type CommonModalProps = {
     // this is called when you hit the submit button on the form
     //  - the `formValues` prop passed in will be the result from `form.getFieldsValue()`
     //  and the function is expected to asynchronously return a `SubmitResult` value.
-    OnSubmit: (formValues: any) => Promise<SubmitResult>
+    //
+    // this can be set to null if you have a different mechanism for submitting the form,
+    // e.g. via a step form or something like that
+    OnSubmit?: (formValues: any) => Promise<SubmitResult>
 
     // children of the form itself, e.g. a bunch of `FormItem`s
     children: React.ReactNode
 
     // the initial form state, used to pre-populate the form on an update
     InitialState: {}
+
+    // allows you to pass a form instance into the form instead of using a local one
+    form?: FormInstance
+
+    // allows you to set the footer manually including to a {null} value
+    footer?: any
+
+    open?: boolean
+    setOpen?: (b: boolean) => void
+    onCancel?: () => Promise<SubmitResult>
 }
 
 // SubmitResult is the expected result from an `OnSubmit` call in `CommonModalProps`
@@ -45,40 +61,61 @@ export type SubmitResult = {
 // The onOk function will parse the success/failure state from the `SubmitResult` it receives
 // and either close the modal on success or populate an error `<Alert/>` with the particular error
 // message that we received from the API
-export function CommonFormModal({ObjectType, IsUpdate, OnSubmit, children, InitialState}: CommonModalProps) {
+export function CommonFormModal({...props}: CommonModalProps) {
     // controls the open/closed state of the modal
-    const [open, setOpen] = React.useState(false);
+    const [localOpen, setLocalOpen] = React.useState(false);
 
     // set to a value when we hit the submit button and receive an error from the API
     const [error, setError] = React.useState<string>("")
 
-    // handle the state of the form with this object
-    const [form] = Form.useForm()
+    let formToUse = props.form
+    if (!props.form) {
+        // handle the state of the form with this object
+        const [f] = Form.useForm()
+        formToUse = f
+    }
+
+    let realOpen = localOpen
+    if (props.open != undefined) {
+        realOpen = props.open
+    }
+
+    const setOpenWrapper = (b: boolean) => {
+        if (props.setOpen) {
+            props.setOpen(b)
+        } else {
+            setLocalOpen(b)
+        }
+    }
+
 
     // title of the modal
-    const title = IsUpdate ? `Update ${ObjectType}` : `Create a new ${ObjectType}`
+    let title = props.IsUpdate ? `Update ${props.ObjectType}` : `Create a new ${props.ObjectType}`
+    if (props.title != "") {
+        title = props.title;
+    }
 
     // title of the submit button at the bottom of the modal
-    const okText = IsUpdate ? "Update" : "Create"
+    const okText = props.IsUpdate ? "Update" : "Create"
 
     // default button to open the modal when IsUpdate == false
     const DefaultButton = <Button type={"primary"} icon={<PlusSquareOutlined/>}>
-        Create a new {ObjectType}
+        {title}
     </Button>
 
     // on update, we will just show an edit icon
-    const actionButton = <div onClick={() => setOpen(true)}>
-        {IsUpdate ? <EditOutlined style={{cursor: "pointer"}}/> : DefaultButton}
+    const actionButton = <div onClick={() => setOpenWrapper(true)}>
+        {props.IsUpdate ? <EditOutlined style={{cursor: "pointer"}}/> : DefaultButton}
     </div>
 
     // this function calls the OnSubmit function passed as an argument, checks if we
     // got a
     const onOk = async () => {
-        const formValues = form.getFieldsValue()
-        const result = await OnSubmit(formValues)
+        const formValues = formToUse.getFieldsValue()
+        const result = await props.OnSubmit(formValues)
 
         if (result.data) {
-            setOpen(false)
+            setLocalOpen(false)
             setError("")
         } else {
             setError(result.error.data.error)
@@ -89,11 +126,26 @@ export function CommonFormModal({ObjectType, IsUpdate, OnSubmit, children, Initi
         //console.log(v)
     }
 
+    const clickCancel = async (): Promise<SubmitResult> => {
+        if (props.onCancel) {
+            const res = await props.onCancel()
+            console.log(res)
+            if (res.error) {
+                console.log(res.error)
+                return res
+            }
+        }
+        setOpenWrapper(false)
+        return {data: null, error: null}
+    }
+
     return <div>
-        <Modal open={open} title={title} onCancel={() => setOpen(false)} onOk={onOk} okText={okText}>
+        <Modal open={realOpen} title={title} onCancel={clickCancel} onOk={onOk} okText={okText}
+               footer={props.footer}>
             <div style={{height: "1em"}}/>
-            <Form form={form} layout={"horizontal"} initialValues={InitialState} onValuesChange={printChanges}>
-                {children}
+            <Form form={formToUse} layout={"horizontal"} initialValues={props.InitialState}
+                  onValuesChange={printChanges}>
+                {props.children}
             </Form>
 
             {/* show an error alert if the OnSubmit function returned us an error */}

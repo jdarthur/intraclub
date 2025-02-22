@@ -3,84 +3,29 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"intraclub/common"
-	"intraclub/controllers"
-	"intraclub/middleware"
 	"intraclub/model"
-	"sync"
+	"intraclub/route"
 )
 
 func main() {
-	common.GlobalDbProvider = model.NewMongoDbProvider("mongodb://localhost:27018", "", "")
-	err := common.GlobalDbProvider.Connect()
-	if err != nil {
-		panic(err)
-	}
+	common.SysAdminCheck = model.IsUserSystemAdministrator
 
-	router := gin.Default()
+	r := gin.Default()
 
-	noAuth := router.Group("/api")
-	apiAuthAndAccess := router.Group("/api", middleware.WithToken)
+	// noAuth for self-register
+	createUser := common.RouteFamily[*model.User]{}
+	createUser.Handle(r, route.SelfRegister{})
 
-	otpManager := controllers.OneTimePasswordManager{Map: &sync.Map{}}
-	noAuth.POST("/token", otpManager.GetToken)
-	noAuth.POST("/one_time_password", otpManager.Create)
+	// no auth for get user by ID / get all users functions
 
-	registerManager := controllers.NewUserController{}
-	noAuth.POST("/register", registerManager.Register)
+	getUsers := common.NewCrudCommon(model.NewUser, false)
+	getUsers.HandleRouteTypes(r, common.CrudWrapperFunctionGetOne, common.CrudWrapperFunctionGetMany)
 
-	userCtl := common.CrudController{Controller: controllers.UserController{}, Database: common.GlobalDbProvider}
-	apiAuthAndAccess.Handle("GET", "/users", userCtl.GetAll)
-	noAuth.Handle("GET", "/users/:id", userCtl.GetOne)
+	// use auth for user deletion / update endpoints
+	updateOrDeleteUsers := common.NewCrudCommon(model.NewUser, true)
+	updateOrDeleteUsers.HandleRouteTypes(r, common.CrudWrapperFunctionDelete, common.CrudWrapperFunctionUpdate)
 
-	// you can only delete your own user
-	ownedByUser := middleware.OwnedByUserWrapper{Record: &model.User{}}
-	apiAuthAndAccess.Handle("DELETE", "/users/:id", ownedByUser.OwnedByUser, userCtl.Delete)
-
-	// special route that we can use to retrieve the active user from a token
-	apiAuthAndAccess.Handle("GET", "/whoami", controllers.WhoAmI)
-
-	// league CRUD controller
-	leagueCtl := common.CrudController{Controller: controllers.LeagueController{}, Database: common.GlobalDbProvider}
-	apiAuthAndAccess.Handle("GET", "/leagues", leagueCtl.GetAll)
-	apiAuthAndAccess.Handle("POST", "/leagues", leagueCtl.Create)
-
-	// get league by ID is a no-auth route so you can view basic league info without being logged in
-	noAuth.Handle("GET", "/league/:id", leagueCtl.GetOne)
-	apiAuthAndAccess.Handle("GET", "/league/:id/weeks", controllers.GetWeeksForLeague)
-
-	leagueOwnedByUser := middleware.OwnedByUserWrapper{Record: &model.League{}}
-	apiAuthAndAccess.Handle("DELETE", "/leagues/:id", leagueOwnedByUser.OwnedByUser, leagueCtl.Delete)
-	apiAuthAndAccess.Handle("PUT", "/leagues/:id", leagueOwnedByUser.OwnedByUser, leagueCtl.Update)
-
-	// Get relevant records by user ID
-	noAuth.Handle("GET", "/teams_for_user/:id", controllers.GetTeamsForUser)
-	noAuth.Handle("GET", "/leagues_for_user/:id", controllers.GetLeaguesForUser)
-	apiAuthAndAccess.Handle("GET", "/leagues_commissioned_by_user/:id", controllers.GetCommissionedLeaguesForUser)
-
-	// facility CRUD controller
-	facilityCtl := common.CrudController{Controller: controllers.FacilityController{}, Database: common.GlobalDbProvider}
-	apiAuthAndAccess.Handle("GET", "/facilities", facilityCtl.GetAll)
-	apiAuthAndAccess.Handle("POST", "/facilities", facilityCtl.Create)
-
-	// get facility by ID without authentication
-	noAuth.Handle("GET", "/facilities/:id", facilityCtl.GetOne)
-
-	// Delete / Update facility endpoints are protected by OwnedByUser middleware
-	facilityOwnedByUser := middleware.OwnedByUserWrapper{Record: &model.Facility{}}
-	apiAuthAndAccess.Handle("DELETE", "/facilities/:id", facilityOwnedByUser.OwnedByUser, facilityCtl.Delete)
-	apiAuthAndAccess.Handle("PUT", "/facilities/:id", facilityOwnedByUser.OwnedByUser, facilityCtl.Update)
-
-	// week CRUD controller
-	weekCtl := common.CrudController{Controller: controllers.WeekController{}, Database: common.GlobalDbProvider}
-	apiAuthAndAccess.Handle("POST", "/weeks", weekCtl.Create)
-	apiAuthAndAccess.Handle("GET", "/weeks/:id", weekCtl.GetOne)
-
-	weekOwnedByUser := middleware.OwnedByUserWrapper{Record: &model.Week{}}
-	apiAuthAndAccess.Handle("DELETE", "/weeks/:id", weekOwnedByUser.OwnedByUser, weekCtl.Delete)
-
-	err = router.Run(":8080")
-	if err != nil {
-		panic(err)
-	}
+	// model.Facility endpoints
+	route.FacilityEndpoints.HandleRouteTypes(r, common.CrudWrapperFunctionAll...)
 
 }

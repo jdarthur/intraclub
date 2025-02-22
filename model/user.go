@@ -2,117 +2,101 @@ package model
 
 import (
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"intraclub/common"
 	"strings"
 )
 
+type UserId common.RecordId
+
+func (id UserId) RecordId() common.RecordId {
+	return common.RecordId(id)
+}
+
+func (id UserId) String() string {
+	return id.RecordId().String()
+}
+
+func UserIdListToRecordIdList(input []UserId) []common.RecordId {
+	output := make([]common.RecordId, 0, len(input))
+	for _, id := range input {
+		output = append(output, id.RecordId())
+	}
+	return output
+}
+
 type User struct {
-	ID        primitive.ObjectID `json:"user_id" bson:"_id"`
-	IsAdmin   bool               `json:"is_admin" bson:"is_admin"`
-	FirstName string             `json:"first_name" bson:"first_name"`
-	LastName  string             `json:"last_name" bson:"last_name"`
-	Email     string             `json:"email" bson:"email"`
+	ID          UserId
+	FirstName   string
+	LastName    string
+	PhoneNumber PhoneNumber
+	Email       EmailAddress
 }
 
-func (u *User) SetUserId(userId string) {}
-
-func (u *User) GetUserId() string {
-	return u.ID.Hex()
+func (u *User) SetOwner(recordId common.RecordId) {
+	// don't need to do anything as User records are self-owned
 }
 
-type listOfUsers []*User
-
-func (l listOfUsers) Get(index int) common.CrudRecord {
-	return l[index]
+func (u *User) EditableBy(common.DatabaseProvider) []common.RecordId {
+	return []common.RecordId{u.ID.RecordId(), common.SysAdminRecordId}
 }
 
-func (l listOfUsers) Length() int {
-	return len(l)
+func (u *User) AccessibleTo(common.DatabaseProvider) []common.RecordId {
+	return []common.RecordId{common.EveryoneRecordId}
 }
 
-func (l listOfUsers) Value() interface{} {
-	return l
+func NewUser() *User {
+	return &User{}
 }
 
-func (u *User) ValidateStatic() error {
-	if u.FirstName == "" {
-		return fmt.Errorf("first name must not be empty")
-	}
-	if u.LastName == "" {
-		return fmt.Errorf("last name must not be empty")
-	}
-	if u.Email == "" {
-		return fmt.Errorf("email must not be empty")
-	}
-
-	if !strings.Contains(u.Email, "@") {
-		return fmt.Errorf("email must contain an @")
-	}
-
-	if u.Email[0] == '@' {
-		return fmt.Errorf("email must not start with @")
-	}
-
-	if u.Email[len(u.Email)-1] == '@' {
-		return fmt.Errorf("email must not end with @")
-	}
-
-	if len(strings.Split(u.Email, "@")) > 2 {
-		return fmt.Errorf("email must not contain multiple @s")
-	}
-
-	return nil
-}
-
-func (u *User) ValidateDynamic(db common.DbProvider, isUpdate bool, previousState common.CrudRecord) error {
-
-	if !isUpdate {
-		return common.ValueMustBeGloballyUnique(db, &User{}, "email", u.Email)
-	}
-
-	return nil
-}
-
-func (u *User) ListOfRecords() common.ListOfCrudRecords {
-	return make(listOfUsers, 0)
-}
-
-func (u *User) SetId(id primitive.ObjectID) {
-	u.ID = id
-}
-
-func (u *User) GetId() primitive.ObjectID {
-	return u.ID
-}
-
-func (u *User) RecordType() string {
+func (u *User) Type() string {
 	return "user"
 }
 
-func (u *User) OneRecord() common.CrudRecord {
-	return new(User)
+func (u *User) GetId() common.RecordId {
+	return u.ID.RecordId()
 }
 
-func GetUserByEmail(db common.DbProvider, email string) (*User, error) {
-	users, err := common.GetAllWhere(db, &User{}, map[string]interface{}{"email": email})
+func (u *User) SetId(id common.RecordId) {
+	u.ID = UserId(id)
+}
+
+func (u *User) TrimValues() {
+	u.FirstName = strings.TrimSpace(u.FirstName)
+	u.LastName = strings.TrimSpace(u.LastName)
+	u.Email = EmailAddress(strings.ToLower(string(u.Email)))
+	u.Email = EmailAddress(strings.TrimSpace(string(u.Email)))
+
+	u.PhoneNumber = PhoneNumber(strings.TrimSpace(string(u.PhoneNumber)))
+	if u.PhoneNumber != "" {
+		u.PhoneNumber = u.PhoneNumber.AddDashes()
+	}
+
+}
+
+func (u *User) StaticallyValid() error {
+	u.TrimValues()
+
+	if u.FirstName == "" {
+		return fmt.Errorf("first name must not be empty")
+	}
+
+	if u.LastName == "" {
+		return fmt.Errorf("last name must not be empty")
+	}
+
+	err := u.Email.StaticallyValid()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if users.Length() == 0 {
-		return nil, common.ApiError{
-			References: email,
-			Code:       common.UserWithEmailDoesNotExist,
-		}
+	err = u.PhoneNumber.StaticallyValid()
+	if err != nil {
+		return err
 	}
 
-	if users.Length() > 1 {
-		return nil, common.ApiError{
-			References: email,
-			Code:       common.MultipleUsersExistForEmail,
-		}
-	}
+	return nil
+}
 
-	return users.Get(0).(*User), nil
+func (u *User) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+	return nil
 }

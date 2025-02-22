@@ -1,6 +1,7 @@
 import {Card, Empty} from "antd";
 import * as React from "react";
 import {useGetTeamsByUserIdQuery} from "../redux/api.js";
+import {USER_PAGE_WIDTH} from "./UserPage";
 
 type Team = {
     TeamId: string
@@ -19,7 +20,7 @@ export function TeamsForUser({UserId}: ByUserId) {
         </div>)
     }
 
-    return <Card title={"Teams"} style={{width: 300}}>
+    return <Card title={"Teams"} style={{width: USER_PAGE_WIDTH}}>
         {content}
     </Card>
 }

@@ -81,9 +81,8 @@ export function ColorSelect({colors, setColors, disabled}: ColorSelectProps) {
     }
 
     const selectedColors = colors?.map((c, i) => {
-        const display = <div onClick={() => editColor(c)}>
-            <ColorDisplay name={c.name} hex={c.hex}
-                          key={c.hex} disabled={disabled} editable/>
+        const display = <div onClick={() => editColor(c)} key={c.hex}>
+            <ColorDisplay name={c.name} hex={c.hex} disabled={disabled} editable/>
         </div>
 
         const deleteFunc = () => deleteColor(i)
@@ -91,7 +90,9 @@ export function ColorSelect({colors, setColors, disabled}: ColorSelectProps) {
         if (showAddColor && selected == i && !disabled) {
             return <TeamColorSelector color={color} save={onSave} setColor={setColor} update
                                       cancel={() => setShowAddColor(false)}
-                                      button={display} deleteColor={deleteFunc}/>
+                                      button={display} deleteColor={deleteFunc}
+                                      key={color.hex}
+            />
         }
 
         return display
@@ -115,11 +116,13 @@ export function ColorSelect({colors, setColors, disabled}: ColorSelectProps) {
 
 
     return <FormItem name={""} label={"Team Colors"}>
-        <Space style={{display: "flex", flexWrap: "wrap", marginBottom: "1em"}}>
-            {selectedColors}
-        </Space>
-        {addColorBox}
-        {(showAddColor || disabled) ? null : addColorButton}
+        <div>
+            <Space style={{display: "flex", flexWrap: "wrap", marginBottom: "1em"}}>
+                {selectedColors}
+            </Space>
+            {addColorBox}
+            {(showAddColor || disabled) ? null : addColorButton}
+        </div>
     </FormItem>
 }
 
@@ -187,12 +190,12 @@ type colorDisplayProps = TeamColor & {
 }
 
 export function ColorDisplay({name, hex, disabled, editable}: colorDisplayProps) {
-    const backgroundColor = disabled ? "#f0f0f0" : "white"
+    const backgroundColor = disabled ? "#f0f0f0" : "#f5f5f5"
     const borderColor = disabled ? "rgba(191, 191, 191, 0.8)" : "#d9d9d9"
 
     const style = {
         padding: 3,
-        borderRadius: 5,
+        borderRadius: 6,
         border: `1px solid ${borderColor}`,
         backgroundColor: backgroundColor
     }
@@ -202,9 +205,8 @@ export function ColorDisplay({name, hex, disabled, editable}: colorDisplayProps)
 
 
     return <Tooltip title={name}>
-        <div
-            style={style}>
-            < div style={{borderRadius: 5, backgroundColor: `#${hex}`, height: 25, width: 25}}/>
+        <div style={style}>
+            <div style={{borderRadius: 6, backgroundColor: `#${hex}`, height: 25, width: 25}}/>
         </div>
 
     </Tooltip>
