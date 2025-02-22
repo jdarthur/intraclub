@@ -5,6 +5,8 @@ import {LabeledValue} from "../common/LabeledValue";
 import {useDeleteLeagueMutation, useGetFacilityByIdQuery, useGetWeekByIdQuery} from "../redux/api.js";
 import {DeleteConfirm} from "../common/DeleteConfirm";
 import {ColorDisplay, TeamColor} from "./ColorSelect";
+import {ArrowRightOutlined, LoginOutlined} from "@ant-design/icons";
+import {Link} from "react-router-dom";
 
 
 export function OneLeague({league_id, name, facility, weeks, start_time, commissioner, colors}: League) {
@@ -28,15 +30,24 @@ export function OneLeague({league_id, name, facility, weeks, start_time, commiss
     const editForm = <LeagueForm LeagueId={league_id} InitialState={l} Update/>
 
     const extra = <Space>
+
         {editForm}
-        <DeleteConfirm deleteFunction={deleteSelf} objectType={"facility"}/>
+        <DeleteConfirm deleteFunction={deleteSelf} objectType={"league"}/>
     </Space>
 
-    return <Card size={"small"} title={name} extra={extra}>
+    const title = <Link to={`/league/${league_id}`}>
+        <Space>
+            {name}
+            <ArrowRightOutlined/>
+        </Space>
+    </Link>
+
+
+    return <Card size={"small"} title={title} extra={extra}>
         <LabeledValue label={"Start time"} value={start_time} key={"start"} vertical/>
         <LabeledValue label={"Facility"} value={<ShortFacility facilityId={facility}/>} vertical key={"facility"}/>
         <WeeksInLeague Weeks={weeks}/>
-        <ColorsInLeague Colors={colors}/>
+        <ColorsInLeague colors={colors}/>
     </Card>
 }
 
@@ -44,7 +55,7 @@ type WeeksProps = {
     Weeks: string[]
 }
 
-function WeeksInLeague({Weeks}: WeeksProps) {
+export function WeeksInLeague({Weeks}: WeeksProps) {
     const weeks = Weeks?.map((w) => <Week weekId={w} key={w}/>)
     return <LabeledValue label={"Weeks"} value={weeks} vertical/>
 }
@@ -65,21 +76,19 @@ type ShortFacilityProps = {
     facilityId: string
 }
 
-function ShortFacility({facilityId}: ShortFacilityProps) {
+export function ShortFacility({facilityId}: ShortFacilityProps) {
     const {data} = useGetFacilityByIdQuery(facilityId)
     return <span>
         {data?.resource?.name}
     </span>
 }
 
-type ColorsInLeagueProps = {
-    Colors: TeamColor[]
-}
+type ColorsInLeagueProps = Partial<Pick<League, "colors">>
 
-function ColorsInLeague({Colors}: ColorsInLeagueProps) {
+export function ColorsInLeague({colors}: ColorsInLeagueProps) {
 
-    const colors = Colors?.map((c) => <ColorDisplay name={c.name} hex={c.hex} key={c.hex}/>)
-    const value = colors?.length ? colors : <Tag>None</Tag>
+    const c = colors?.map((color) => <ColorDisplay name={color.name} hex={color.hex} key={color.hex}/>)
+    const value = c?.length ? c : <Tag>None</Tag>
 
     const wrappedValue = <Space style={{display: "flex", flexWrap: "wrap"}}>
         {value}

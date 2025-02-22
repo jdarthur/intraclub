@@ -78,7 +78,7 @@ export const mainApi = createApi({
         }),
         updateLeague: builder.mutation({
             query: (args) => ({url: `leagues/${args.id}`, method: 'PUT', body: args.body}),
-            invalidatesTags: ["leagues"]
+            invalidatesTags: ["leagues", "league"]
         }),
         getWeekById: builder.query({
             query: (id) => ({url: `weeks/${id}`}),
@@ -89,14 +89,14 @@ export const mainApi = createApi({
         }),
         deleteWeek: builder.mutation({
             query: (id) => ({url: `weeks/${id}`, method: 'DELETE'}),
-            invalidatesTags: ["weeks", "league_weeks"]
+            invalidatesTags: ["weeks", "league_weeks", "league"]
         }),
         getFacilityById: builder.query({
             query: (id) => ({url: `facilities/${id}`}),
         }),
         deleteLeague: builder.mutation({
             query: (id) => ({url: `leagues/${id}`, method: 'DELETE'}),
-            invalidatesTags: ["leagues"]
+            invalidatesTags: ["leagues", "league"]
         }),
         // get multiple weeks by a list of IDs
         getWeeksByIds: builder.query({
@@ -148,6 +148,10 @@ export const mainApi = createApi({
             query: (id) => ({url: `skill_info/${id}`, method: "DELETE"}),
             invalidatesTags: ["skill_info"]
         }),
+        getLeague: builder.query({
+            query: (id) => ({url: `league/${id}`}),
+            providesTags: ["league"]
+        }),
     })
 });
 
@@ -182,4 +186,5 @@ export const {
     useCreateSkillInfoMutation,
     useGetSkillInfoOptionsQuery,
     useDeleteSkillInfoMutation,
+    useGetLeagueQuery,
 } = mainApi

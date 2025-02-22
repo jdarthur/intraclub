@@ -1,108 +1,80 @@
 package model
 
 import (
+	"errors"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"intraclub/common"
 	"time"
 )
 
+type WeekId common.RecordId
+
+func (id WeekId) RecordId() common.RecordId {
+	return common.RecordId(id)
+}
+
+func (id WeekId) String() string {
+	return id.RecordId().String()
+}
+
 type Week struct {
-	ID           primitive.ObjectID `json:"week_id" bson:"_id"`
-	Date         YyyyMmDdDate       `json:"date" bson:"date"`                   // date when this week was actually played
-	OriginalDate YyyyMmDdDate       `json:"original_date" bson:"original_date"` // date when this week was originally scheduled to play (e.g. before a rain day)
-	UserId       string             `json:"-" bson:"user_id"`                   // user ID of the user that created this week (the league commissioner)
+	ID       WeekId
+	SeasonId SeasonId
+	Date     time.Time
 }
 
-func (w *Week) GetUserId() string {
-	return w.UserId
+func (w *Week) SetOwner(recordId common.RecordId) {
+	// don't need to do anything as Week records have
+	// ownership automatically inferred / enforced by the
+	// values of the SeasonId field
 }
 
-func (w *Week) SetUserId(userId string) {
-	w.UserId = userId
-}
-
-func (w *Week) RecordType() string {
-	return "week"
-}
-
-func (w *Week) OneRecord() common.CrudRecord {
-	return new(Week)
-}
-
-type listOfWeeks []*Week
-
-func (l listOfWeeks) Get(index int) common.CrudRecord {
-	return l[index]
-}
-
-func (l listOfWeeks) Length() int {
-	return len(l)
-}
-
-func (w *Week) ListOfRecords() common.ListOfCrudRecords {
-	return make(listOfWeeks, 0)
-}
-
-func (w *Week) SetId(id primitive.ObjectID) {
-	w.ID = id
-}
-
-func (w *Week) GetId() primitive.ObjectID {
-	return w.ID
-}
-
-func (w *Week) ValidateStatic() error {
-	if w.Date.IsZero() {
-		return fmt.Errorf("date field must not be empty")
-	}
-
-	if w.OriginalDate.IsZero() {
-		return fmt.Errorf("original date field must not be empty")
-	}
-
-	return nil
-}
-
-func (w *Week) ValidateDynamic(db common.DbProvider, isUpdate bool, previousState common.CrudRecord) error {
-	return nil
-}
-
-func (w *Week) PushBack(weeks int) {
-	w.Date.Time = w.Date.Time.Add(time.Duration(weeks) * oneWeek)
-}
-
-func (w *Week) OnDelete(db common.DbProvider) error {
-
-	leagues, err := GetCommissionedLeaguesByUserId(db, w.UserId)
+func (w *Week) OnCreate(db common.DatabaseProvider) error {
+	season, err := GetSeason(db, w.SeasonId)
 	if err != nil {
 		return err
 	}
+	season.Weeks = append(season.Weeks)
+	return common.UpdateOne(db, season)
+}
 
-	for _, league := range leagues {
-		weekInLeague := false
-		for _, weekId := range league.Weeks {
-			if weekId == w.ID.Hex() {
-				weekInLeague = true
-				break
-			}
-		}
+func NewWeek() *Week {
+	return &Week{}
+}
 
-		if weekInLeague {
-			newWeekIds := make([]string, 0)
-			for _, weekId := range league.Weeks {
-				if weekId != w.ID.Hex() {
-					newWeekIds = append(newWeekIds, weekId)
-				}
-			}
-
-			league.Weeks = newWeekIds
-			err = common.Update(db, league)
-			if err != nil {
-				return err
-			}
-		}
+func (w *Week) EditableBy(db common.DatabaseProvider) []common.RecordId {
+	season, err := GetSeason(db, w.SeasonId)
+	if err != nil {
+		fmt.Println(err)
+		return nil
 	}
 
+	return UserIdListToRecordIdList(season.Commissioners)
+}
+
+func (w *Week) AccessibleTo(common.DatabaseProvider) []common.RecordId {
+	return []common.RecordId{common.EveryoneRecordId}
+}
+
+func (w *Week) StaticallyValid() error {
+	if w.Date.IsZero() {
+		return errors.New("date is zero")
+	}
 	return nil
+}
+
+func (w *Week) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+	return common.ExistsById(db, &Season{}, w.SeasonId.RecordId())
+}
+
+func (w *Week) Type() string {
+	return "week"
+}
+
+func (w *Week) GetId() common.RecordId {
+	return w.ID.RecordId()
+}
+
+func (w *Week) SetId(id common.RecordId) {
+	w.ID = WeekId(id)
 }

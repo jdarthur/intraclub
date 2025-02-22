@@ -105,6 +105,10 @@ func RespondWithBadRequest(c *gin.Context, err error) {
 	c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 }
 
+func RespondWithResource(c *gin.Context, resource interface{}) {
+	c.JSON(http.StatusOK, gin.H{"resource": resource})
+}
+
 func TryParsingObjectId(objectId string) (primitive.ObjectID, error) {
 	id, err := primitive.ObjectIDFromHex(objectId)
 	if err != nil {

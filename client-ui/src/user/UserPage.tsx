@@ -9,6 +9,8 @@ import {LabeledValue} from "../common/LabeledValue";
 import {User} from "../settings/Users";
 import {ExperienceForUser} from "./ExperienceForUser";
 
+export const USER_PAGE_WIDTH = "min(100vw - 2em, 650px)"
+
 export function UserPage() {
     const {id} = useParams()
 
@@ -29,16 +31,17 @@ export function UserPage() {
     return <div>
         <NavigationBreadcrumb items={["Users", name]}/>
 
-        <Card title={title} style={{width: 500}}>
+        <Card title={title} style={{width: USER_PAGE_WIDTH}}>
             <LabeledValue label={"Email"} value={user.email} vertical/>
         </Card>
 
         <div style={{height: "1em"}}/>
 
-        <TeamsForUser UserId={id}/>
+        <ExperienceForUser UserId={id}/>
 
         <div style={{height: "1em"}}/>
 
-        <ExperienceForUser UserId={id}/>
+        <TeamsForUser UserId={id}/>
+
     </div>
 }

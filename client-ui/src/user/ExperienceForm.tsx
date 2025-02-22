@@ -44,7 +44,7 @@ export function ExperienceForm({UserId}: ExperienceFormProps) {
         return await func();
     }
 
-    return <CommonFormModal ObjectType={"experience"} title={"Add experience info"}
+    return <CommonFormModal ObjectType={"experience"} title={"Add info"}
                             IsUpdate={false} InitialState={{}} OnSubmit={onSubmit}>
         <SelectFormItem name={"league_type"} label={"League type"} options={GetLeagueTypes(options)}/>
         <NumberInputFormItem name={"most_recent_year"} label={"Most recent year"}/>

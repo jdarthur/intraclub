@@ -9,15 +9,15 @@ import (
 )
 
 const (
-	FirstName = "First Name"
-	LastName  = "Last Name"
-	Email     = "Email"
+	FirstNameCsvField = "First Name"
+	LastNameCsvField  = "Last Name"
+	EmailCsvField     = "Email"
 )
 
 var ExpectedHeaders = []string{
-	FirstName,
-	LastName,
-	Email,
+	FirstNameCsvField,
+	LastNameCsvField,
+	EmailCsvField,
 }
 
 func ParseUserCsvFromFile(filename string) ([]*User, error) {
@@ -96,12 +96,12 @@ func ParseCsvLine(line, headers []string) (*User, error) {
 			return user, fmt.Errorf("got empty value for header '%s' at line %d", key, i)
 		}
 
-		if key == FirstName {
+		if key == FirstNameCsvField {
 			user.FirstName = value
-		} else if key == LastName {
+		} else if key == LastNameCsvField {
 			user.LastName = value
-		} else if key == Email {
-			user.Email = value
+		} else if key == EmailCsvField {
+			user.Email = EmailAddress(value)
 		} else {
 			// shouldn't be able to get here since we validated the headers
 			// in ValidateHeaders before we called ParseCsvLine

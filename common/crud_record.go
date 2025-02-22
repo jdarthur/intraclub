@@ -1,69 +1,88 @@
 package common
 
 import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"encoding/binary"
+	"encoding/hex"
+	"fmt"
+	"math/rand"
 )
 
-type ListOfCrudRecords interface {
-	Length() int
-	Get(index int) CrudRecord
+type RecordId uint64
+
+func NewRecordId() RecordId {
+	return RecordId(rand.Uint64() + uint64(len(unavailableRecordIds)))
 }
 
-// ForEachCrudRecord runs through all of the CrudRecord entries in the provided
-// ListOfCrudRecords and calls the user-specified function for each record. This
-// can be used to e.g. map/reduce operations on all of the records of a type
-func ForEachCrudRecord(l ListOfCrudRecords, f func(record CrudRecord)) {
-	for i := 0; i < l.Length(); i++ {
-		record := l.Get(i)
-		f(record)
+func (r RecordId) Uint64() uint64 {
+	return uint64(r)
+}
+
+func (r RecordId) String() string {
+	return fmt.Sprintf("%08x", r.Uint64())
+}
+
+func (r RecordId) ValidRecordId() bool {
+	return uint64(r) > uint64(len(unavailableRecordIds))
+}
+
+func RecordIdFromString(s string) (RecordId, error) {
+	b := make([]byte, 8)
+	n, err := hex.Decode(b, []byte(s))
+	if err != nil {
+		return InvalidRecordId, err
 	}
+	if n != 8 {
+		return InvalidRecordId, fmt.Errorf("short read on hex.Decode")
+	}
+	return RecordId(binary.BigEndian.Uint64(b)), nil
+}
+
+// InvalidRecordId is a special record ID that indicates a value hasn't been set
+var InvalidRecordId = RecordId(0)
+
+// EveryoneRecordId indicates that a CrudRecord is accessible by everyone
+var EveryoneRecordId = RecordId(1)
+var AccessibleToEveryone = []RecordId{EveryoneRecordId}
+
+// SysAdminRecordId indicated that a CrudRecord is accessible / editable by users
+// the model.SystemAdministrator role applied to their model.User record
+var SysAdminRecordId = RecordId(2)
+
+func SysAdminAndUsers(users ...RecordId) []RecordId {
+	recordIds := make([]RecordId, 0, 1+len(users))
+	recordIds = append(recordIds, SysAdminRecordId)
+	recordIds = append(recordIds, users...)
+	return recordIds
+}
+
+// unavailableRecordIds is a list of RecordId values that cannot be set
+// in NewRecordId because they have a special meaning in the auth/access logic
+var unavailableRecordIds = []RecordId{
+	InvalidRecordId, EveryoneRecordId, SysAdminRecordId,
 }
 
 type CrudRecord interface {
-	RecordType() string               // A string name for this record, used as the DB collection name
-	OneRecord() CrudRecord            // One instance of the CrudRecord's type. Must be a pointer
-	ListOfRecords() ListOfCrudRecords // List of instances of the CrudRecord's type. Must be a list of pointers
-	SetId(id primitive.ObjectID)      // Set's the ID field on the record. This function is why the OneRecord / ListOfRecords fields must return pointer types.
-	GetId() primitive.ObjectID        // Gets the ID field from the record
-	Validatable                       // Validate the correctness of the record on DB create / update
+	Type() string
+	GetId() RecordId
+	SetId(RecordId)
+	EditableBy(db DatabaseProvider) []RecordId
+	AccessibleTo(db DatabaseProvider) []RecordId
+	SetOwner(recordId RecordId)
+	DatabaseValidatable
 }
 
-func CheckExistenceOrError(provider DbProvider, record CrudRecord) error {
-	_, exists, err := GetOne(provider, record)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return RecordDoesNotExist(record)
-	}
-
-	return nil
+type OnCreate interface {
+	OnCreate(db DatabaseProvider) error // function to call post-create
 }
 
-func CheckExistenceOrErrorByStringId(provider DbProvider, record CrudRecord, id string) error {
-	objId, err := TryParsingObjectId(id)
-	if err != nil {
-		return ApiError{References: []any{record.RecordType(), id}, Code: InvalidNestedObjectId}
-	}
-
-	record.SetId(objId)
-
-	_, exists, err := GetOne(provider, record)
-	if err != nil {
-		return err
-	}
-
-	if !exists {
-		return RecordDoesNotExist(record)
-	}
-
-	return nil
+type OnUpdate interface {
+	OnUpdate(db DatabaseProvider) error // function to call post-update
 }
 
-func RecordDoesNotExist(record CrudRecord) error {
-	return ApiError{
-		References: []any{record.RecordType(), record.GetId().Hex()},
-		Code:       CrudRecordWithObjectIdDoesNotExist,
-	}
+type PreDelete interface {
+	PreDelete(db DatabaseProvider) error // function to call pre-delete
+}
+
+type PostDelete interface {
+	OnDelete(db DatabaseProvider) error // function to call post-delete
 }

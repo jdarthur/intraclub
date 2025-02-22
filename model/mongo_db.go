@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"intraclub/common"
@@ -18,37 +17,43 @@ type MongoDb struct {
 	Connection *mongo.Database
 }
 
-var IntraclubMongoDatabase = "intraclub"
+func (m *MongoDb) GetAll(recordType common.CrudRecord) ([]common.CrudRecord, error) {
+	return m.GetAllWhere(recordType, nil)
+}
 
-func (m *MongoDb) GetAllWhere(record common.CrudRecord, filter map[string]interface{}) (objects common.ListOfCrudRecords, err error) {
-
+func (m *MongoDb) GetAllWhere(recordType common.CrudRecord, where common.WhereFunc) ([]common.CrudRecord, error) {
 	ctx, cancel := defaultTimeout()
 	defer cancel()
 
-	res, err := m.Connection.Collection(record.RecordType()).Find(ctx, filter)
+	res, err := m.Connection.Collection(recordType.Type()).Find(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	output := record.ListOfRecords()
-	err = res.All(ctx, &output)
+	records := ListOfCrudRecords(recordType)
+	err = res.All(ctx, records)
 	if err != nil {
 		return nil, err
+	}
+
+	output := make([]common.CrudRecord, 0)
+	for _, record := range records {
+		if where == nil || where(record) {
+			output = append(output, record)
+		}
 	}
 
 	return output, nil
 }
 
-func (m *MongoDb) GetAll(record common.CrudRecord) (objects common.ListOfCrudRecords, err error) {
-	return m.GetAllWhere(record, bson.M{})
-}
+var IntraclubMongoDatabase = "intraclub"
 
 func (m *MongoDb) GetOne(record common.CrudRecord) (object common.CrudRecord, exists bool, err error) {
 
 	ctx, cancel := defaultTimeout()
 	defer cancel()
 
-	res := m.Connection.Collection(record.RecordType()).FindOne(ctx, byId(record.GetId()))
+	res := m.Connection.Collection(record.Type()).FindOne(ctx, byId(record.GetId()))
 	if res.Err() != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, false, nil
@@ -56,13 +61,11 @@ func (m *MongoDb) GetOne(record common.CrudRecord) (object common.CrudRecord, ex
 		return nil, false, err
 	}
 
-	output := record.OneRecord()
-	err = res.Decode(output)
+	err = res.Decode(record)
 	if err != nil {
 		return nil, false, err
 	}
-
-	return output, true, nil
+	return record, true, nil
 
 }
 
@@ -71,14 +74,12 @@ func (m *MongoDb) Create(object common.CrudRecord) (common.CrudRecord, error) {
 	ctx, cancel := defaultTimeout()
 	defer cancel()
 
-	object.SetId(primitive.NewObjectID())
+	object.SetId(common.NewRecordId())
 
-	inserted, err := m.Connection.Collection(object.RecordType()).InsertOne(ctx, object)
+	_, err := m.Connection.Collection(object.Type()).InsertOne(ctx, object)
 	if err != nil {
 		return nil, err
 	}
-
-	object.SetId(inserted.InsertedID.(primitive.ObjectID))
 
 	return object, nil
 
@@ -88,7 +89,7 @@ func (m *MongoDb) Update(object common.CrudRecord) error {
 	ctx, cancel := defaultTimeout()
 	defer cancel()
 
-	v, err := m.Connection.Collection(object.RecordType()).UpdateOne(ctx, byId(object.GetId()), bson.M{"$set": object})
+	v, err := m.Connection.Collection(object.Type()).UpdateOne(ctx, byId(object.GetId()), bson.M{"$set": object})
 	if err != nil {
 		return err
 	}
@@ -105,7 +106,7 @@ func (m *MongoDb) Delete(record common.CrudRecord) error {
 	ctx, cancel := defaultTimeout()
 	defer cancel()
 
-	deleted, err := m.Connection.Collection(record.RecordType()).DeleteOne(ctx, byId(record.GetId()))
+	deleted, err := m.Connection.Collection(record.Type()).DeleteOne(ctx, byId(record.GetId()))
 	if err != nil {
 		return err
 	}
@@ -127,8 +128,8 @@ func defaultTimeout() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 5*time.Second)
 }
 
-func byId(id primitive.ObjectID) bson.M {
-	return bson.M{"_id": id}
+func byId(id common.RecordId) bson.M {
+	return bson.M{"_id": id.String()}
 }
 
 func (m *MongoDb) Connect() error {
@@ -145,10 +146,14 @@ func (m *MongoDb) Connect() error {
 	return nil
 }
 
-func NewMongoDbProvider(url, username, password string) common.DbProvider {
+func NewMongoDbProvider(url, username, password string) common.DatabaseProvider {
 	return &MongoDb{
 		Hostname: url,
 		Username: username,
 		Password: password,
 	}
+}
+
+func ListOfCrudRecords[T common.CrudRecord](record T) []T {
+	return make([]T, 0)
 }

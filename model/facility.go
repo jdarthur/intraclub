@@ -1,90 +1,144 @@
 package model
 
 import (
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"errors"
+	"fmt"
 	"intraclub/common"
+	"strings"
 )
 
+type FacilityId common.RecordId
+
+func (id FacilityId) RecordId() common.RecordId {
+	return common.RecordId(id)
+}
+
+func (id FacilityId) String() string {
+	return id.RecordId().String()
+}
+
 type Facility struct {
-	ID          primitive.ObjectID `json:"id" bson:"_id"`
-	Address     string             `json:"address" bson:"address"`
-	Name        string             `json:"name" bson:"name"`
-	Courts      int                `json:"courts" bson:"courts"`
-	LayoutImage string             `json:"layout_image" bson:"layout_image"`
-	UserId      string             `json:"-" bson:"user_id"`
+	ID             FacilityId
+	UserId         UserId
+	Name           string
+	Address        string
+	NumberOfCourts int
+	LayoutPhoto    common.RecordId
 }
 
-func (f *Facility) SetUserId(userId string) {
-	f.UserId = userId
-}
-
-func (f *Facility) GetUserId() string {
-	return f.UserId
-}
-
-func (f *Facility) RecordType() string {
-	return "facility"
-}
-
-func (f *Facility) OneRecord() common.CrudRecord {
-	return new(Facility)
-}
-
-type listOfFacilities []*Facility
-
-func (l listOfFacilities) Length() int {
-	return len(l)
-}
-
-func (l listOfFacilities) Get(index int) common.CrudRecord {
-	return l[index]
-}
-
-func (f *Facility) ListOfRecords() common.ListOfCrudRecords {
-	return listOfFacilities{}
-}
-
-func (f *Facility) SetId(id primitive.ObjectID) {
-	f.ID = id
-}
-
-func (f *Facility) GetId() primitive.ObjectID {
-	return f.ID
-}
-
-func (f *Facility) ValidateStatic() error {
-
-	if f.Name == "" {
-		return common.ApiError{
-			References: []any{"Name"},
-			Code:       common.FieldIsRequired,
-		}
+func (f *Facility) PreDelete(db common.DatabaseProvider) error {
+	inUse, err := f.IsFacilityInUse(db)
+	if err != nil {
+		return err
 	}
-
-	if f.Address == "" {
-		return common.ApiError{
-			References: []any{"Address"},
-			Code:       common.FieldIsRequired,
-		}
+	if inUse {
+		return fmt.Errorf("facility %s is in use", f.ID)
 	}
-
-	if f.Courts == 0 {
-		return common.ApiError{
-			Code: common.FacilityMustHaveAtLeastOneCourt,
-		}
-	}
-
 	return nil
 }
 
-func (f *Facility) ValidateDynamic(db common.DbProvider, isUpdate bool, previousState common.CrudRecord) error {
+func (f *Facility) SetOwner(recordId common.RecordId) {
+	f.UserId = UserId(recordId)
+}
 
-	if f.LayoutImage != "" {
-		err := common.CheckExistenceOrErrorByStringId(db, &Image{}, f.LayoutImage)
-		if err != nil {
-			return err
-		}
+func (f *Facility) EditableBy(common.DatabaseProvider) []common.RecordId {
+	return common.SysAdminAndUsers(f.UserId.RecordId())
+}
+
+func (f *Facility) AccessibleTo(common.DatabaseProvider) []common.RecordId {
+	return common.AccessibleToEveryone
+}
+
+func NewFacility() *Facility {
+	return &Facility{}
+}
+
+func (f *Facility) Type() string {
+	return "facility"
+}
+
+func (f *Facility) GetId() common.RecordId {
+	return f.ID.RecordId()
+}
+
+func (f *Facility) SetId(id common.RecordId) {
+	f.ID = FacilityId(id)
+}
+
+func (f *Facility) StaticallyValid() error {
+	f.Name = strings.TrimSpace(f.Name)
+	f.Address = strings.TrimSpace(f.Address)
+
+	if f.Name == "" {
+		return errors.New("facility name is empty")
+	}
+	if f.NumberOfCourts <= 0 {
+		return errors.New("facility number of courts must be greater than zero")
+	}
+	if f.Address == "" {
+		return errors.New("facility address is empty")
+	}
+	return nil
+}
+
+// Enforce that Facility.Name and Facility.Address fields are unique in the DB
+func facilityAlreadyExistsWithValues(f, other *Facility) bool {
+	if f.ID == other.ID {
+		return false // don't enforce uniqueness against self
+	}
+	if f.Name == other.Name {
+		return true
+	}
+	if f.Address == other.Address {
+		return true
+	}
+	return false
+}
+
+func (f *Facility) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+
+	checkAgainst := f
+	if existing != nil {
+		checkAgainst = existing.(*Facility)
 	}
 
-	return common.CheckExistenceOrErrorByStringId(db, &User{}, f.UserId)
+	f2 := func(c *Facility) bool {
+		return facilityAlreadyExistsWithValues(checkAgainst, c)
+	}
+	records, err := common.GetAllWhere(db, &Facility{}, f2)
+	if err != nil {
+		return err
+	}
+
+	if len(records) != 0 {
+		if records[0].Name == f.Name {
+			return errors.New("facility with provided name already exists")
+		} else if records[0].Address == f.Address {
+			return errors.New("facility with provided address already exists")
+		}
+		panic("unhandled facility value collision")
+	}
+
+	if f.LayoutPhoto != 0 {
+		return common.ExistsById(db, &Photo{}, f.LayoutPhoto)
+	}
+	return nil
+}
+
+func (f *Facility) IsFacilityInUse(db common.DatabaseProvider) (bool, error) {
+	seasons, err := f.GetSeasonsForFacility(db)
+	if err != nil {
+		return false, err
+	}
+	return len(seasons) > 0, nil
+}
+
+func (f *Facility) GetSeasonsForFacility(db common.DatabaseProvider) ([]*Season, error) {
+	// get all Seasons where Season.Facility == this FacilityId
+	filter := func(c *Season) bool { return c.Facility == f.ID }
+	seasons, err := common.GetAllWhere(db, &Season{}, filter)
+	if err != nil {
+		return nil, err
+	}
+	return seasons, nil
 }
