@@ -68,7 +68,7 @@ func ExistsById[T CrudRecord](db DatabaseProvider, record T, id RecordId) (err e
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("%s record with ID %d does not exist", record.Type(), id)
+		return fmt.Errorf("'%s' record with ID '%s' does not exist", record.Type(), id)
 	}
 	return nil
 }

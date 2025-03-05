@@ -50,18 +50,22 @@ func (id PhotoId) String() string {
 
 type Photo struct {
 	ID       PhotoId
-	UserId   UserId
+	Owner    UserId
 	AltText  string
 	Contents []byte
 	FileType PhotoType
 }
 
+func NewPhoto() *Photo {
+	return &Photo{}
+}
+
 func (p *Photo) SetOwner(recordId common.RecordId) {
-	p.UserId = UserId(recordId)
+	p.Owner = UserId(recordId)
 }
 
 func (p *Photo) EditableBy(common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{p.UserId.RecordId(), common.SysAdminRecordId}
+	return []common.RecordId{p.Owner.RecordId(), common.SysAdminRecordId}
 }
 
 func (p *Photo) AccessibleTo(common.DatabaseProvider) []common.RecordId {
@@ -80,7 +84,7 @@ func (p *Photo) StaticallyValid() error {
 }
 
 func (p *Photo) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
-	err := common.ExistsById(db, &User{}, p.UserId.RecordId())
+	err := common.ExistsById(db, &User{}, p.Owner.RecordId())
 	if err != nil {
 		return err
 	}

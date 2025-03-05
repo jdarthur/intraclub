@@ -8,7 +8,11 @@ import (
 )
 
 func init() {
-	err := common.GenerateJwtKeyPairIfNotExists()
+	err := common.DeleteKeyPair()
+	if err != nil {
+		panic(err)
+	}
+	err = common.GenerateJwtKeyPairIfNotExists()
 	if err != nil {
 		panic(err)
 	}

@@ -62,7 +62,7 @@ type UserRoleAssignment struct {
 }
 
 func (u *UserRoleAssignment) SetOwner(recordId common.RecordId) {
-	// don't need to do anything as the UserId field this record type
+	// don't need to do anything as the Owner field this record type
 	// will necessarily be present in the Create request
 }
 

@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	"intraclub/common"
 	"strings"
 )
@@ -17,12 +18,31 @@ func (id BlurbId) String() string {
 }
 
 type Blurb struct {
-	ID      BlurbId
-	Title   string
-	Content string
-	Photos  []PhotoId
-	UserId  UserId
-	Season  SeasonId
+	ID        BlurbId
+	Title     string
+	Content   string
+	Photos    []PhotoId
+	Owner     UserId
+	Season    SeasonId
+	Reactions ReactionList
+}
+
+func (b *Blurb) EditableBy(db common.DatabaseProvider) []common.RecordId {
+	return []common.RecordId{
+		b.Owner.RecordId(),
+	}
+}
+
+func (b *Blurb) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+	return common.AccessibleToEveryone
+}
+
+func (b *Blurb) SetOwner(recordId common.RecordId) {
+	b.Owner = UserId(recordId)
+}
+
+func NewBlurb() *Blurb {
+	return &Blurb{}
 }
 
 func (b *Blurb) StaticallyValid() error {
@@ -38,9 +58,9 @@ func (b *Blurb) StaticallyValid() error {
 	return nil
 }
 
-func (b *Blurb) DynamicallyValid(db common.DatabaseProvider) error {
+func (b *Blurb) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
 
-	err := common.ExistsById(db, &User{}, b.UserId.RecordId())
+	err := common.ExistsById(db, &User{}, b.Owner.RecordId())
 	if err != nil {
 		return err
 	}
@@ -51,11 +71,18 @@ func (b *Blurb) DynamicallyValid(db common.DatabaseProvider) error {
 	}
 
 	for _, id := range b.Photos {
-		if err := common.ExistsById(db, &Photo{}, id.RecordId()); err != nil {
+		v, exists, err := common.GetOneById(db, &Photo{}, id.RecordId())
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("photo with ID '%s' does not exist", id)
+		}
+		if v.Owner != b.Owner {
+			return fmt.Errorf("photo with ID '%s' is not owned by user '%s'", id, b.Owner)
 		}
 	}
-
-	return nil
+	return b.Reactions.DynamicallyValid(db, nil)
 }
 
 func (b *Blurb) Type() string {
@@ -68,4 +95,79 @@ func (b *Blurb) GetId() common.RecordId {
 
 func (b *Blurb) SetId(id common.RecordId) {
 	b.ID = BlurbId(id)
+}
+
+func (b *Blurb) React(db common.DatabaseProvider, u UserId, t reactionType) error {
+	r := &Reaction{
+		UserId: u,
+		Type:   t,
+	}
+
+	err := b.Reactions.CanAddReaction(db, r)
+	if err != nil {
+		return err
+	}
+
+	err = b.CanUserCommentOrReact(db, u)
+	if err != nil {
+		return err
+	}
+
+	b.Reactions = append(b.Reactions, r)
+
+	return common.UpdateOne(db, b)
+}
+
+func (b *Blurb) Unreact(db common.DatabaseProvider, u UserId, t reactionType) error {
+	r := &Reaction{
+		UserId: u,
+		Type:   t,
+	}
+
+	found := false
+	newList := make(ReactionList, 0)
+	for _, reaction := range b.Reactions {
+		if reaction.Equals(r) {
+			found = true
+		} else {
+			newList = append(newList, reaction)
+		}
+	}
+	if !found {
+		return fmt.Errorf("reaction with values %+v does not exist", r)
+	}
+
+	b.Reactions = newList
+	return common.UpdateOne(db, b)
+}
+
+func (b *Blurb) CanUserCommentOrReact(db common.DatabaseProvider, u UserId) error {
+	// no error when we receive an empty user ID
+	if u.RecordId() == common.InvalidRecordId {
+		return nil
+	}
+
+	err := common.ExistsById(db, &User{}, u.RecordId())
+	if err != nil {
+		return err
+	}
+
+	season, exists, err := common.GetOneById(db, &Season{}, b.Season.RecordId())
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("season with ID %s does not exist", b.Season)
+	}
+
+	isInSeason, err := season.IsUserIdASeasonParticipant(db, u)
+	if err != nil {
+		return err
+	}
+
+	if !isInSeason {
+		return fmt.Errorf("user '%s' is not a participant in season '%s'", u, b.Season)
+	}
+
+	return nil
 }

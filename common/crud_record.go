@@ -18,7 +18,7 @@ func (r RecordId) Uint64() uint64 {
 }
 
 func (r RecordId) String() string {
-	return fmt.Sprintf("%08x", r.Uint64())
+	return fmt.Sprintf("%016x", r.Uint64())
 }
 
 func (r RecordId) ValidRecordId() bool {

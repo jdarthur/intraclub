@@ -95,6 +95,17 @@ func doesFileExist(path string) (bool, error) {
 	return true, nil
 }
 
+func deleteFileIfExists(path string) error {
+	_, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	return os.Remove(path)
+}
+
 func GenerateJwtKeyPairIfNotExists() error {
 	exists, err := DoesKeyPairExist()
 	if err != nil {
@@ -114,6 +125,14 @@ func GenerateJwtKeyPairIfNotExists() error {
 	}
 
 	return SerializeKeyPair(JwtPublicKey, JwtPrivateKey)
+}
+
+func DeleteKeyPair() error {
+	err := deleteFileIfExists(JwtCertFile)
+	if err != nil {
+
+	}
+	return deleteFileIfExists(JwtKeyFile)
 }
 
 func DoesKeyPairExist() (bool, error) {

@@ -50,7 +50,7 @@ func TestCreateToken(t *testing.T) {
 	}
 
 	if at.UserId != userId {
-		t.Fatalf("token2.UserId != userId")
+		t.Fatalf("token2.Owner != userId")
 	}
 
 	fmt.Printf("%+v\n", at)
