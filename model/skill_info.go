@@ -65,7 +65,7 @@ func (s SkillInfo) StaticallyValid() error {
 	panic("implement me")
 }
 
-func (s SkillInfo) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (s SkillInfo) DynamicallyValid(db common.DatabaseProvider) error {
 	//TODO implement me
 	panic("implement me")
 }

@@ -111,7 +111,7 @@ func (l *LoginToken) StaticallyValid() error {
 }
 
 // DynamicallyValid validates that this token corresponds to an existing user
-func (l *LoginToken) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (l *LoginToken) DynamicallyValid(db common.DatabaseProvider) error {
 	return common.ExistsById(db, &User{}, l.UserId.RecordId())
 }
 

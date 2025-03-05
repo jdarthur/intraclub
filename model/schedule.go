@@ -94,7 +94,7 @@ func (s *Schedule) StaticallyValid() error {
 	return nil
 }
 
-func (s *Schedule) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (s *Schedule) DynamicallyValid(db common.DatabaseProvider) error {
 	err := common.ExistsById(db, &Season{}, s.SeasonId.RecordId())
 	if err != nil {
 		return err
@@ -109,7 +109,7 @@ func (s *Schedule) DynamicallyValid(db common.DatabaseProvider, existing common.
 	return nil
 }
 
-func (s *Schedule) OnCreate(db common.DatabaseProvider) error {
+func (s *Schedule) PostCreate(db common.DatabaseProvider) error {
 	season, err := GetSeason(db, s.SeasonId)
 	if err != nil {
 		return err

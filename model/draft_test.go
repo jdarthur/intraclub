@@ -95,7 +95,7 @@ func TestCaptainIsNotInDraftList(t *testing.T) {
 	draft := newRandomDraft(t, db, 0, 4)
 
 	draft.Available = []UserId{draft.Owner}
-	err := draft.DynamicallyValid(db, nil)
+	err := draft.DynamicallyValid(db)
 	if err == nil {
 		t.Fatal("Expected draft without captain ID in list to be invalid")
 	}

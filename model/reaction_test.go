@@ -21,7 +21,7 @@ func TestReactionAlreadyPresent(t *testing.T) {
 
 	r := make(ReactionList, 0)
 	r = append(r, reaction)
-	err := r.DynamicallyValid(db, nil)
+	err := r.DynamicallyValid(db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func TestReactionUserIdDoesNotExist(t *testing.T) {
 	r := make(ReactionList, 0)
 	r = append(r, reaction)
 
-	err := r.DynamicallyValid(db, nil)
+	err := r.DynamicallyValid(db)
 	if err == nil {
 		t.Fatal("should get error for a nonexistent user ID in reaction")
 	}

@@ -83,7 +83,7 @@ func (p *Photo) StaticallyValid() error {
 	return nil
 }
 
-func (p *Photo) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (p *Photo) DynamicallyValid(db common.DatabaseProvider) error {
 	err := common.ExistsById(db, &User{}, p.Owner.RecordId())
 	if err != nil {
 		return err

@@ -39,10 +39,21 @@ func (w WithAccessControl[T]) CanUserEdit(record T) bool {
 		return false
 	}
 
+	cod, editIsConstrained := any(record).(CanOnlyDelete)
+
 	isSysAdminEditable := false
 	for _, userId := range list {
 		if userId == w.AccessControlUser {
-			return true
+			if !editIsConstrained {
+				// if EditableBy has no "user X can only delete" constraint, we can edit
+				return true
+			} else {
+				if !cod.CanOnlyDelete(w.Database, w.AccessControlUser) {
+					// if EditableBy has a "user X can only delete" constraint, but this
+					// user doesn't have that constraint, we can edit.
+					return true
+				}
+			}
 		}
 
 		if userId == SysAdminRecordId {
@@ -51,6 +62,9 @@ func (w WithAccessControl[T]) CanUserEdit(record T) bool {
 	}
 
 	if isSysAdminEditable && SysAdminCheck != nil {
+		if editIsConstrained && cod.CanOnlyDelete(w.Database, SysAdminRecordId) {
+			return false
+		}
 		isSysAdmin, err := SysAdminCheck(w.Database, w.AccessControlUser)
 		if err != nil {
 			fmt.Println("error checking for sys admin", err)
@@ -91,7 +105,7 @@ func (w WithAccessControl[T]) DeleteOneById(record T, id RecordId) (t T, exists 
 	if !exists || !w.CanUserEdit(t) {
 		return t, false, nil
 	}
-	
+
 	return DeleteOneById(w.Database, record, id)
 }
 

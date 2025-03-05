@@ -64,6 +64,6 @@ func (r *Rating) StaticallyValid() error {
 	return nil
 }
 
-func (r *Rating) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (r *Rating) DynamicallyValid(db common.DatabaseProvider) error {
 	return nil
 }

@@ -97,6 +97,6 @@ func (u *User) StaticallyValid() error {
 	return nil
 }
 
-func (u *User) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (u *User) DynamicallyValid(db common.DatabaseProvider) error {
 	return nil
 }

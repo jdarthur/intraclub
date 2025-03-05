@@ -1,6 +1,9 @@
 package common
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 var GlobalDatabaseProvider DatabaseProvider
 
@@ -57,6 +60,19 @@ func GetOneById[T CrudRecord](db DatabaseProvider, record T, id RecordId) (t T, 
 		return t, false, nil
 	}
 	return r.(T), exists, nil
+}
+
+func GetExistingRecordById[T CrudRecord](db DatabaseProvider, record T, id RecordId) (t T, err error) {
+	record.SetId(id)
+	r, exists, err := db.GetOne(record)
+	if err != nil {
+		return t, err
+	}
+	if !exists {
+		return t, fmt.Errorf("'%s' record with ID '%s' does not exist", record.Type(), id)
+
+	}
+	return r.(T), nil
 }
 
 // ExistsById checks if a CrudRecord exists with a particular RecordId,
@@ -148,27 +164,31 @@ func DeleteOneById[T CrudRecord](db DatabaseProvider, record T, id RecordId) (t 
 // CreateOne validates that a CrudRecord is statically and dynamically
 // valid, creates a new RecordId for the new record's primary key, and
 // saves the record to the given DatabaseProvider. If the record has
-// any post-create logic to run (via implementing the OnCreate interface)
+// any post-create logic to run (via implementing the PostCreate interface)
 // this logic is also run, returning any errors encountered along the way
 func CreateOne[T CrudRecord](db DatabaseProvider, record T) (t T, err error) {
+
+	// create a new record ID
+	recordId := NewRecordId()
+	record.SetId(recordId)
+
+	setCreateTimeStampIfApplicable(record)
+
 	// validate that this record meets all the constraints of its type
 	err = Validate(db, record, nil)
 	if err != nil {
 		return t, err
 	}
 
-	// create a new record ID
-	recordId := NewRecordId()
-	record.SetId(recordId)
 	v, err := db.Create(record)
 	if err != nil {
 		return t, err
 	}
 
 	// run post-create logic if the record type implements it
-	o, ok := v.(OnCreate)
+	o, ok := v.(PostCreate)
 	if ok {
-		err = o.OnCreate(db)
+		err = o.PostCreate(db)
 		if err != nil {
 			return t, err
 		}
@@ -193,12 +213,22 @@ func UpdateOne(db DatabaseProvider, record CrudRecord) (err error) {
 		return fmt.Errorf("%s record with ID %d does not exist", record.Type(), record.GetId())
 	}
 
+	// set update timestamp before validating (in case validation checks for timestamp values)
+	setUpdateTimeStampIfApplicable(record, v)
+
 	// validate that this record meets all the constraints of its type
 	err = Validate(db, record, v)
 	if err != nil {
 		return err
 	}
 
+	pu, ok := record.(PreUpdate)
+	if ok {
+		err = pu.PreUpdate(db, v)
+		if err != nil {
+			return err
+		}
+	}
 	// update the record in the DB
 	err = db.Update(record)
 	if err != nil {
@@ -206,12 +236,38 @@ func UpdateOne(db DatabaseProvider, record CrudRecord) (err error) {
 	}
 
 	// run post-update logic if implemented by the type
-	o, ok := record.(OnUpdate)
+	o, ok := record.(PostUpdate)
 	if ok {
-		err = o.OnUpdate(db)
+		err = o.PostUpdate(db)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func setCreateTimeStampIfApplicable[T CrudRecord](record T) {
+	ts, ok := any(record).(TimestampedRecord)
+	if ok {
+		ts.SetCreateTimestamp(time.Now())
+	}
+}
+
+// setUpdateTimeStampIfApplicable will check if the record is a TimestampedRecord, and if
+// so, it will set the update timestamp. This function will also overwrite the created
+// timestamp on the update body with the value from the existing record, so that the
+// created timestamp remains immutable during an update operation
+func setUpdateTimeStampIfApplicable[T CrudRecord](updatedRecord, existingRecord T) {
+	ts, ok := any(updatedRecord).(TimestampedRecord)
+	if ok {
+		originalCreatedAt, _ := any(existingRecord).(TimestampedRecord).GetTimeStamps()
+
+		oldValue := ts.SetCreateTimestamp(originalCreatedAt) // disallow any updates to create timestamp during update
+		if oldValue != originalCreatedAt {
+			fmt.Printf("Warning: update for %s with ID %s had new created-at timestamp: %s\n", updatedRecord.Type(), updatedRecord.GetId(), oldValue)
+			fmt.Printf("Overwriting back to original: %s\n", originalCreatedAt)
+		}
+		ts.SetUpdateTimestamp(time.Now())
+	}
+
 }

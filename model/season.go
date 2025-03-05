@@ -103,7 +103,7 @@ func (s *Season) StaticallyValid() error {
 	return s.StartTime.StaticallyValid()
 }
 
-func (s *Season) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (s *Season) DynamicallyValid(db common.DatabaseProvider) error {
 	for _, commissioner := range s.Commissioners {
 		if err := common.ExistsById(db, &User{}, commissioner.RecordId()); err != nil {
 			return err
@@ -161,6 +161,11 @@ func (s *Season) GetDraft(db common.DatabaseProvider) (*Draft, error) {
 }
 
 func (s *Season) IsUserIdASeasonParticipant(db common.DatabaseProvider, u UserId) (bool, error) {
+	for _, commissioner := range s.Commissioners {
+		if commissioner == u {
+			return true, nil
+		}
+	}
 
 	for _, lateAdd := range s.LateAdditions {
 		if lateAdd == u {
@@ -168,12 +173,17 @@ func (s *Season) IsUserIdASeasonParticipant(db common.DatabaseProvider, u UserId
 		}
 	}
 
-	draft, err := s.GetDraft(db)
+	teams, err := s.GetTeams(db)
 	if err != nil {
 		return false, err
 	}
 
-	return draft.IsAvailableToSelect(u) || draft.IsSelected(u), nil
+	for _, team := range teams {
+		if team.IsTeamMember(u) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (s *Season) IsUserIdACommissioner(u UserId) bool {
@@ -183,6 +193,17 @@ func (s *Season) IsUserIdACommissioner(u UserId) bool {
 		}
 	}
 	return false
+}
+
+func (s *Season) GetTeams(db common.DatabaseProvider) ([]*Team, error) {
+	return common.GetAllWhere(db, &Team{}, func(c *Team) bool {
+		for _, team := range s.Teams {
+			if c.ID == team {
+				return true
+			}
+		}
+		return false
+	})
 }
 
 func GetSeason(db common.DatabaseProvider, id SeasonId) (*Season, error) {

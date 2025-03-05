@@ -95,15 +95,9 @@ func facilityAlreadyExistsWithValues(f, other *Facility) bool {
 	return false
 }
 
-func (f *Facility) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
-
-	checkAgainst := f
-	if existing != nil {
-		checkAgainst = existing.(*Facility)
-	}
-
+func (f *Facility) DynamicallyValid(db common.DatabaseProvider) error {
 	f2 := func(c *Facility) bool {
-		return facilityAlreadyExistsWithValues(checkAgainst, c)
+		return facilityAlreadyExistsWithValues(f, c)
 	}
 	records, err := common.GetAllWhere(db, &Facility{}, f2)
 	if err != nil {

@@ -6,7 +6,7 @@ type Validatable interface {
 
 type DatabaseValidatable interface {
 	Validatable
-	DynamicallyValid(db DatabaseProvider, existing DatabaseValidatable) error
+	DynamicallyValid(db DatabaseProvider) error
 }
 
 func Validate(db DatabaseProvider, d DatabaseValidatable, existing DatabaseValidatable) error {
@@ -14,5 +14,5 @@ func Validate(db DatabaseProvider, d DatabaseValidatable, existing DatabaseValid
 	if err != nil {
 		return err
 	}
-	return d.DynamicallyValid(db, existing)
+	return d.DynamicallyValid(db)
 }

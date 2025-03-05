@@ -86,6 +86,6 @@ func (p *PlayoffStructure) NumberOfRounds() int {
 	return int(math.Sqrt(float64(p.NumberOfTeams))) + 1
 }
 
-func (p *PlayoffStructure) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (p *PlayoffStructure) DynamicallyValid(db common.DatabaseProvider) error {
 	return nil
 }

@@ -93,7 +93,7 @@ func (r *Reaction) StaticallyValid() error {
 	return r.Type.StaticallyValid()
 }
 
-func (r *Reaction) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (r *Reaction) DynamicallyValid(db common.DatabaseProvider) error {
 	return common.ExistsById(db, &User{}, r.UserId.RecordId())
 }
 
@@ -121,9 +121,9 @@ func (r ReactionList) StaticallyValid() error {
 	return nil
 }
 
-func (r ReactionList) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (r ReactionList) DynamicallyValid(db common.DatabaseProvider) error {
 	for _, reaction := range r {
-		err := reaction.DynamicallyValid(db, existing)
+		err := reaction.DynamicallyValid(db)
 		if err != nil {
 			return err
 		}

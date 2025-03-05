@@ -47,7 +47,7 @@ func (p *PrivateTestRecord) StaticallyValid() error {
 	return nil
 }
 
-func (p *PrivateTestRecord) DynamicallyValid(db DatabaseProvider, existing DatabaseValidatable) error {
+func (p *PrivateTestRecord) DynamicallyValid(db DatabaseProvider) error {
 	return nil
 }
 

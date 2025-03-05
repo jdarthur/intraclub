@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand"
+	"time"
 )
 
 type RecordId uint64
@@ -71,12 +72,21 @@ type CrudRecord interface {
 	DatabaseValidatable
 }
 
-type OnCreate interface {
-	OnCreate(db DatabaseProvider) error // function to call post-create
+type PostCreate interface {
+	PostCreate(db DatabaseProvider) error // function to call post-create
 }
 
-type OnUpdate interface {
-	OnUpdate(db DatabaseProvider) error // function to call post-update
+type PreUpdate interface {
+	PreUpdate(db DatabaseProvider, existingValues CrudRecord) error // function to call pre-update
+}
+
+type CanOnlyDelete interface {
+	CrudRecord
+	CanOnlyDelete(db DatabaseProvider, userId RecordId) bool
+}
+
+type PostUpdate interface {
+	PostUpdate(db DatabaseProvider) error // function to call post-update
 }
 
 type PreDelete interface {
@@ -84,5 +94,11 @@ type PreDelete interface {
 }
 
 type PostDelete interface {
-	OnDelete(db DatabaseProvider) error // function to call post-delete
+	PostDelete(db DatabaseProvider) error // function to call post-delete
+}
+
+type TimestampedRecord interface {
+	GetTimeStamps() (created, updated time.Time)
+	SetCreateTimestamp(time.Time) (oldValue time.Time)
+	SetUpdateTimestamp(time.Time) (oldValue time.Time)
 }

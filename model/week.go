@@ -29,7 +29,7 @@ func (w *Week) SetOwner(recordId common.RecordId) {
 	// values of the SeasonId field
 }
 
-func (w *Week) OnCreate(db common.DatabaseProvider) error {
+func (w *Week) PostCreate(db common.DatabaseProvider) error {
 	season, err := GetSeason(db, w.SeasonId)
 	if err != nil {
 		return err
@@ -63,7 +63,7 @@ func (w *Week) StaticallyValid() error {
 	return nil
 }
 
-func (w *Week) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (w *Week) DynamicallyValid(db common.DatabaseProvider) error {
 	return common.ExistsById(db, &Season{}, w.SeasonId.RecordId())
 }
 

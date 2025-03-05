@@ -7,7 +7,8 @@ import (
 
 func newDefaultSeason(t *testing.T, db common.DatabaseProvider) *Season {
 	commissioner := newStoredUser(t, db)
-	team := newStoredTeam(t, db, commissioner.ID)
+	teamCaptain := newStoredUser(t, db)
+	team := newStoredTeam(t, db, teamCaptain.ID)
 	return newStoredSeason(t, db, commissioner.ID, []*Team{team})
 }
 

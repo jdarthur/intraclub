@@ -47,7 +47,7 @@ func (t *Team) StaticallyValid() error {
 	return nil
 }
 
-func (t *Team) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (t *Team) DynamicallyValid(db common.DatabaseProvider) error {
 	err := common.ExistsById(db, &User{}, t.Captain.RecordId())
 	if err != nil {
 		return err

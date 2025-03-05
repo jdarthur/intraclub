@@ -12,7 +12,8 @@ const (
 	Commissioner
 	TeamCaptainOrCoCaptain
 	TeamMember
-	LeagueMember
+	SeasonMember
+	BlurbReporter
 	RoleInvalid
 )
 
@@ -26,8 +27,10 @@ func (r Role) String() string {
 		return "Team Captain or Co-Captain"
 	case TeamMember:
 		return "Team Member"
-	case LeagueMember:
-		return "League Member"
+	case SeasonMember:
+		return "Season Member"
+	case BlurbReporter:
+		return "Blurb Reporter"
 	default:
 		return "Invalid Role"
 	}
@@ -43,7 +46,7 @@ func (r Role) GetReferenceType() common.CrudRecord {
 		return &Team{}
 	case TeamMember:
 		return &Team{}
-	case LeagueMember:
+	case SeasonMember:
 		return &Season{}
 	default:
 		return nil
@@ -94,7 +97,7 @@ func (u *UserRoleAssignment) StaticallyValid() error {
 	return nil
 }
 
-func (u *UserRoleAssignment) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (u *UserRoleAssignment) DynamicallyValid(db common.DatabaseProvider) error {
 	err := common.ExistsById(db, &User{}, u.UserId.RecordId())
 	if err != nil {
 		return err
@@ -183,6 +186,13 @@ func (u *User) AssignRoleWithReference(db common.DatabaseProvider, r Role, refer
 	}
 	if hasRole {
 		return nil
+	}
+
+	if r != SystemAdministrator && referenceId != common.InvalidRecordId {
+		err = common.ExistsById(db, r.GetReferenceType(), referenceId)
+		if err != nil {
+			return err
+		}
 	}
 
 	assignment := UserRoleAssignment{

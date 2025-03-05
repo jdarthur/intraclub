@@ -15,6 +15,12 @@ func newValidBlurb(owner UserId, season SeasonId) *Blurb {
 	return b
 }
 
+func newDefaultBlurb(t *testing.T, db common.DatabaseProvider) (*Blurb, *Season) {
+	season := newDefaultSeason(t, db)
+	b := newStoredBlurb(t, db, season.Commissioners[0], season.ID)
+	return b, season
+}
+
 func newStoredBlurb(t *testing.T, db common.DatabaseProvider, owner UserId, season SeasonId) *Blurb {
 	b := newValidBlurb(owner, season)
 	v, err := common.CreateOne(db, b)
@@ -67,7 +73,7 @@ func TestBlurbContentIsOnlyWhitespace(t *testing.T) {
 func TestBlurbUserIdDoesNotExist(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	b := newValidBlurb(UserId(common.InvalidRecordId), SeasonId(0))
-	err := b.DynamicallyValid(db, nil)
+	err := b.DynamicallyValid(db)
 	if err == nil {
 		t.Fatal("expected error on invalid user ID")
 	}
@@ -78,7 +84,7 @@ func TestBlurbSeasonIdDoesNotExist(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	user := newStoredUser(t, db)
 	b := newValidBlurb(user.ID, SeasonId(0))
-	err := b.DynamicallyValid(db, nil)
+	err := b.DynamicallyValid(db)
 	if err == nil {
 		t.Fatal("expected error on invalid user ID")
 	}
@@ -90,7 +96,7 @@ func TestBlurbPhotoIdDoesNotExist(t *testing.T) {
 	season := newDefaultSeason(t, db)
 	b := newValidBlurb(season.Commissioners[0], season.ID)
 	b.Photos = []PhotoId{0}
-	err := b.DynamicallyValid(db, nil)
+	err := b.DynamicallyValid(db)
 	if err == nil {
 		t.Fatal("expected error on invalid photo ID")
 	}
@@ -99,15 +105,15 @@ func TestBlurbPhotoIdDoesNotExist(t *testing.T) {
 
 func TestBlurbPhotoDoesNotBelongToUser(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season := newDefaultSeason(t, db)
+
+	b, _ := newDefaultBlurb(t, db)
 
 	user2 := newStoredUser(t, db)
 	photo := newStoredPhoto(t, db, user2.ID)
 
-	b := newValidBlurb(season.Commissioners[0], season.ID)
 	b.Photos = []PhotoId{photo.ID}
 
-	err := b.DynamicallyValid(db, nil)
+	err := b.DynamicallyValid(db)
 	if err == nil {
 		t.Fatal("expected error on non-owned photo ID")
 	}

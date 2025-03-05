@@ -73,7 +73,7 @@ func (d *Draft) StaticallyValid() error {
 	return nil
 }
 
-func (d *Draft) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (d *Draft) DynamicallyValid(db common.DatabaseProvider) error {
 
 	err := common.ExistsById(db, &User{}, d.Owner.RecordId())
 	if err != nil {

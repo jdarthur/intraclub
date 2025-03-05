@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"intraclub/common"
+	"sort"
 	"strings"
 )
 
@@ -58,7 +59,7 @@ func (b *Blurb) StaticallyValid() error {
 	return nil
 }
 
-func (b *Blurb) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (b *Blurb) DynamicallyValid(db common.DatabaseProvider) error {
 
 	err := common.ExistsById(db, &User{}, b.Owner.RecordId())
 	if err != nil {
@@ -82,7 +83,7 @@ func (b *Blurb) DynamicallyValid(db common.DatabaseProvider, existing common.Dat
 			return fmt.Errorf("photo with ID '%s' is not owned by user '%s'", id, b.Owner)
 		}
 	}
-	return b.Reactions.DynamicallyValid(db, nil)
+	return b.Reactions.DynamicallyValid(db)
 }
 
 func (b *Blurb) Type() string {
@@ -170,4 +171,19 @@ func (b *Blurb) CanUserCommentOrReact(db common.DatabaseProvider, u UserId) erro
 	}
 
 	return nil
+}
+
+func (b *Blurb) GetComments(db common.DatabaseProvider) ([]*Comment, error) {
+	v, err := common.GetAllWhere(db, &Comment{}, func(c *Comment) bool {
+		return c.Blurb == b.ID
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// sort the comments by create date
+	sort.Slice(v, func(i, j int) bool {
+		return v[i].CreatedAt.Before(v[j].CreatedAt)
+	})
+	return v, nil
 }

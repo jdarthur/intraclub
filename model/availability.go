@@ -41,12 +41,12 @@ type Availability struct {
 	Available AvailabilityOption
 }
 
-func (a *Availability) SetOwner(recordId common.RecordId) {
-	a.UserId = UserId(recordId)
-}
-
 func NewAvailability() *Availability {
 	return &Availability{}
+}
+
+func (a *Availability) SetOwner(recordId common.RecordId) {
+	a.UserId = UserId(recordId)
 }
 
 func (a *Availability) Type() string {
@@ -68,7 +68,7 @@ func (a *Availability) StaticallyValid() error {
 	return nil
 }
 
-func (a *Availability) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (a *Availability) DynamicallyValid(db common.DatabaseProvider) error {
 	err := common.ExistsById(db, &User{}, a.UserId.RecordId())
 	if err != nil {
 		return err

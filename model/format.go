@@ -104,7 +104,7 @@ func (f *Format) StaticallyValid() error {
 	return nil
 }
 
-func (f *Format) DynamicallyValid(db common.DatabaseProvider, existing common.DatabaseValidatable) error {
+func (f *Format) DynamicallyValid(db common.DatabaseProvider) error {
 	for _, line := range f.Lines {
 		err := line.DynamicallyValid(db)
 		if err != nil {
