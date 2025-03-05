@@ -132,7 +132,7 @@ func (r ReactionList) DynamicallyValid(db common.DatabaseProvider) error {
 }
 
 func (r ReactionList) CanAddReaction(db common.DatabaseProvider, new *Reaction) error {
-	err := common.Validate(db, new, nil)
+	err := common.Validate(db, new)
 	if err != nil {
 		return err
 	}

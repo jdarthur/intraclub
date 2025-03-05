@@ -138,7 +138,7 @@ func (m *StartLoginTokenManager) IsTokenValid(db common.DatabaseProvider, token 
 		return fmt.Errorf("token %s does not exist\n", token.Token)
 	}
 
-	err := common.Validate(db, token, nil)
+	err := common.Validate(db, token)
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func (m *StartLoginTokenManager) RequestToken(db common.DatabaseProvider, req *R
 		return nil, err
 	}
 
-	err = common.Validate(db, token, nil)
+	err = common.Validate(db, token)
 	if err != nil {
 		return nil, err
 	}

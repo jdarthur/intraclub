@@ -10,6 +10,7 @@ type PreDraftGrade struct {
 	PlayerId UserId          // ID of the User who is being graded
 	DraftId  DraftId         // ID of the Draft that this PreDraftGrade pertains to
 	GraderId UserId          // ID of the User providing a Grade
+	Modifier int             // 1, 0, or -1 to indicate that this is a strong, average, or weak version of this Rating
 	Rating   RatingId
 }
 

@@ -9,7 +9,7 @@ type DatabaseValidatable interface {
 	DynamicallyValid(db DatabaseProvider) error
 }
 
-func Validate(db DatabaseProvider, d DatabaseValidatable, existing DatabaseValidatable) error {
+func Validate(db DatabaseProvider, d DatabaseValidatable) error {
 	err := d.StaticallyValid()
 	if err != nil {
 		return err

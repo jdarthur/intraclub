@@ -11,10 +11,7 @@ type TeamColor struct {
 	Hex  string `json:"hex"`
 }
 
-// ValidateStatic checks that the TeamColor has:
-//   - a non-empty name
-//   - a non-empty, 6-character hex code that is parseable as valid hex
-func (t TeamColor) ValidateStatic() error {
+func (t TeamColor) StaticallyValid() error {
 	if t.Name == "" {
 		return fmt.Errorf("name must not be empty")
 	}

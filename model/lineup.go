@@ -7,10 +7,10 @@ import (
 )
 
 type lineupPairing struct {
-	Format  common.RecordId // ID of a particular Format for a Season
-	Line    int             // index of the line inside the Format
-	Player1 UserId          // index of the User who is player one for this Format / Line combination
-	Player2 UserId          // index of the User who is player two for this Format / Line combination
+	Format  FormatId // ID of a particular Format for a Season
+	Line    int      // index of the line inside the Format
+	Player1 UserId   // index of the User who is player one for this Format / Line combination
+	Player2 UserId   // index of the User who is player two for this Format / Line combination
 }
 
 func (l lineupPairing) StaticallyValid() error {
@@ -31,7 +31,7 @@ func (l lineupPairing) DynamicallyValid(db common.DatabaseProvider) error {
 		return err
 	}
 
-	format, exists, err := common.GetOneById(db, &Format{}, l.Format)
+	format, exists, err := common.GetOneById(db, &Format{}, l.Format.RecordId())
 	if err != nil {
 		return err
 	}
@@ -73,16 +73,15 @@ func (l Lineup) SetId(id common.RecordId) {
 }
 
 func (l Lineup) StaticallyValid() error {
+	if len(l.Pairings) == 0 {
+		return errors.New("lineup pairings list is empty")
+	}
 	return nil
 }
 
 func (l Lineup) DynamicallyValid(db common.DatabaseProvider) error {
 	for _, pairing := range l.Pairings {
-		err := pairing.StaticallyValid()
-		if err != nil {
-			return err
-		}
-		err = pairing.DynamicallyValid(db)
+		err := common.Validate(db, pairing)
 		if err != nil {
 			return err
 		}

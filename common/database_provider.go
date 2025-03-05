@@ -175,7 +175,7 @@ func CreateOne[T CrudRecord](db DatabaseProvider, record T) (t T, err error) {
 	setCreateTimeStampIfApplicable(record)
 
 	// validate that this record meets all the constraints of its type
-	err = Validate(db, record, nil)
+	err = Validate(db, record)
 	if err != nil {
 		return t, err
 	}
@@ -217,7 +217,7 @@ func UpdateOne(db DatabaseProvider, record CrudRecord) (err error) {
 	setUpdateTimeStampIfApplicable(record, v)
 
 	// validate that this record meets all the constraints of its type
-	err = Validate(db, record, v)
+	err = Validate(db, record)
 	if err != nil {
 		return err
 	}
