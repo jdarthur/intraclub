@@ -28,8 +28,8 @@ Tokens are necessary to call authenticated endpoints such as create, update, del
 
 ### d) Create other users
 You must have some users to be able to create a draft (at least like 8 or so users)
- - [ ] Endpoint to create a user from CSV
- - [ ] Created users should not belong to CSV endpoint caller
+ - [x] Endpoint to create a user from CSV
+ - [x] Created users should not belong to CSV endpoint caller
  - [ ] CSV endpoint should parse already-created users so they are only modified (if necessary)
  - [ ] CSV endpoint should return errors, new users, modified users, & created users
 

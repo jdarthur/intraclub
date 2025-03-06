@@ -3,8 +3,10 @@ package model
 import (
 	"encoding/csv"
 	"fmt"
+	"intraclub/common"
 	"io"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -20,8 +22,9 @@ var ExpectedHeaders = []string{
 	EmailCsvField,
 }
 
-func ParseUserCsvFromFile(filename string) ([]*User, error) {
+var HeadersLine = fmt.Sprintf("%s, %s, %s\n", FirstNameCsvField, LastNameCsvField, EmailCsvField)
 
+func ParseUserCsvFromFile(filename string) ([]*User, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -109,7 +112,68 @@ func ParseCsvLine(line, headers []string) (*User, error) {
 		}
 	}
 
+	err := user.StaticallyValid()
+	if err != nil {
+		return user, err
+	}
+
 	return user, nil
+}
+
+func ParseUserList(db common.DatabaseProvider, input []*User) (newUsers, alreadyExistingUsers []*User, err error) {
+	existingUsersInDatabase, err := common.GetAll(db, &User{})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	newUsers = make([]*User, 0)
+	alreadyExistingUsers = make([]*User, 0)
+	for _, user := range input {
+		found := false
+
+		// look for this user in the database list
+		for _, existing := range existingUsersInDatabase {
+			if existing.Email == user.Email {
+				// if already existing, add it to that list and break out of loop
+				alreadyExistingUsers = append(alreadyExistingUsers, existing)
+				found = true
+				break
+			}
+		}
+
+		// if this user did not exist in the database, add it to the new list
+		if !found {
+			newUsers = append(newUsers, user)
+		}
+	}
+	return newUsers, alreadyExistingUsers, nil
+}
+
+func ParseAndCreateCsvUsers(db common.DatabaseProvider, csvUserList []*User) (createdUsers, existingUsers []*User, err error) {
+
+	newUsers, alreadyExistingUsers, err := ParseUserList(db, csvUserList)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	created := make([]*User, 0)
+	for _, user := range newUsers {
+		v, err := common.CreateOne(db, user)
+		if err != nil {
+			return nil, nil, err
+		}
+		created = append(created, v)
+	}
+
+	sort.Slice(created, func(i, j int) bool {
+		return created[i].LastName < created[j].LastName
+	})
+
+	sort.Slice(alreadyExistingUsers, func(i, j int) bool {
+		return alreadyExistingUsers[i].LastName < alreadyExistingUsers[j].LastName
+	})
+
+	return created, alreadyExistingUsers, nil
 }
 
 func TrimHeaders(headers []string) []string {
