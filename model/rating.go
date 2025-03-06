@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+var RatingOne = "Well-developed overall game, strong fundamentals, and skilled against many types of opponent play styles"
+var RatingTwo = "Moderate overall game, perhaps lacking in some fundamentals but makes up for weaknesses through a particular strengths such as finesse, quickness, or strategy"
+var RatingThree = "Lower-skilled player who might be prone to mistakes or beatable due to lack of quickness or weakness to particular shot styles"
+
 type RatingId common.RecordId
 
 func (id RatingId) RecordId() common.RecordId {
@@ -32,7 +36,7 @@ func NewRating() *Rating {
 }
 
 func (r *Rating) EditableBy(common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{r.UserId.RecordId()}
+	return common.SysAdminAndUsers(r.UserId.RecordId())
 }
 
 func (r *Rating) AccessibleTo(common.DatabaseProvider) []common.RecordId {
@@ -65,5 +69,5 @@ func (r *Rating) StaticallyValid() error {
 }
 
 func (r *Rating) DynamicallyValid(db common.DatabaseProvider) error {
-	return nil
+	return common.ExistsById(db, &User{}, r.UserId.RecordId())
 }

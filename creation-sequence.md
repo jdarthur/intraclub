@@ -34,9 +34,11 @@ You must have some users to be able to create a draft (at least like 8 or so use
  - [ ] CSV endpoint should return errors, new users, modified users, & created users
 
 ### e) Create rating types
-
-- This is most likely just `1`, `2`, and `3`
-- This is needed before we can create a format
+This is most likely just essentially `1`, `2`, and `3` and is needed before we can create a format
+- [x] create a new rating
+- [x] validate that the rating has values + a real User ID
+- [ ] validate that the rating is update-able by system administrator
+- [ ] validate that the rating cannot be deleted if it is in use
 
 ### f) Create a format
 
