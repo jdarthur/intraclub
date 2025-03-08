@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"intraclub/common"
+	"strings"
 )
 
 // Line is a pairing of two players that have a particular Rating.
@@ -54,10 +55,32 @@ func (id FormatId) String() string {
 	return id.RecordId().String()
 }
 
+// Format is a globally-available common.CrudRecord type which allows
+// a user to specify a format that a Season will be played in. This is
+// composed of a list of possible Rating IDs, and a list of Line records
+// which compose a pairing of two Rating types.
+//
+// For example, this could be a 1/2/3 division of skilled, medium, and
+// beginner-level players with all six combinations of skill level:
+//   - 1/1
+//   - 1/2
+//   - 1/3
+//   - 2/2
+//   - 2/3
+//   - 3/3
+//
+// Another format type could be "old guy / young guy" in which players
+// are classed into either "old guy" status or "young guy" status, with
+// Line options of:
+//   - old guy / old guy
+//   - old guy / young guy
+//   - young guy / young guy.
 type Format struct {
-	ID     FormatId
-	UserId UserId
-	Lines  []Line
+	ID              FormatId   // unique ID for the Format
+	UserId          UserId     // owner of the Format
+	Name            string     // name for the Format, e.g. "Men's Intraclub 1/2/3"
+	PossibleRatings []RatingId // list of possible Rating values for the lines, highest to lowest skill
+	Lines           []Line     // Rating pairings that will play during a matchup
 }
 
 func (f *Format) SetOwner(recordId common.RecordId) {
@@ -93,7 +116,22 @@ func (f *Format) StaticallyValid() error {
 		return errors.New("format has no lines")
 	}
 
+	if len(f.PossibleRatings) == 0 {
+		return errors.New("format has no possible ratings")
+	}
+
+	f.Name = strings.TrimSpace(f.Name)
+	if f.Name == "" {
+		return errors.New("format has no name")
+	}
+
 	for i, line1 := range f.Lines {
+		if !f.IsRatingInOptionsList(line1.Player1Rating) {
+			return fmt.Errorf("rating for player 1 in line %d (%s) is not in possible options list", i, line1.Player1Rating)
+		}
+		if !f.IsRatingInOptionsList(line1.Player2Rating) {
+			return fmt.Errorf("rating for player 2 in line %d (%s) is not in possible options list", i, line1.Player1Rating)
+		}
 		for j, line2 := range f.Lines {
 			if i != j && line1.EquivalentTo(line2) {
 				return fmt.Errorf("format has duplicate lines %s at index %d, %s at index %d", line1, i, line2, j)
@@ -102,6 +140,15 @@ func (f *Format) StaticallyValid() error {
 	}
 
 	return nil
+}
+
+func (f *Format) IsRatingInOptionsList(r RatingId) bool {
+	for _, option := range f.PossibleRatings {
+		if r == option {
+			return true
+		}
+	}
+	return false
 }
 
 func (f *Format) DynamicallyValid(db common.DatabaseProvider) error {
@@ -115,23 +162,10 @@ func (f *Format) DynamicallyValid(db common.DatabaseProvider) error {
 }
 
 func (f *Format) IsRatingValidForFormat(r RatingId) bool {
-	for _, line := range f.Lines {
-		if line.Player1Rating == r || line.Player2Rating == r {
+	for _, rating := range f.PossibleRatings {
+		if r == rating {
 			return true
 		}
 	}
 	return false
-}
-
-func (f *Format) GetAvailableRatings() []RatingId {
-	ratings := make([]RatingId, 0)
-	for _, line := range f.Lines {
-		if !ratingInList(line.Player1Rating, ratings) {
-			ratings = append(ratings, line.Player1Rating)
-		}
-		if !ratingInList(line.Player2Rating, ratings) {
-			ratings = append(ratings, line.Player2Rating)
-		}
-	}
-	return ratings
 }

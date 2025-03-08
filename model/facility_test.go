@@ -71,16 +71,9 @@ func TestFacilityCrud(t *testing.T) {
 }
 
 func TestEditableBySysAdmin(t *testing.T) {
-	common.SysAdminCheck = IsUserSystemAdministrator
-
 	db := common.NewUnitTestDBProvider()
 	user := newStoredUser(t, db)
-	sysAdmin := newStoredUser(t, db)
-	err := sysAdmin.AssignRole(db, SystemAdministrator)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	sysAdmin := newSysAdmin(t, db)
 	facility := newStoredFacility(t, db, user.ID)
 
 	wac := common.WithAccessControl[*Facility]{Database: db, AccessControlUser: sysAdmin.GetId()}

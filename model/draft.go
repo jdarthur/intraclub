@@ -301,7 +301,7 @@ func (d *Draft) GetAvailableRatings(db common.DatabaseProvider) ([]RatingId, err
 	if !exists {
 		return ratings, fmt.Errorf("format with ID %s does not exist", d.Format)
 	}
-	return format.GetAvailableRatings(), nil
+	return format.PossibleRatings, nil
 }
 
 func ratingInList(rating RatingId, list []RatingId) bool {

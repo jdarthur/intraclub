@@ -100,23 +100,17 @@ func TestCommentUserIdIsInvalid(t *testing.T) {
 }
 
 func TestEditBySysAdmin(t *testing.T) {
-	common.SysAdminCheck = IsUserSystemAdministrator
-
 	db := common.NewUnitTestDBProvider()
 	blurb, _ := newDefaultBlurb(t, db)
 	c := newStoredComment(t, db, blurb.Owner, blurb)
 
-	sysAdmin := newStoredUser(t, db)
-	err := sysAdmin.AssignRole(db, SystemAdministrator)
-	if err != nil {
-		t.Fatal(err)
-	}
+	sysAdmin := newSysAdmin(t, db)
 
 	copied := copyComment(c)
 	copied.Content = "new content"
 
 	wac := common.WithAccessControl[*Comment]{Database: db, AccessControlUser: sysAdmin.ID.RecordId()}
-	err = wac.UpdateOneById(copied)
+	err := wac.UpdateOneById(copied)
 	if err == nil {
 		t.Error("Edit by privileged non-owner should produce error")
 	}
@@ -175,21 +169,14 @@ func TestEditByOwner(t *testing.T) {
 }
 
 func TestDeleteBySysAdmin(t *testing.T) {
-	common.SysAdminCheck = IsUserSystemAdministrator
-
 	db := common.NewUnitTestDBProvider()
 	blurb, _ := newDefaultBlurb(t, db)
 
 	c := newStoredComment(t, db, blurb.Owner, blurb)
-
-	sysAdmin := newStoredUser(t, db)
-	err := sysAdmin.AssignRole(db, SystemAdministrator)
-	if err != nil {
-		t.Fatal(err)
-	}
+	sysAdmin := newSysAdmin(t, db)
 
 	wac := common.WithAccessControl[*Comment]{Database: db, AccessControlUser: sysAdmin.ID.RecordId()}
-	_, _, err = wac.DeleteOneById(c, c.ID.RecordId())
+	_, _, err := wac.DeleteOneById(c, c.ID.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}

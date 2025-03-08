@@ -23,3 +23,13 @@ func newStoredUser(t *testing.T, db common.DatabaseProvider) *User {
 	}
 	return v
 }
+
+func newSysAdmin(t *testing.T, db common.DatabaseProvider) *User {
+	common.SysAdminCheck = IsUserSystemAdministrator
+	sysAdmin := newStoredUser(t, db)
+	err := sysAdmin.AssignRole(db, SystemAdministrator)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return sysAdmin
+}

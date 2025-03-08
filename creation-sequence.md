@@ -37,13 +37,19 @@ You must have some users to be able to create a draft (at least like 8 or so use
 This is most likely just essentially `1`, `2`, and `3` and is needed before we can create a format
 - [x] create a new rating
 - [x] validate that the rating has values + a real User ID
-- [ ] validate that the rating is update-able by system administrator
-- [ ] validate that the rating cannot be deleted if it is in use
+- [x] validate that the rating is update-able by system administrator
+- [x] validate that the rating cannot be deleted if it is in use
 
 ### f) Create a format
-
-- This will divide the drafted players into Ratings
-- It is a list of ratings, high-skill-level to low-skill-level
+This will divide the drafted players into groups. It is a named list of ratings, high-skill-level to low-skill-level
+- [ ] create a new format
+- [ ] validate that the format has a name + a real UserId
+- [ ] validate that the format has some valid possible ratings
+- [ ] validate that the format has at least one valid line
+- [ ] validate that all rating IDs in each line are located in the possible ratings list
+- [ ] validate that the format cannot be deleted if it is in-use by a season
+- [ ] validate that the format cannot be edited if it is in-use by a season
+- [ ] validate that the format has no duplicate lines 
 
 ### g) Create a playoff structure
 

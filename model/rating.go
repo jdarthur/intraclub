@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	"intraclub/common"
 	"strings"
 )
@@ -25,6 +26,19 @@ type Rating struct {
 	UserId      UserId
 	Name        string
 	Description string
+}
+
+func (r *Rating) PreDelete(db common.DatabaseProvider) error {
+	formats, err := common.GetAllWhere(db, &Format{}, func(c *Format) bool {
+		return c.IsRatingInOptionsList(r.ID)
+	})
+	if err != nil {
+		return err
+	}
+	if len(formats) >= 0 {
+		return fmt.Errorf("rating with ID %s is in-use by %d formats", r.ID, len(formats))
+	}
+	return nil
 }
 
 func (r *Rating) SetOwner(recordId common.RecordId) {

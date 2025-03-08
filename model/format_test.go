@@ -28,7 +28,9 @@ func newDefaultStoredFormat(t *testing.T, db common.DatabaseProvider) *Format {
 	f := NewFormat()
 	lines := []Line{newLine(t, db)}
 
+	f.Name = "default format"
 	f.Lines = lines
+	f.PossibleRatings = []RatingId{lines[0].Player1Rating, lines[0].Player2Rating}
 
 	v, err := common.CreateOne(db, f)
 	if err != nil {
@@ -64,32 +66,34 @@ func TestFormatReversedValueDuplicateLine(t *testing.T) {
 	fmt.Println(err)
 }
 
-func TestGetFormatAvailableRatings(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+func TestFormatNameEmpty(t *testing.T) {
+	t.Fatal("implement me")
+}
 
-	line1 := newLine(t, db)
-	line2 := newLine(t, db)
-	line3 := Line{
-		Player1Rating: line1.Player1Rating,
-		Player2Rating: line2.Player1Rating,
-	}
-	format := NewFormat()
-	format.Lines = []Line{line1, line2, line3}
+func TestFormatNameWhitespace(t *testing.T) {
+	t.Fatal("implement me")
+}
 
-	availableRatings := format.GetAvailableRatings()
-	if len(availableRatings) != 4 {
-		t.Fatalf("Expected 3 ratings, got %d", len(availableRatings))
-	}
-	if availableRatings[0] != line1.Player1Rating {
-		t.Fatalf("Expected first rating to be line1.Player1Rating, got %s", availableRatings[0])
-	}
-	if availableRatings[1] != line1.Player2Rating {
-		t.Fatalf("Expected first rating to be line1.Player2Rating, got %s", availableRatings[1])
-	}
-	if availableRatings[2] != line2.Player1Rating {
-		t.Fatalf("Expected first rating to be line2.Player1Rating, got %s", availableRatings[2])
-	}
-	if availableRatings[3] != line2.Player2Rating {
-		t.Fatalf("Expected first rating to be line3.Player2Rating, got %s", availableRatings[3])
-	}
+func TestFormatHasEmptyPossibleRatings(t *testing.T) {
+	t.Fatal("implement me")
+}
+
+func TestFormatHasEmptyLines(t *testing.T) {
+	t.Fatal("implement me")
+}
+
+func TestFormatHasLineRatingsNotInPossibleLinesList(t *testing.T) {
+	t.Fatal("implement me")
+}
+
+func TestFormatCannotBeDeletedWhenInUse(t *testing.T) {
+	t.Fatal("implement me")
+}
+
+func TestFormatCannotBeEditedWhenInUse(t *testing.T) {
+	t.Fatal("implement me")
+}
+
+func TestFormatCanBeEditedWhenNotInUse(t *testing.T) {
+	t.Fatal("implement me")
 }
