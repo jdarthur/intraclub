@@ -157,20 +157,24 @@ func (s *ScoringStructure) validateWinIntegers(winsAt, winBy, instantWin int, is
 	return nil
 }
 
-func (s *ScoringStructure) WinningScore(score int, isMain bool) bool {
+func (s *ScoringStructure) WinningScore(myScore, yourScore int, isMain bool) bool {
+	diff := myScore - yourScore
+
 	if isMain {
-		if s.MainScoreInstantWinAt > 0 && score >= s.MainScoreInstantWinAt {
+		// check against main winning threshold if (isMain)
+		if s.MainScoreInstantWinAt > 0 && myScore >= s.MainScoreInstantWinAt {
 			return true
 		}
-		if score >= s.MainScoreWinsAt && score >= s.MainScoreMustWinBy {
+		if myScore >= s.MainScoreWinsAt && diff >= s.MainScoreMustWinBy {
 			return true
 		}
 		return false
 	}
-	if s.SecondaryScoreInstantWinAt > 0 && score >= s.SecondaryScoreInstantWinAt {
+	// otherwise check against secondary
+	if s.SecondaryScoreInstantWinAt > 0 && myScore >= s.SecondaryScoreInstantWinAt {
 		return true
 	}
-	if score >= s.SecondaryScoreWinsAt && score >= s.SecondaryScoreMustWinBy {
+	if myScore >= s.SecondaryScoreWinsAt && diff >= s.SecondaryScoreMustWinBy {
 		return true
 	}
 	return false

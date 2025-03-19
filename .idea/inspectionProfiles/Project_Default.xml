@@ -4,6 +4,7 @@
     <inspection_tool class="GoDfaErrorMayBeNotNil" enabled="true" level="WARNING" enabled_by_default="true">
       <functions>
         <function importPath="intraclub/common" name="GetOneByStringId" />
+        <function importPath="intraclub/common" name="GetExistingRecordById" />
       </functions>
     </inspection_tool>
   </profile>

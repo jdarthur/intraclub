@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 	"intraclub/common"
 	"math"
 )
@@ -21,6 +22,32 @@ type PlayoffStructure struct {
 	UserId        UserId
 	Byes          int // number of teams which get a bye week
 	NumberOfTeams int // number of teams which make the playoffs
+}
+
+func (p *PlayoffStructure) PreUpdate(db common.DatabaseProvider, existingValues common.CrudRecord) error {
+	s, err := p.GetAssignedSeasons(db)
+	if err != nil {
+		return err
+	}
+	if len(s) != 0 {
+		return fmt.Errorf("playoff structure cannot be updated as it has %d assigned season(s)", len(s))
+	}
+	return nil
+}
+
+func (p *PlayoffStructure) PreDelete(db common.DatabaseProvider) error {
+	s, err := p.GetAssignedSeasons(db)
+	if err != nil {
+		return err
+	}
+	if len(s) != 0 {
+		return fmt.Errorf("playoff structure cannot be deleted as it has %d assigned season(s)", len(s))
+	}
+	return nil
+}
+
+func NewPlayoffStructure() *PlayoffStructure {
+	return &PlayoffStructure{}
 }
 
 func (p *PlayoffStructure) SetOwner(recordId common.RecordId) {
@@ -48,16 +75,19 @@ func (p *PlayoffStructure) SetId(id common.RecordId) {
 }
 
 func (p *PlayoffStructure) StaticallyValid() error {
-	if p.Byes <= 0 {
-		return errors.New("number of byes should be greater than zero")
+	if p.Byes < 0 {
+		return errors.New("number of byes should be >= zero")
 	}
-	if p.NumberOfTeams <= 0 {
-		return errors.New("number of teams should be greater than zero")
+	if p.NumberOfTeams < 2 {
+		return errors.New("number of teams should be >= 2")
 	}
 
 	matchupsInFirstRound := p.NumberOfTeams - p.Byes
 	if matchupsInFirstRound%2 != 0 {
 		return errors.New("matchups in first round should be even")
+	}
+	if matchupsInFirstRound == 0 {
+		return errors.New("matchups in first round should not be zero")
 	}
 
 	matchupsInSecondRound := (matchupsInFirstRound / 2) + p.Byes
@@ -68,7 +98,7 @@ func (p *PlayoffStructure) StaticallyValid() error {
 		}
 	}
 	if !found {
-		return errors.New("invalid matchups in second round (must be a power of 2")
+		return fmt.Errorf("invalid matchups in second round (must be a power of 2, got %d)", p.NumberOfTeams)
 	}
 
 	return nil
@@ -81,11 +111,20 @@ func (p *PlayoffStructure) NumberOfRounds() int {
 	if p.Byes > 0 {
 		matchupsInFirstRound := p.NumberOfTeams - p.Byes
 		matchupsInSecondRound := (matchupsInFirstRound / 2) + p.Byes
-		return int(math.Sqrt(float64(matchupsInSecondRound))) + 1
+
+		v := math.Log2(float64(matchupsInSecondRound))
+		return int(v) + 1
 	}
-	return int(math.Sqrt(float64(p.NumberOfTeams))) + 1
+	v := math.Log2(float64(p.NumberOfTeams))
+	return int(v)
 }
 
 func (p *PlayoffStructure) DynamicallyValid(db common.DatabaseProvider) error {
-	return nil
+	return common.ExistsById(db, &User{}, p.UserId.RecordId())
+}
+
+func (p *PlayoffStructure) GetAssignedSeasons(db common.DatabaseProvider) ([]*Season, error) {
+	return common.GetAllWhere(db, &Season{}, func(c *Season) bool {
+		return c.PlayoffStructure == p.ID
+	})
 }

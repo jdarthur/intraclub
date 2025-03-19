@@ -83,6 +83,14 @@ type Format struct {
 	Lines           []Line     // Rating pairings that will play during a matchup
 }
 
+func (f *Format) PreUpdate(db common.DatabaseProvider, existingValues common.CrudRecord) error {
+	return f.CheckHasAssignedDrafts(db, true)
+}
+
+func (f *Format) PreDelete(db common.DatabaseProvider) error {
+	return f.CheckHasAssignedDrafts(db, false)
+}
+
 func (f *Format) SetOwner(recordId common.RecordId) {
 	f.UserId = UserId(recordId)
 }
@@ -152,6 +160,11 @@ func (f *Format) IsRatingInOptionsList(r RatingId) bool {
 }
 
 func (f *Format) DynamicallyValid(db common.DatabaseProvider) error {
+	err := common.ExistsById(db, &User{}, f.UserId.RecordId())
+	if err != nil {
+		return err
+	}
+
 	for _, line := range f.Lines {
 		err := line.DynamicallyValid(db)
 		if err != nil {
@@ -168,4 +181,27 @@ func (f *Format) IsRatingValidForFormat(r RatingId) bool {
 		}
 	}
 	return false
+}
+
+func (f *Format) GetAssignedDrafts(db common.DatabaseProvider) ([]*Draft, error) {
+	return common.GetAllWhere(db, &Draft{}, func(c *Draft) bool {
+		return c.Format == f.ID
+	})
+}
+
+func (f *Format) CheckHasAssignedDrafts(db common.DatabaseProvider, isUpdate bool) error {
+	drafts, err := f.GetAssignedDrafts(db)
+	if err != nil {
+		return err
+	}
+
+	verb := "edit"
+	if !isUpdate {
+		verb = "delete"
+	}
+
+	if len(drafts) != 0 {
+		return fmt.Errorf("cannot %s format with %d assigned drafts", verb, len(drafts))
+	}
+	return nil
 }

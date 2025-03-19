@@ -48,12 +48,8 @@ var sixZeroDustedFlow = []bool{
 	true, true, true, true, true, true, // win set two
 }
 
-func TestMatchFlow(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
-	ss := newDefaultStoredScoringStructure(t, db)
-	match1, match2 := newStoredMatchPair(t, db, ss)
-
-	for _, won := range sixZeroDustedFlow {
+func runMatchFlow(t *testing.T, db common.DatabaseProvider, match1, match2 *Match, flow []bool) {
+	for _, won := range flow {
 		if won {
 			err := match1.IncrementSecondary(db)
 			if err != nil {
@@ -66,6 +62,37 @@ func TestMatchFlow(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestMatchFlow(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	ss := newDefaultStoredScoringStructure(t, db)
+	match1, match2 := newStoredMatchPair(t, db, ss)
+
+	runMatchFlow(t, db, match1, match2, sixZeroDustedFlow)
+
+	if match1.Status != MatchWon {
+		t.Fatal("expected match to be won")
+	}
+	if match2.Status != MatchLost {
+		t.Fatal("expected match to be lost")
+	}
+	fmt.Println(match1.String(match2))
+	fmt.Println(match2.String(match1))
+}
+
+var closeThreeSets = []bool{
+	true, true, false, true, false, false, true, false, true, true, // win set one, 6-4
+	true, true, false, false, true, false, false, true, false, true, false, false, // lost set two, 5-7
+	false, true, true, false, false, true, false, true, true, true, // won set three, 6-4
+}
+
+func TestMatchFlow2(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	ss := newDefaultStoredScoringStructure(t, db)
+	match1, match2 := newStoredMatchPair(t, db, ss)
+
+	runMatchFlow(t, db, match1, match2, closeThreeSets)
 
 	if match1.Status != MatchWon {
 		t.Fatal("expected match to be won")

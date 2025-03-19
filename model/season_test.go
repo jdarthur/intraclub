@@ -15,6 +15,7 @@ func newDefaultSeason(t *testing.T, db common.DatabaseProvider) *Season {
 func newStoredSeason(t *testing.T, db common.DatabaseProvider, commissioner UserId, teams []*Team) *Season {
 	draft := newStoredDraft(t, db, commissioner)
 	facility := newStoredFacility(t, db, commissioner)
+	playoffStructure := newStoredPlayoffStructure(t, db)
 
 	season := NewSeason()
 	season.Name = "Test Season"
@@ -22,6 +23,7 @@ func newStoredSeason(t *testing.T, db common.DatabaseProvider, commissioner User
 	season.StartTime = NewStartTime(8, 30)
 	season.DraftId = draft.ID
 	season.Facility = facility.ID
+	season.PlayoffStructure = playoffStructure.ID
 	for _, team := range teams {
 		season.Teams = append(season.Teams, team.ID)
 	}

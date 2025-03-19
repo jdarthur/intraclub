@@ -148,27 +148,29 @@ func (s *Match) Initialize(db common.DatabaseProvider) error {
 	return nil
 }
 
-func (s *Match) Victorious() bool {
+func (s *Match) Victorious(opp *Match) bool {
 	if s.WinOverride == true {
 		return true
 	}
 	if s._structure == nil {
-		panic("Match._structure is not initialized!")
+		panic("match._structure is not initialized")
 	}
-	return s._structure.WinningScore(s.MainValue, true)
+
+	return s._structure.WinningScore(s.MainValue, opp.MainValue, true)
 }
 
-func (s *Match) WonSecondary() bool {
+func (s *Match) WonSecondary(opp *Match) bool {
 	if s.WinOverride == true {
 		return true
 	}
 	if s._structure == nil {
-		panic("Match._structure is not initialized!")
+		panic("match._structure is not initialized")
 	}
-	return s._structure.WinningScore(s.SecondaryValue, false)
+
+	return s._structure.WinningScore(s.SecondaryValue, opp.SecondaryValue, false)
 }
 
-func (s *Match) MarkStatus(db common.DatabaseProvider, newStatus MatchStatus) error {
+func (s *Match) MarkStatus(db common.DatabaseProvider, newStatus MatchStatus, opp *Match) error {
 	s.Status = newStatus
 
 	oppStatus := MatchInProgress
@@ -176,10 +178,6 @@ func (s *Match) MarkStatus(db common.DatabaseProvider, newStatus MatchStatus) er
 		oppStatus = MatchLost
 	}
 
-	opp, err := common.GetExistingRecordById(db, &Match{}, s.Opponent.RecordId())
-	if err != nil {
-		return err
-	}
 	opp.Status = oppStatus
 	return common.UpdateOne(db, opp)
 }
@@ -212,8 +210,12 @@ func (s *Match) IncrementSecondary(db common.DatabaseProvider) error {
 		s.Status = MatchWon
 	}
 
-	if s.WonSecondary() {
+	opp, err := s.GetOpponent(db)
+	if err != nil {
+		return err
+	}
 
+	if s.WonSecondary(opp) {
 		err := s.AddCompletedSecondary(db)
 		if err != nil {
 			return err
@@ -221,29 +223,28 @@ func (s *Match) IncrementSecondary(db common.DatabaseProvider) error {
 
 		s.MainValue += 1
 		s.SecondaryValue = 0
-		if s.Victorious() {
-			err = s.MarkStatus(db, MatchWon)
+		if s.Victorious(opp) {
+			err = s.MarkStatus(db, MatchWon, opp)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = s.ResetSecondaryForOpponent(db)
+			err = s.ResetSecondaryForOpponent(db, opp)
 			if err != nil {
 				return err
 			}
 		}
-
 	}
 	return common.UpdateOne(db, s)
 }
 
-func (s *Match) ResetSecondaryForOpponent(db common.DatabaseProvider) error {
-	opp, err := common.GetExistingRecordById(db, &Match{}, s.Opponent.RecordId())
-	if err != nil {
-		return err
-	}
+func (s *Match) ResetSecondaryForOpponent(db common.DatabaseProvider, opp *Match) error {
 	opp.SecondaryValue = 0
-	return nil
+	return common.UpdateOne(db, opp)
+}
+
+func (s *Match) GetOpponent(db common.DatabaseProvider) (*Match, error) {
+	return common.GetExistingRecordById(db, &Match{}, s.Opponent.RecordId())
 }
 
 func (s *Match) String(opp *Match) string {
@@ -263,11 +264,11 @@ func (s *Match) String(opp *Match) string {
 		output += fmt.Sprintf("   %s %d: %d-%d (%s)\n", name, i+1, completed.UsValue, completed.ThemValue, won)
 	}
 
-	if !s.Victorious() && !opp.Victorious() {
+	if !s.Victorious(opp) && !opp.Victorious(s) {
 		won := ""
-		if s.Victorious() {
+		if s.Victorious(opp) {
 			won = " (won)"
-		} else if opp.Victorious() {
+		} else if opp.Victorious(s) {
 			won = " (lost)"
 		}
 		output += fmt.Sprintf("   %s %d: %d-%d%s\n", name, len(s._completed)+1, s.SecondaryValue, opp.SecondaryValue, won)

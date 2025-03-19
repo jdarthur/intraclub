@@ -7,6 +7,11 @@ import (
 	"testing"
 )
 
+func newDefaultStoredDraft(t *testing.T, db common.DatabaseProvider) *Draft {
+	user := newStoredUser(t, db)
+	return newStoredDraft(t, db, user.ID)
+}
+
 func newStoredDraft(t *testing.T, db common.DatabaseProvider, commissioner UserId) *Draft {
 	draft := NewDraft()
 	draft.Owner = commissioner

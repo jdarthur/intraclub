@@ -42,19 +42,27 @@ This is most likely just essentially `1`, `2`, and `3` and is needed before we c
 
 ### f) Create a format
 This will divide the drafted players into groups. It is a named list of ratings, high-skill-level to low-skill-level
-- [ ] create a new format
-- [ ] validate that the format has a name + a real UserId
-- [ ] validate that the format has some valid possible ratings
-- [ ] validate that the format has at least one valid line
-- [ ] validate that all rating IDs in each line are located in the possible ratings list
-- [ ] validate that the format cannot be deleted if it is in-use by a season
-- [ ] validate that the format cannot be edited if it is in-use by a season
-- [ ] validate that the format has no duplicate lines 
+- [x] create a new format
+- [x] validate that the format has a name + a real UserId
+- [x] validate that the format has some valid possible ratings
+- [x] validate that the format has at least one valid line
+- [x] validate that all rating IDs in each line are located in the possible ratings list
+- [x] validate that the format cannot be deleted if it is in-use by a season
+- [x] validate that the format cannot be edited if it is in-use by a season
+- [x] validate that the format has no duplicate lines 
+- [x] validate that the format has no reversed duplicate lines
 
 ### g) Create a playoff structure
 
-- This only needs to be created once
-- e.g. 3 teams make the playoffs, 1 team gets a bye
+- This only needs to be created once. An example format could be "3 teams make the playoffs, 1 team gets a bye"
+- [x] validate that user ID is a real user
+- [x] validate that no-bye setup has a power-of-2 number of teams
+- [x] validate that in-use playoff structure cannot be deleted
+- [x] validate that in-use playoff structure cannot be edited
+- [x] validate that first round w/ byes includes an even number of teams
+- [x] validate that second round w/ byes is a power-of-two number of teams
+- [x] validate that number of teams must be at least two
+- [x] validate that number of byes can't be >= number of teams
 
 ## 2) Draft players to teams
 
