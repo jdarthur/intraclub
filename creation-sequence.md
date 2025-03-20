@@ -67,11 +67,15 @@ This will divide the drafted players into groups. It is a named list of ratings,
 ## 2) Draft players to teams
 
 ### a) Create a draft
-
-- You must have a certain number of teams in mind
-- Draft creation will create a list of Teams without an assigned captain
-- Draft owner will be the first season commissioner
-- Format must be assigned to partition players to a rating based on draft order
+ [ ] Initialize a draft with a list of captain IDs
+ [ ] Each captain ID must be a valid user ID
+ [ ] Format must be assigned
+ [ ] List of players must be all real players
+ [ ] Selections must be empty when initializing
+ [ ] Captains can only pick when it's their turn
+ [ ] Captains can only be selected by themselves
+ [ ] Players cannot be double-selected
+ [ ] 
 
 ### b) Assign some draft-able players to the draft
 

@@ -17,6 +17,8 @@ func (t TeamId) String() string {
 
 type Team struct {
 	ID         TeamId
+	Name       string
+	Color      TeamColor
 	Captain    UserId
 	CoCaptains []UserId
 	Members    []UserId
@@ -31,6 +33,18 @@ func (t *Team) SetOwner(recordId common.RecordId) {
 
 func NewTeam() *Team {
 	return &Team{}
+}
+
+func NewDefaultTeam(captain UserId, name string) *Team {
+	team := NewTeam()
+	team.Name = name
+	team.Color = TeamColor{
+		Name: "Unset",
+		Hex:  "000000",
+	}
+	team.Captain = captain
+	team.Members = []UserId{captain}
+	return team
 }
 
 func (t *Team) EditableBy(common.DatabaseProvider) []common.RecordId {

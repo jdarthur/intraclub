@@ -28,11 +28,19 @@ func newDefaultFormat(t *testing.T, db common.DatabaseProvider) *Format {
 	user := newStoredUser(t, db)
 	f := NewFormat()
 	f.UserId = user.ID
-	lines := []Line{newLine(t, db)}
+	lines := []Line{
+		newLine(t, db),
+		newLine(t, db),
+	}
 
 	f.Name = "default format"
 	f.Lines = lines
-	f.PossibleRatings = []RatingId{lines[0].Player1Rating, lines[0].Player2Rating}
+	f.PossibleRatings = []RatingId{
+		lines[0].Player1Rating,
+		lines[0].Player2Rating,
+		lines[1].Player1Rating,
+		lines[1].Player2Rating,
+	}
 	return f
 }
 
