@@ -67,23 +67,33 @@ This will divide the drafted players into groups. It is a named list of ratings,
 ## 2) Draft players to teams
 
 ### a) Create a draft
- [ ] Initialize a draft with a list of captain IDs
- [ ] Each captain ID must be a valid user ID
- [ ] Format must be assigned
- [ ] List of players must be all real players
- [ ] Selections must be empty when initializing
- [ ] Captains can only pick when it's their turn
- [ ] Captains can only be selected by themselves
- [ ] Players cannot be double-selected
- [ ] 
+- [x] Initialize a draft with a list of captain IDs
+- [x] Each captain ID must be a valid user ID
+- [x] Format must be assigned
+- [x] List of players must be all real players
+- [x] Selections must be empty when initializing
+- [x] Captains can only pick when it's their turn
+- [x] Captains can only be selected by themselves
+- [x] Players cannot be double-selected
+- [x] Players not in draft list cannot be selected
 
 ### b) Assign some draft-able players to the draft
-
-- You should have an even-ish number to divide among teams, e.g. 10 players per team
+You should have an even-ish number to divide among teams, e.g. 10 players per team
+- [x] You can add new players to the available list
+- [x] You can re-add players without changing the available list
 
 ### c) Assign pre-draft grades to players in the draft
+Grading system where players may be marked as a strong, average, or weak version
+of a particular `Rating`, e.g a high 1 or a mid 3
 
-- Grader
+- [x] player ID must be valid
+- [x] Draft ID must be valid
+- [x] Grader ID must be a valid user
+- [x] Player ID must be draftable in `Draft`
+- [x] Rating must be present in `Draft`'s format
+- [x] +/- modifier must be 0, 1, or 2
+- [x] draft must not be completed when creating or updating a grade
+
 
 ### d) Assign some captains to each team in the draft
 

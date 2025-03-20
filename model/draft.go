@@ -83,9 +83,7 @@ func (d *Draft) AccessibleTo(common.DatabaseProvider) []common.RecordId {
 }
 
 func (d *Draft) StaticallyValid() error {
-	if len(d.Available) == 0 {
-		return errors.New("no available players to draft")
-	}
+	// don't need to validate anything here as everything should be dynamically validated
 	return nil
 }
 
@@ -180,15 +178,6 @@ func (d *Draft) IsSelected(userId UserId) bool {
 	return false
 }
 
-// IsAvailableToSelect returns true if this UserId is present in the
-// available-to-draft list and hasn't already been selected
-func (d *Draft) IsAvailableToSelect(userId UserId) bool {
-	if !d.IsInDraftList(userId) {
-		return false
-	}
-	return !d.IsSelected(userId)
-}
-
 // GetAllAvailableToSelect returns a list of all UserId values which
 // the provided captain is allowed to select.
 func (d *Draft) GetAllAvailableToSelect(captainId UserId) []UserId {
@@ -266,8 +255,11 @@ func (d *Draft) SelectByCaptain(player, captain UserId) error {
 // Select validates that this particular user is available to select and
 // adds them to the selections list if so
 func (d *Draft) Select(u UserId) error {
-	if !d.IsAvailableToSelect(u) {
-		return fmt.Errorf("user with id %s is not in the available list", u)
+	if !d.IsInDraftList(u) {
+		return fmt.Errorf("user with id %s is not in the available-to-draft list", u)
+	}
+	if d.IsSelected(u) {
+		return fmt.Errorf("user with id %s has already been selected", u)
 	}
 	d.Selections = append(d.Selections, u)
 	return nil
@@ -407,7 +399,11 @@ func (d *Draft) GetAvailableRatings(db common.DatabaseProvider) ([]RatingId, err
 
 func (d *Draft) Initialize(db common.DatabaseProvider, captains []UserId) error {
 	if len(d.Captains) != 0 {
-		return errors.New("team captains list is already initialized")
+		return errors.New("draft is already initialized")
+	}
+
+	if len(d.Selections) != 0 {
+		return errors.New("draft has selections assigned before initialization")
 	}
 
 	for i, captain := range captains {
@@ -426,6 +422,21 @@ func (d *Draft) Initialize(db common.DatabaseProvider, captains []UserId) error 
 			TeamId:    v.ID,
 			CaptainId: captain,
 		})
+
+		// add this captain to the available players list
+		if !d.IsInDraftList(captain) {
+			d.Available = append(d.Available, captain)
+		}
+	}
+	return common.UpdateOne(db, d)
+}
+
+func (d *Draft) AssignDraftablePlayers(db common.DatabaseProvider, players []UserId) error {
+	for _, player := range players {
+
+		if !d.IsInDraftList(player) {
+			d.Available = append(d.Available, player)
+		}
 	}
 	return common.UpdateOne(db, d)
 }
@@ -459,4 +470,11 @@ func (d *Draft) AssignDraftedPlayersToTeams(db common.DatabaseProvider) error {
 		}
 	}
 	return nil
+}
+
+func (d *Draft) IsDraftCompleted() bool {
+	if len(d.Available) == 0 {
+		return false
+	}
+	return len(d.Available) == len(d.Selections)
 }

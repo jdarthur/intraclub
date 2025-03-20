@@ -25,19 +25,11 @@ func newStoredDraft(t *testing.T, db common.DatabaseProvider, commissioner UserI
 	return v
 }
 
-func newRandomDraft(t *testing.T, db common.DatabaseProvider, playerCount, teamCount int) *Draft {
+func newUninitializedRandomDraft(t *testing.T, db common.DatabaseProvider, playerCount, teamCount int) *Draft {
 	draft := NewDraft()
 	commissioner := newStoredUser(t, db)
 	draft.Owner = commissioner.ID
 	draft.Format = newDefaultStoredFormat(t, db).ID
-
-	for i := 0; i < teamCount; i++ {
-		user := newStoredUser(t, db)
-		team := newStoredTeam(t, db, user.ID)
-		tca := &TeamCaptainAssignment{TeamId: team.ID, CaptainId: user.ID}
-		draft.Captains = append(draft.Captains, tca)
-		draft.Available = append(draft.Available, user.ID)
-	}
 
 	for i := 0; i < playerCount-teamCount; i++ {
 		user := newStoredUser(t, db)
@@ -52,8 +44,28 @@ func newRandomDraft(t *testing.T, db common.DatabaseProvider, playerCount, teamC
 	return draft
 }
 
-func doRandomDraft(t *testing.T, db common.DatabaseProvider, playerCount int, teamCount int) *Draft {
-	draft := newRandomDraft(t, db, playerCount, teamCount)
+func newRandomDraft(t *testing.T, db common.DatabaseProvider, playerCount, teamCount int) *Draft {
+
+	// create an uninitialized draft
+	draft := newUninitializedRandomDraft(t, db, playerCount, teamCount)
+
+	// create random captains
+	users := make([]UserId, 0, playerCount)
+	for i := 0; i < teamCount; i++ {
+		user := newStoredUser(t, db)
+		users = append(users, user.ID)
+	}
+
+	// initialize the team / captain assignments
+	err := draft.Initialize(db, users)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return draft
+}
+
+func completeExistingDraft(t *testing.T, draft *Draft) {
 	for _, v := range draft.Captains {
 		err := draft.Select(v.CaptainId)
 		if err != nil {
@@ -61,13 +73,19 @@ func doRandomDraft(t *testing.T, db common.DatabaseProvider, playerCount int, te
 		}
 	}
 
-	for i := 0; i < playerCount-teamCount; i++ {
+	for i := 0; i < len(draft.Available)-len(draft.Captains); i++ {
 		onTheClock, err := draft.GetCaptainOnTheClock()
 		if err != nil {
 			t.Fatal(err)
 		}
 		selectRandomAvailableByCaptain(t, draft, onTheClock)
 	}
+
+}
+
+func doRandomDraft(t *testing.T, db common.DatabaseProvider, playerCount int, teamCount int) *Draft {
+	draft := newRandomDraft(t, db, playerCount, teamCount)
+	completeExistingDraft(t, draft)
 	return draft
 }
 
@@ -141,6 +159,32 @@ func TestSnakeSelection(t *testing.T) {
 	selectRandomAvailableByCaptain(t, draft, captain3)
 	selectRandomAvailableByCaptain(t, draft, captain2)
 	selectRandomAvailableByCaptain(t, draft, captain1)
+}
+
+func TestDoubleSelectPlayer(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	draft := newRandomDraft(t, db, 100, 3)
+
+	captain1 := draft.Captains[0].CaptainId
+	captain2 := draft.Captains[1].CaptainId
+
+	selectRandomAvailableByCaptain(t, draft, captain1)
+	err := draft.SelectByCaptain(draft.Selections[0], captain2)
+	if err == nil {
+		t.Fatalf("Expected double-selection of player to be invalid")
+	}
+	fmt.Println(err)
+}
+
+func TestSelectValidButNotDraftableUserId(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	draft := newRandomDraft(t, db, 100, 3)
+	captain1 := draft.Captains[0].CaptainId
+	err := draft.SelectByCaptain(newStoredUser(t, db).ID, captain1)
+	if err == nil {
+		t.Fatalf("Expected double-selection of player to be invalid")
+	}
+	fmt.Println(err)
 }
 
 func TestGetRatingForSelection(t *testing.T) {
@@ -330,5 +374,101 @@ func TestTeamAssignmentAfterDraft(t *testing.T) {
 		if i != 0 {
 			t.Fatalf("Expected team overlapping members to be zero, but got %d", i)
 		}
+	}
+}
+
+func TestDoubleInitializeDraft(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	draft := newRandomDraft(t, db, 100, 4)
+
+	err := draft.Initialize(db, []UserId{})
+	if err == nil {
+		t.Fatal("Expected draft double-initialize to be invalid")
+	}
+	fmt.Println(err)
+}
+
+func TestInitializeDraftWithInvalidCaptain(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	draft := newUninitializedRandomDraft(t, db, 100, 4)
+
+	err := draft.Initialize(db, []UserId{UserId(common.InvalidRecordId)})
+	if err == nil {
+		t.Fatal("Expected invalid captain ID to be invalid")
+	}
+	fmt.Println(err)
+}
+
+func TestNoAssignedFormat(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	draft := newRandomDraft(t, db, 100, 4)
+	draft.Format = FormatId(common.InvalidRecordId)
+	err := common.UpdateOne(db, draft)
+	if err == nil {
+		t.Fatal("Expected draft to be invalid with empty format")
+	}
+
+	fmt.Println(err)
+}
+
+func TestInvalidAvailablePlayerId(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	draft := newRandomDraft(t, db, 100, 4)
+	draft.Available = append(draft.Available, UserId(common.InvalidRecordId))
+	err := common.UpdateOne(db, draft)
+	if err == nil {
+		t.Fatal("Expected draft to be invalid with invalid player")
+	}
+
+	fmt.Println(err)
+}
+
+func TestDraftHasSelectionBeforeInitialization(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	draft := newUninitializedRandomDraft(t, db, 100, 4)
+	draft.Selections = append(draft.Available, draft.Available[0])
+	err := draft.Initialize(db, []UserId{newStoredUser(t, db).ID})
+	if err == nil {
+		t.Fatal("Expected draft initialization to fail with selections set")
+	}
+
+	fmt.Println(err)
+}
+
+func TestDraftAddAvailablePlayers(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	draft := newRandomDraft(t, db, 9, 2)
+	playerToAdd := newStoredUser(t, db)
+
+	err := draft.AssignDraftablePlayers(db, []UserId{playerToAdd.ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(draft.Available) != 10 {
+		t.Fatalf("Expected to find 10 players, got %d", len(draft.Available))
+	}
+
+	if !draft.IsInDraftList(playerToAdd.ID) {
+		t.Fatalf("Expected to find new player in draftable list")
+	}
+}
+
+func TestDraftReAddAvailablePlayers(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	draft := newRandomDraft(t, db, 10, 2)
+	playerToAdd := draft.Available[0]
+
+	err := draft.AssignDraftablePlayers(db, []UserId{playerToAdd})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(draft.Available) != 10 {
+		t.Fatalf("Expected to find 10 players, got %d", len(draft.Available))
+	}
+
+	if !draft.IsInDraftList(playerToAdd) {
+		t.Fatalf("Expected to find new player in draftable list")
 	}
 }
