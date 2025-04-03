@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"intraclub/common"
 	"testing"
 )
@@ -22,7 +23,7 @@ func TestSeasonUpdatedOnScheduleCreate(t *testing.T) {
 
 	schedule := newStoredSchedule(t, db, season)
 
-	season, err := GetSeason(db, schedule.SeasonId)
+	season, err := common.GetExistingRecordById(db, &Season{}, schedule.SeasonId.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,5 +31,19 @@ func TestSeasonUpdatedOnScheduleCreate(t *testing.T) {
 	if season.ScheduleID != schedule.ID {
 		t.Fatal("Expected season to have the new schedule ID saved")
 	}
+}
 
+func TestOneSchedulePerSeason(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	season := newDefaultSeason(t, db)
+	schedule := newStoredSchedule(t, db, season)
+
+	schedule2 := NewSchedule()
+	schedule2.SeasonId = season.ID
+	schedule2.Matchups = schedule.Matchups
+	_, err := common.CreateOne(db, schedule2)
+	if err == nil {
+		t.Fatal("Expected error creating a duplicate schedule")
+	}
+	fmt.Println(err)
 }

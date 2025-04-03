@@ -17,12 +17,6 @@ func (id SeasonId) String() string {
 	return id.RecordId().String()
 }
 
-type weeklyMatchup struct {
-	WeekId   WeekId
-	HomeTeam TeamId
-	AwayTeam TeamId
-}
-
 type StartTime time.Time
 
 func NewStartTime(hour int, minute int) StartTime {
@@ -54,11 +48,17 @@ type Season struct {
 	StartTime        StartTime          // time of day when the first matches kick off (e.g. _8:30 AM_)
 	Commissioners    []UserId           // list of User IDs who act as commissioners in this Season
 	Teams            []TeamId           // list of Team IDs participating in this Season
-	Weeks            []WeekId           // list of Week IDs for this Season
 	DraftId          DraftId            // Draft results for this Season
 	ScheduleID       ScheduleId         // ID of the Schedule for this Season
 	PlayoffStructure PlayoffStructureId // ID of the PlayoffStructure for the Season
 	LateAdditions    []UserId           // IDs of any User s who were added to the Season after the season's Draft
+}
+
+func (s *Season) UniquenessEquivalent(other *Season) error {
+	if s.DraftId == other.DraftId {
+		return fmt.Errorf("duplicate season for draft ID %s", s.DraftId)
+	}
+	return nil
 }
 
 func (s *Season) SetOwner(recordId common.RecordId) {
@@ -112,12 +112,6 @@ func (s *Season) DynamicallyValid(db common.DatabaseProvider) error {
 
 	for _, team := range s.Teams {
 		if err := common.ExistsById(db, &Team{}, team.RecordId()); err != nil {
-			return err
-		}
-	}
-
-	for _, week := range s.Weeks {
-		if err := common.ExistsById(db, &Week{}, week.RecordId()); err != nil {
 			return err
 		}
 	}
@@ -206,14 +200,37 @@ func (s *Season) GetTeams(db common.DatabaseProvider) ([]*Team, error) {
 	})
 }
 
-func GetSeason(db common.DatabaseProvider, id SeasonId) (*Season, error) {
-	season, exists, err := common.GetOneById(db, &Season{}, id.RecordId())
+func (s *Season) IsTeamAssignedToSeason(teamId TeamId) bool {
+	for _, t := range s.Teams {
+		if t == teamId {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Season) GetTeamCaptains(db common.DatabaseProvider) ([]UserId, error) {
+	teams, err := s.GetTeams(db)
 	if err != nil {
-		fmt.Println(err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to get teams for season: %s\n", err.Error())
 	}
-	if !exists {
-		return nil, fmt.Errorf("season with ID %s does not exist\n", id)
+	output := make([]UserId, 0)
+	for _, team := range teams {
+		output = append(output, team.Captain)
 	}
-	return season, nil
+	return output, nil
+}
+
+// EditableBySeason returns a list of common.RecordId values who can edit a particular
+// record based on those who can edit the record's associated Season. This function is
+// used as a reusable way to compose the common.CrudRecord.EditableBy() list for record
+// types which are downstream of a Season and editable by the commissioners, e.g. a Schedule
+// or Week belonging to a Season
+func EditableBySeason(db common.DatabaseProvider, seasonId SeasonId) []common.RecordId {
+	season, err := common.GetExistingRecordById(db, &Season{}, seasonId.RecordId())
+	if err != nil {
+		fmt.Println(err) // shouldn't get here, but print an error if so for debugging
+		return nil
+	}
+	return season.EditableBy(db)
 }

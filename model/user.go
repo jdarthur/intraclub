@@ -32,6 +32,19 @@ type User struct {
 	Email       EmailAddress
 }
 
+func (u *User) UniquenessEquivalent(other *User) error {
+	if u.Email == other.Email {
+		return fmt.Errorf("user with email address %s already exists", u.Email)
+	}
+	if u.FirstName == other.FirstName && u.LastName == other.LastName {
+		return fmt.Errorf("user with name %s %s already exists", u.FirstName, u.LastName)
+	}
+	if u.PhoneNumber != "" && u.PhoneNumber == other.PhoneNumber {
+		return fmt.Errorf("user with phone number %s already exists", u.PhoneNumber)
+	}
+	return nil
+}
+
 func (u *User) SetOwner(recordId common.RecordId) {
 	// don't need to do anything as User records are self-owned
 }

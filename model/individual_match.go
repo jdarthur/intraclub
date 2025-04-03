@@ -5,26 +5,26 @@ import (
 	"intraclub/common"
 )
 
-type MatchId common.RecordId
+type IndividualMatchId common.RecordId
 
-func (id MatchId) RecordId() common.RecordId {
+func (id IndividualMatchId) RecordId() common.RecordId {
 	return common.RecordId(id)
 }
 
-func (id MatchId) String() string {
+func (id IndividualMatchId) String() string {
 	return id.RecordId().String()
 }
 
-type MatchStatus int
+type IndividualMatchStatus int
 
 const (
-	MatchUnstarted MatchStatus = iota
+	MatchUnstarted IndividualMatchStatus = iota
 	MatchInProgress
 	MatchWon
 	MatchLost
 )
 
-func (status MatchStatus) String() string {
+func (status IndividualMatchStatus) String() string {
 	switch status {
 	case MatchUnstarted:
 		return "Unstarted"
@@ -55,48 +55,48 @@ func (sc CompletedSecondary) Won() bool {
 	return sc.UsValue > sc.ThemValue
 }
 
-type Match struct {
-	ID             MatchId
+type IndividualMatch struct {
+	ID             IndividualMatchId
 	Editors        []UserId
-	Opponent       MatchId
+	Opponent       IndividualMatchId
 	Structure      ScoringStructureId
 	MainValue      int
 	SecondaryValue int
 	WinOverride    bool
-	Status         MatchStatus
+	Status         IndividualMatchStatus
 	_structure     *ScoringStructure `json:"-" bson:"-"`
 	_completed     []CompletedSecondary
 }
 
-func NewMatch() *Match {
-	return &Match{}
+func NewMatch() *IndividualMatch {
+	return &IndividualMatch{}
 }
 
-func (s *Match) Type() string {
+func (s *IndividualMatch) Type() string {
 	return "match"
 }
 
-func (s *Match) GetId() common.RecordId {
+func (s *IndividualMatch) GetId() common.RecordId {
 	return s.ID.RecordId()
 }
 
-func (s *Match) SetId(id common.RecordId) {
-	s.ID = MatchId(id)
+func (s *IndividualMatch) SetId(id common.RecordId) {
+	s.ID = IndividualMatchId(id)
 }
 
-func (s *Match) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (s *IndividualMatch) EditableBy(db common.DatabaseProvider) []common.RecordId {
 	return UserIdListToRecordIdList(s.Editors)
 }
 
-func (s *Match) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (s *IndividualMatch) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
-func (s *Match) SetOwner(recordId common.RecordId) {
+func (s *IndividualMatch) SetOwner(recordId common.RecordId) {
 	s.Editors = append(s.Editors, UserId(recordId))
 }
 
-func (s *Match) StaticallyValid() error {
+func (s *IndividualMatch) StaticallyValid() error {
 	if len(s.Editors) == 0 {
 		return fmt.Errorf("no editors specified")
 	}
@@ -109,21 +109,21 @@ func (s *Match) StaticallyValid() error {
 	return nil
 }
 
-func (s *Match) DynamicallyValid(db common.DatabaseProvider) error {
+func (s *IndividualMatch) DynamicallyValid(db common.DatabaseProvider) error {
 	err := common.ExistsById(db, &ScoringStructure{}, s.Structure.RecordId())
 	if err != nil {
 		return err
 	}
 
-	if s.Opponent != MatchId(common.InvalidRecordId) {
+	if s.Opponent != IndividualMatchId(common.InvalidRecordId) {
 		// check if we have a set value first, so that we can
 		// create one score pointing to nothing successfully,
 		// then create a second score pointing to the first
-		opp, err := common.GetExistingRecordById(db, &Match{}, s.Opponent.RecordId())
+		opp, err := common.GetExistingRecordById(db, &IndividualMatch{}, s.Opponent.RecordId())
 		if err != nil {
 			return err
 		}
-		if opp.Opponent != MatchId(common.InvalidRecordId) && opp.Opponent != s.ID {
+		if opp.Opponent != IndividualMatchId(common.InvalidRecordId) && opp.Opponent != s.ID {
 			return fmt.Errorf("this record's opponent %s is pointing to a different opponent than this record (%s)", s.Opponent, opp.Opponent)
 		}
 	}
@@ -137,7 +137,7 @@ func (s *Match) DynamicallyValid(db common.DatabaseProvider) error {
 	return nil
 }
 
-func (s *Match) Initialize(db common.DatabaseProvider) error {
+func (s *IndividualMatch) Initialize(db common.DatabaseProvider) error {
 	if s._structure == nil {
 		v, err := common.GetExistingRecordById(db, &ScoringStructure{}, s.Structure.RecordId())
 		if err != nil {
@@ -148,7 +148,7 @@ func (s *Match) Initialize(db common.DatabaseProvider) error {
 	return nil
 }
 
-func (s *Match) Victorious(opp *Match) bool {
+func (s *IndividualMatch) Victorious(opp *IndividualMatch) bool {
 	if s.WinOverride == true {
 		return true
 	}
@@ -159,7 +159,7 @@ func (s *Match) Victorious(opp *Match) bool {
 	return s._structure.WinningScore(s.MainValue, opp.MainValue, true)
 }
 
-func (s *Match) WonSecondary(opp *Match) bool {
+func (s *IndividualMatch) WonSecondary(opp *IndividualMatch) bool {
 	if s.WinOverride == true {
 		return true
 	}
@@ -170,7 +170,7 @@ func (s *Match) WonSecondary(opp *Match) bool {
 	return s._structure.WinningScore(s.SecondaryValue, opp.SecondaryValue, false)
 }
 
-func (s *Match) MarkStatus(db common.DatabaseProvider, newStatus MatchStatus, opp *Match) error {
+func (s *IndividualMatch) MarkStatus(db common.DatabaseProvider, newStatus IndividualMatchStatus, opp *IndividualMatch) error {
 	s.Status = newStatus
 
 	oppStatus := MatchInProgress
@@ -182,12 +182,12 @@ func (s *Match) MarkStatus(db common.DatabaseProvider, newStatus MatchStatus, op
 	return common.UpdateOne(db, opp)
 }
 
-func (s *Match) AddCompletedSecondary(db common.DatabaseProvider) error {
+func (s *IndividualMatch) AddCompletedSecondary(db common.DatabaseProvider) error {
 	completedValue := CompletedSecondary{
 		UsValue: s.SecondaryValue,
 	}
 
-	opp, err := common.GetExistingRecordById(db, &Match{}, s.Opponent.RecordId())
+	opp, err := common.GetExistingRecordById(db, &IndividualMatch{}, s.Opponent.RecordId())
 	if err != nil {
 		return err
 	}
@@ -203,7 +203,7 @@ func (s *Match) AddCompletedSecondary(db common.DatabaseProvider) error {
 	return common.UpdateOne(db, s)
 }
 
-func (s *Match) IncrementSecondary(db common.DatabaseProvider) error {
+func (s *IndividualMatch) IncrementSecondary(db common.DatabaseProvider) error {
 	s.SecondaryValue += 1
 
 	if s.Status != MatchUnstarted {
@@ -228,30 +228,29 @@ func (s *Match) IncrementSecondary(db common.DatabaseProvider) error {
 			if err != nil {
 				return err
 			}
-		} else {
-			err = s.ResetSecondaryForOpponent(db, opp)
-			if err != nil {
-				return err
-			}
+		}
+		err = s.ResetSecondaryForOpponent(db, opp)
+		if err != nil {
+			return err
 		}
 	}
 	return common.UpdateOne(db, s)
 }
 
-func (s *Match) ResetSecondaryForOpponent(db common.DatabaseProvider, opp *Match) error {
+func (s *IndividualMatch) ResetSecondaryForOpponent(db common.DatabaseProvider, opp *IndividualMatch) error {
 	opp.SecondaryValue = 0
 	return common.UpdateOne(db, opp)
 }
 
-func (s *Match) GetOpponent(db common.DatabaseProvider) (*Match, error) {
-	return common.GetExistingRecordById(db, &Match{}, s.Opponent.RecordId())
+func (s *IndividualMatch) GetOpponent(db common.DatabaseProvider) (*IndividualMatch, error) {
+	return common.GetExistingRecordById(db, &IndividualMatch{}, s.Opponent.RecordId())
 }
 
-func (s *Match) String(opp *Match) string {
+func (s *IndividualMatch) String(opp *IndividualMatch) string {
 	if s._structure == nil {
-		panic("Match._structure is not initialized!")
+		panic("IndividualMatch._structure is not initialized!")
 	}
-	output := fmt.Sprintf("Match %s\n", s.ID)
+	output := fmt.Sprintf("IndividualMatch %s\n", s.ID)
 	output += "------------------------------------\n"
 	output += fmt.Sprintf("Status: %s\n", s.Status)
 	output += "Results:\n"
@@ -272,6 +271,15 @@ func (s *Match) String(opp *Match) string {
 			won = " (lost)"
 		}
 		output += fmt.Sprintf("   %s %d: %d-%d%s\n", name, len(s._completed)+1, s.SecondaryValue, opp.SecondaryValue, won)
+	}
+	return output
+}
+
+func (s *IndividualMatch) GetSecondaryPointTotal() int {
+	output := 0
+	output += s.SecondaryValue
+	for _, v := range s._completed {
+		output += v.UsValue
 	}
 	return output
 }

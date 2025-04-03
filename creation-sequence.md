@@ -23,7 +23,8 @@ Tokens are necessary to call authenticated endpoints such as create, update, del
 ### c) Create a facility
  - [x] Only one person has to create the Martin's Landing River Club facility
  - [x] Facilities may not overlap
-   - e.g uniqueness on name, address fields
+   - [x] uniqueness on name
+   - [x] uniqueness on address
  - [x] Facilities that are assigned to a season may not 
 
 ### d) Create other users
@@ -96,8 +97,9 @@ of a particular `Rating`, e.g a high 1 or a mid 3
 
 
 ### d) Assign some captains to each team in the draft
+- [x] users must exist for all captains
+- [ ] captain IDs must all be distinct
 
-- Users must exist already for each captain
 
 ### e) Do the draft
 
@@ -106,20 +108,22 @@ of a particular `Rating`, e.g a high 1 or a mid 3
 - Each captain can select a player when draft is started and it's their turn
 
 ### f) Complete the draft
-
-- Mark the draft as closed
-- Create a season from the draft results with the assigned players and captains
+- [x] Mark the draft as closed after the last pick
+- [x] Create a season from the draft results with the assigned players and captains
 
 ## Configure a season
 
 ### a) Set up base values
 
-- Assign a name, facility, and start time
-- Add co-commissioners if desired
+- [x] Assign a name, facility, and start time
+- [ ] Add co-commissioners if desired
 
 ### b) Create a list of weeks
-
-- Each week must be in the future
+- [ ] Each week must be in the future
+- [ ] Each week must point to a valid `Draft`
+   - the Availability records for a user can be created before the Season
+   - each `Season` will have a one-to-one relationship with a `Draft`
+- [ ] Weeks for a `Season` / `Draft` can be queried 
 - Week records should get actually created right before configuration `POST`
 
 ### c) Create a season schedule

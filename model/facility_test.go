@@ -107,7 +107,7 @@ func TestAddressAlreadyExists(t *testing.T) {
 	copied.ID = FacilityId(common.InvalidRecordId) // generate new record ID to force a name conflict with old record
 	_, err := common.CreateOne(db, copied)
 	if err == nil {
-		t.Fatal("expected error on duplicate name")
+		t.Fatal("expected error on duplicate address")
 	}
 	fmt.Println(err)
 }

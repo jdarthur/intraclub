@@ -1,90 +1,82 @@
 package model
 
 import (
-	"errors"
 	"fmt"
 	"intraclub/common"
 )
 
-type lineupPairing struct {
-	Format  FormatId // ID of a particular Format for a Season
-	Line    int      // index of the line inside the Format
-	Player1 UserId   // index of the User who is player one for this Format / Line combination
-	Player2 UserId   // index of the User who is player two for this Format / Line combination
+type LineupId common.RecordId
+
+func (id LineupId) RecordId() common.RecordId {
+	return common.RecordId(id)
 }
 
-func (l lineupPairing) StaticallyValid() error {
-	if l.Line < 0 {
-		return errors.New("line is less than zero")
-	}
-	return nil
-}
-
-func (l lineupPairing) DynamicallyValid(db common.DatabaseProvider) error {
-	err := common.ExistsById(db, &User{}, l.Player1.RecordId())
-	if err != nil {
-		return err
-	}
-
-	err = common.ExistsById(db, &User{}, l.Player2.RecordId())
-	if err != nil {
-		return err
-	}
-
-	format, exists, err := common.GetOneById(db, &Format{}, l.Format.RecordId())
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return fmt.Errorf("format %s does not exist", l.Format)
-	}
-
-	if l.Line > len(format.Lines) {
-		return fmt.Errorf("line %d is greater than number of lines in format (%d)", l.Line, len(format.Lines))
-	}
-
-	return nil
+func (id LineupId) String() string {
+	return id.RecordId().String()
 }
 
 type Lineup struct {
-	ID       common.RecordId
-	TeamId   TeamId
-	Pairings []lineupPairing
+	ID     LineupId
+	TeamId TeamId // TeamId for this particular Lineup
+	WeekId WeekId // Week that this Lineup applies to
 }
 
-func (l Lineup) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (l *Lineup) UniquenessEquivalent(other *Lineup) error {
+	if l.WeekId == other.WeekId && l.TeamId == other.TeamId {
+		return fmt.Errorf("duplicate record for team ID & week ID")
+	}
+	return nil
+}
+
+func (l *Lineup) SetOwner(recordId common.RecordId) {
+	// don't need to do anything here as ownership is enforced by
+	// team captain or co-captain status
+}
+
+func (l *Lineup) EditableBy(db common.DatabaseProvider) []common.RecordId {
 	return EditableByTeamCaptainOrCoCaptains(db, l.TeamId)
 }
 
-func (l Lineup) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (l *Lineup) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
 	return AccessibleByTeamMembers(db, l.TeamId)
 }
 
-func (l Lineup) Type() string {
+func (l *Lineup) Type() string {
 	return "lineup"
 }
 
-func (l Lineup) GetId() common.RecordId {
-	return l.ID
+func (l *Lineup) GetId() common.RecordId {
+	return l.ID.RecordId()
 }
 
-func (l Lineup) SetId(id common.RecordId) {
-	l.ID = id
+func (l *Lineup) SetId(id common.RecordId) {
+	l.ID = LineupId(id)
 }
 
-func (l Lineup) StaticallyValid() error {
-	if len(l.Pairings) == 0 {
-		return errors.New("lineup pairings list is empty")
+func (l *Lineup) StaticallyValid() error {
+	return nil
+}
+
+func (l *Lineup) DynamicallyValid(db common.DatabaseProvider) error {
+	err := common.ExistsById(db, &Team{}, l.TeamId.RecordId())
+	if err != nil {
+		return err
+	}
+	err = common.ExistsById(db, &Week{}, l.WeekId.RecordId())
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
-func (l Lineup) DynamicallyValid(db common.DatabaseProvider) error {
-	for _, pairing := range l.Pairings {
-		err := common.Validate(db, pairing)
-		if err != nil {
-			return err
-		}
+func (l *Lineup) GetFormat(db common.DatabaseProvider) (*Format, error) {
+	week, err := common.GetExistingRecordById(db, &Week{}, l.WeekId.RecordId())
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	draft, err := common.GetExistingRecordById(db, &Draft{}, week.DraftId.RecordId())
+	if err != nil {
+		return nil, err
+	}
+	return common.GetExistingRecordById(db, &Format{}, draft.Format.RecordId())
 }

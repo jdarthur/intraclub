@@ -60,6 +60,26 @@ func newValidGrade(t *testing.T, db common.DatabaseProvider) *PreDraftGrade {
 	return grade
 }
 
+func newStoredGrade(t *testing.T, db common.DatabaseProvider) *PreDraftGrade {
+	grade := newValidGrade(t, db)
+	v, err := common.CreateOne(db, grade)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return v
+}
+
+func copyGrade(g *PreDraftGrade) *PreDraftGrade {
+	return &PreDraftGrade{
+		ID:       g.ID,
+		PlayerId: g.PlayerId,
+		DraftId:  g.DraftId,
+		GraderId: g.GraderId,
+		Modifier: g.Modifier,
+		Rating:   g.Rating,
+	}
+}
+
 func TestPreDraftInvalidRating(t *testing.T) {
 
 	db := common.NewUnitTestDBProvider()
@@ -229,6 +249,18 @@ func TestGradeWhenDraftIsCompleted(t *testing.T) {
 	grade.Rating = format.PossibleRatings[0]
 
 	err = grade.DynamicallyValid(db)
+	if err == nil {
+		t.Fatal("Expected error, got nil")
+	}
+	fmt.Println(err)
+}
+
+func TestDuplicateGrade(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	grade := newStoredGrade(t, db)
+	grade2 := copyGrade(grade)
+
+	_, err := common.CreateOne(db, grade2)
 	if err == nil {
 		t.Fatal("Expected error, got nil")
 	}

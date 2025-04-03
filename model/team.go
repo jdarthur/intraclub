@@ -22,6 +22,7 @@ type Team struct {
 	Captain    UserId
 	CoCaptains []UserId
 	Members    []UserId
+	RatingsMap map[UserId]RatingId
 }
 
 func (t *Team) SetOwner(recordId common.RecordId) {

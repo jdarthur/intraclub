@@ -14,5 +14,6 @@ func Validate(db DatabaseProvider, d DatabaseValidatable) error {
 	if err != nil {
 		return err
 	}
+	
 	return d.DynamicallyValid(db)
 }

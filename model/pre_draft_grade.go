@@ -27,6 +27,13 @@ type PreDraftGrade struct {
 	Rating   RatingId
 }
 
+func (p *PreDraftGrade) UniquenessEquivalent(other *PreDraftGrade) error {
+	if p.PlayerId == other.PlayerId && p.GraderId == other.GraderId && p.DraftId == other.DraftId {
+		return fmt.Errorf("duplicate record for player ID, grader ID and draft ID")
+	}
+	return nil
+}
+
 type PreDraftAggregate struct {
 	PlayerId  UserId
 	Aggregate float64 // average of the ratings for this player (higher is better)

@@ -38,6 +38,16 @@ type Facility struct {
 	LayoutPhoto    PhotoId    // ID of a Photo showing the layout of the Facility (i.e. orientation of courts, parking, etc.)
 }
 
+func (f *Facility) UniquenessEquivalent(other *Facility) error {
+	if f.Name == other.Name {
+		return fmt.Errorf("duplicate record for facility name")
+	}
+	if f.Address == other.Address {
+		return fmt.Errorf("duplicate record for facility address")
+	}
+	return nil
+}
+
 // NewFacility allocates a new *Facility record. Calling this function
 // (as opposed to doing e.g. `v := &Facility{}`) allows us to easily
 // navigate to all the points in the code which allocate a new Facility
@@ -116,42 +126,10 @@ func (f *Facility) StaticallyValid() error {
 	return nil
 }
 
-// facilityAlreadyExistsWithValues enforces that Facility.Name
-// and Facility.Address fields for a record are unique in the DB
-func facilityAlreadyExistsWithValues(f, other *Facility) bool {
-	if f.ID == other.ID {
-		return false // don't enforce uniqueness against self
-	}
-	if f.Name == other.Name {
-		return true // name must be unique
-	}
-	if f.Address == other.Address {
-		return true // address must also be unique
-	}
-	return false
-}
-
 // DynamicallyValid validates this record against the record-specific
 // business logic rules using a common.DatabaseProvider to validate e.g.
 // individual ID values for existence, ownership constraints, etc.
 func (f *Facility) DynamicallyValid(db common.DatabaseProvider) error {
-	f2 := func(c *Facility) bool {
-		return facilityAlreadyExistsWithValues(f, c)
-	}
-	records, err := common.GetAllWhere(db, &Facility{}, f2)
-	if err != nil {
-		return err
-	}
-
-	if len(records) != 0 {
-		if records[0].Name == f.Name {
-			return errors.New("facility with provided name already exists")
-		} else if records[0].Address == f.Address {
-			return errors.New("facility with provided address already exists")
-		}
-		panic("unhandled facility value collision")
-	}
-
 	if f.LayoutPhoto != 0 {
 		return common.ExistsById(db, &Photo{}, f.LayoutPhoto.RecordId())
 	}

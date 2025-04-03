@@ -41,6 +41,13 @@ type Availability struct {
 	Available AvailabilityOption
 }
 
+func (a *Availability) UniquenessEquivalent(other *Availability) error {
+	if a.UserId == other.UserId && a.WeekId == other.WeekId {
+		return fmt.Errorf("duplicate record for user ID & week ID")
+	}
+	return nil
+}
+
 func NewAvailability() *Availability {
 	return &Availability{}
 }
@@ -89,9 +96,18 @@ func (a *Availability) getTeam(db common.DatabaseProvider) (*Team, error) {
 		return nil, fmt.Errorf("week with ID %s does not exist", a.WeekId.RecordId())
 	}
 
-	season, err := GetSeason(db, week.SeasonId)
+	draft, err := common.GetExistingRecordById(db, &Draft{}, week.DraftId.RecordId())
 	if err != nil {
 		return nil, err
+	}
+
+	season, err := draft.GetSeason(db)
+	if err != nil {
+		return nil, err
+	}
+
+	if season == nil {
+		return nil, fmt.Errorf("draft %s (from week %s) does not have an assigned season", draft.ID, a.WeekId)
 	}
 
 	seasonMember, err := season.IsUserIdASeasonParticipant(db, a.UserId)
@@ -125,4 +141,45 @@ func (a *Availability) AccessibleTo(db common.DatabaseProvider) []common.RecordI
 		return nil
 	}
 	return UserIdListToRecordIdList(team.Members)
+}
+
+func GetAvailabilityForUser(db common.DatabaseProvider, userId UserId, draftId DraftId) ([]*Availability, error) {
+	weeks, err := common.GetAllWhere(db, &Week{}, func(c *Week) bool {
+		return c.DraftId == draftId
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return common.GetAllWhere(db, &Availability{}, func(c *Availability) bool {
+		// only return Availability associated with this User
+		if c.UserId != userId {
+			return false
+		}
+
+		// only return Availability associated with the Weeks of this Season
+		for _, week := range weeks {
+			if c.WeekId == week.ID {
+				return true
+			}
+		}
+		return false
+	})
+}
+
+func GetAvailabilityForTeam(db common.DatabaseProvider, teamId TeamId, draftId DraftId) (map[UserId][]*Availability, error) {
+	output := make(map[UserId][]*Availability)
+	team, err := common.GetExistingRecordById(db, &Team{}, teamId.RecordId())
+	if err != nil {
+		return nil, err
+	}
+	for _, member := range team.Members {
+		availability, err := GetAvailabilityForUser(db, member, draftId)
+		if err != nil {
+			return nil, err
+		}
+		output[member] = availability
+	}
+	return output, nil
 }

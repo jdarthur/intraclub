@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func newStoredMatchPair(t *testing.T, db common.DatabaseProvider, s *ScoringStructure) (*Match, *Match) {
+func newStoredMatchPair(t *testing.T, db common.DatabaseProvider, s *ScoringStructure) (*IndividualMatch, *IndividualMatch) {
 	match1 := NewMatch()
 	match2 := NewMatch()
 
@@ -48,7 +48,7 @@ var sixZeroDustedFlow = []bool{
 	true, true, true, true, true, true, // win set two
 }
 
-func runMatchFlow(t *testing.T, db common.DatabaseProvider, match1, match2 *Match, flow []bool) {
+func runMatchFlow(t *testing.T, db common.DatabaseProvider, match1, match2 *IndividualMatch, flow []bool) {
 	for _, won := range flow {
 		if won {
 			err := match1.IncrementSecondary(db)
@@ -102,4 +102,19 @@ func TestMatchFlow2(t *testing.T) {
 	}
 	fmt.Println(match1.String(match2))
 	fmt.Println(match2.String(match1))
+}
+
+func TestIndividualPointTotals(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	ss := newDefaultStoredScoringStructure(t, db)
+	match1, match2 := newStoredMatchPair(t, db, ss)
+
+	runMatchFlow(t, db, match1, match2, closeThreeSets)
+
+	if match1.GetSecondaryPointTotal() != 17 {
+		t.Fatal("expected secondary point to be 17")
+	}
+	if match2.GetSecondaryPointTotal() != 15 {
+		t.Fatal("expected secondary point to be 13")
+	}
 }

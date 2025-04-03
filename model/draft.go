@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"intraclub/common"
+	"time"
 )
 
 // TeamCaptainAssignment is a struct which binds a TeamId to its captain
@@ -64,6 +65,7 @@ type Draft struct {
 	Selections    []UserId                 // All user IDs who have been drafted, in order
 	Format        FormatId                 // Format in which the Season associated with this draft will be played
 	RatingCutoffs map[RatingId]int         // map from rating ID to the last selection index matching that ID
+	CompletedAt   time.Time
 }
 
 func (d *Draft) SetOwner(recordId common.RecordId) {
@@ -432,8 +434,11 @@ func (d *Draft) Initialize(db common.DatabaseProvider, captains []UserId) error 
 }
 
 func (d *Draft) AssignDraftablePlayers(db common.DatabaseProvider, players []UserId) error {
-	for _, player := range players {
+	if d.IsDraftCompleted() {
+		return errors.New("draft is already completed")
+	}
 
+	for _, player := range players {
 		if !d.IsInDraftList(player) {
 			d.Available = append(d.Available, player)
 		}
@@ -442,6 +447,10 @@ func (d *Draft) AssignDraftablePlayers(db common.DatabaseProvider, players []Use
 }
 
 func (d *Draft) AssignDraftedPlayersToTeams(db common.DatabaseProvider) error {
+	if !d.IsDraftCompleted() {
+		return errors.New("draft is not yet completed")
+	}
+
 	for _, assignment := range d.Captains {
 		// get the team record corresponding to the assignment
 		team, err := common.GetExistingRecordById(db, &Team{}, assignment.TeamId.RecordId())
@@ -455,11 +464,13 @@ func (d *Draft) AssignDraftedPlayersToTeams(db common.DatabaseProvider) error {
 			return err
 		}
 
+		team.RatingsMap = make(map[UserId]RatingId)
 		for _, result := range results {
 			// if drafted player is not already a member of the team, add them.
 			// The only added player when this is called should be the captain
 			if !team.IsTeamMember(result.User.ID) {
 				team.Members = append(team.Members, result.User.ID)
+				team.RatingsMap[result.User.ID] = result.Rating
 			}
 		}
 
@@ -472,9 +483,52 @@ func (d *Draft) AssignDraftedPlayersToTeams(db common.DatabaseProvider) error {
 	return nil
 }
 
+func (d *Draft) CreateSeason(db common.DatabaseProvider, name string, facility FacilityId, t StartTime) (*Season, error) {
+	if !d.IsDraftCompleted() {
+		return nil, errors.New("draft is not completed")
+	}
+
+	// update the completed-at timestamp for this draft
+	d.CompletedAt = time.Now()
+	err := common.UpdateOne(db, d)
+	if err != nil {
+		return nil, err
+	}
+
+	s := NewSeason()
+
+	// fill fields from the function args
+	s.Name = name
+	s.Facility = facility
+	s.StartTime = t
+
+	// autofill the remaining required fields from the draft data
+	s.Commissioners = []UserId{d.Owner}
+	for _, tca := range d.Captains {
+		s.Teams = append(s.Teams, tca.TeamId)
+	}
+	s.DraftId = d.ID
+
+	// create a new Season record
+	return common.CreateOne(db, s)
+}
+
 func (d *Draft) IsDraftCompleted() bool {
 	if len(d.Available) == 0 {
 		return false
 	}
 	return len(d.Available) == len(d.Selections)
+}
+
+func (d *Draft) GetSeason(db common.DatabaseProvider) (*Season, error) {
+	seasons, err := common.GetAllWhere(db, &Season{}, func(c *Season) bool {
+		return c.DraftId == d.ID
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(seasons) == 0 {
+		return nil, nil
+	}
+	return seasons[0], nil
 }

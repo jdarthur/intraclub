@@ -98,6 +98,16 @@ func selectRandomAvailableByCaptain(t *testing.T, draft *Draft, captain UserId) 
 	}
 }
 
+func newCompletedDraft(t *testing.T, db common.DatabaseProvider) (*Draft, *Season) {
+	draft := doRandomDraft(t, db, 100, 4)
+	facility := newStoredFacility(t, db, draft.Owner)
+	season, err := draft.CreateSeason(db, "Test season", facility.ID, NewStartTime(8, 30))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return draft, season
+}
+
 func TestRandomDraft(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	draft := doRandomDraft(t, db, 100, 4)

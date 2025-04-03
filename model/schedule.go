@@ -5,40 +5,6 @@ import (
 	"intraclub/common"
 )
 
-type TeamMatchup struct {
-	HomeTeam common.RecordId
-	AwayTeam common.RecordId
-}
-
-type WeeklyMatchup struct {
-	WeekId   common.RecordId
-	Matchups []TeamMatchup
-}
-
-func (w WeeklyMatchup) StaticallyValid() error {
-	return nil
-}
-
-func (w WeeklyMatchup) DynamicallyValid(db common.DatabaseProvider) error {
-	err := common.ExistsById(db, &Week{}, w.WeekId)
-	if err != nil {
-		return err
-	}
-
-	for _, matchup := range w.Matchups {
-		err = common.ExistsById(db, &Team{}, matchup.HomeTeam)
-		if err != nil {
-			return err
-		}
-		err = common.ExistsById(db, &Team{}, matchup.AwayTeam)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 type ScheduleId common.RecordId
 
 func (id ScheduleId) RecordId() common.RecordId {
@@ -52,7 +18,15 @@ func (id ScheduleId) String() string {
 type Schedule struct {
 	ID       ScheduleId
 	SeasonId SeasonId
-	Matchups []WeeklyMatchup
+	Matchups []WeeklyMatchupId
+}
+
+func (s *Schedule) UniquenessEquivalent(other *Schedule) error {
+	// can only have one schedule per season ID
+	if s.SeasonId == other.SeasonId {
+		return fmt.Errorf("duplicate schedule for season ID")
+	}
+	return nil
 }
 
 func (s *Schedule) SetOwner(recordId common.RecordId) {
@@ -66,12 +40,7 @@ func NewSchedule() *Schedule {
 }
 
 func (s *Schedule) EditableBy(db common.DatabaseProvider) []common.RecordId {
-	season, err := GetSeason(db, s.SeasonId)
-	if err != nil {
-		fmt.Println(err)
-		return nil
-	}
-	return season.EditableBy(db)
+	return EditableBySeason(db, s.SeasonId)
 }
 
 func (s *Schedule) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
@@ -101,7 +70,11 @@ func (s *Schedule) DynamicallyValid(db common.DatabaseProvider) error {
 	}
 
 	for _, m := range s.Matchups {
-		err = m.DynamicallyValid(db)
+		weeklyMatchup, err := common.GetExistingRecordById(db, &WeeklyMatchup{}, m.RecordId())
+		if err != nil {
+			return err
+		}
+		err = weeklyMatchup.DynamicallyValid(db)
 		if err != nil {
 			return err
 		}
@@ -110,10 +83,29 @@ func (s *Schedule) DynamicallyValid(db common.DatabaseProvider) error {
 }
 
 func (s *Schedule) PostCreate(db common.DatabaseProvider) error {
-	season, err := GetSeason(db, s.SeasonId)
+	season, err := common.GetExistingRecordById(db, &Season{}, s.SeasonId.RecordId())
 	if err != nil {
 		return err
 	}
 	season.ScheduleID = s.ID
 	return common.UpdateOne(db, season)
+}
+
+func (s *Schedule) GetWeeks(db common.DatabaseProvider) ([]*Week, error) {
+	season, err := common.GetExistingRecordById(db, &Season{}, s.SeasonId.RecordId())
+	if err != nil {
+		return nil, err
+	}
+
+	return common.GetAllWhere(db, &Week{}, func(c *Week) bool {
+		return c.DraftId == season.DraftId
+	})
+}
+
+func (s *Schedule) IsScheduleComplete(db common.DatabaseProvider) (bool, error) {
+	weeks, err := s.GetWeeks(db)
+	if err != nil {
+		return false, err
+	}
+	return len(weeks) == len(s.Matchups), nil
 }

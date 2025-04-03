@@ -180,6 +180,11 @@ func CreateOne[T CrudRecord](db DatabaseProvider, record T) (t T, err error) {
 		return t, err
 	}
 
+	err = ValidateUniqueConstraint(db, record)
+	if err != nil {
+		return t, err
+	}
+
 	v, err := db.Create(record)
 	if err != nil {
 		return t, err
@@ -203,7 +208,7 @@ func CreateOne[T CrudRecord](db DatabaseProvider, record T) (t T, err error) {
 // does not violate any type-specific constraints, updates it in the
 // given DatabaseProvider and runs any post-create logic that the
 // type implements, returning any errors encountered along the way
-func UpdateOne(db DatabaseProvider, record CrudRecord) (err error) {
+func UpdateOne[T CrudRecord](db DatabaseProvider, record T) (err error) {
 	// validate that the original record exists
 	v, exists, err := GetOneById(db, record, record.GetId())
 	if err != nil {
@@ -222,7 +227,12 @@ func UpdateOne(db DatabaseProvider, record CrudRecord) (err error) {
 		return err
 	}
 
-	pu, ok := record.(PreUpdate)
+	err = ValidateUniqueConstraint(db, record)
+	if err != nil {
+		return err
+	}
+
+	pu, ok := any(record).(PreUpdate)
 	if ok {
 		err = pu.PreUpdate(db, v)
 		if err != nil {
@@ -236,7 +246,7 @@ func UpdateOne(db DatabaseProvider, record CrudRecord) (err error) {
 	}
 
 	// run post-update logic if implemented by the type
-	o, ok := record.(PostUpdate)
+	o, ok := any(record).(PostUpdate)
 	if ok {
 		err = o.PostUpdate(db)
 		if err != nil {
