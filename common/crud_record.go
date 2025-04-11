@@ -10,6 +10,13 @@ import (
 
 type RecordId uint64
 
+func (r RecordId) MarshalJSON() ([]byte, error) {
+	str := "\""
+	str += r.String()
+	str += "\""
+	return []byte(str), nil
+}
+
 func NewRecordId() RecordId {
 	return RecordId(rand.Uint64() + uint64(len(unavailableRecordIds)))
 }

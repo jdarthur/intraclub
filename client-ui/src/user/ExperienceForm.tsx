@@ -1,4 +1,4 @@
-import {SkillInfoBody, SkillInfoRecord} from "./SkillInfo";
+import {SkillInfoBody} from "./SkillInfo";
 import {CommonFormModal} from "../common/CommonFormModal";
 import {
     useCreateSkillInfoMutation,
@@ -41,7 +41,7 @@ export function ExperienceForm({UserId}: ExperienceFormProps) {
         }
 
         let func = () => createExperienceRecord(body)
-        return await func();
+        return func();
     }
 
     return <CommonFormModal ObjectType={"experience"} title={"Add info"}

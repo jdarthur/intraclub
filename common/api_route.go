@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"strconv"
 )
 
 // PathIdField is the field in a request to an ApiRoute
@@ -12,7 +11,7 @@ import (
 var PathIdField = "id"
 
 func AppendPathId(route string) string {
-	return fmt.Sprintf("%s:%s", route, PathIdField)
+	return fmt.Sprintf("%s/:%s", route, PathIdField)
 }
 
 // HttpMethod is a type used to enforce method correctness in ApiRoute
@@ -110,7 +109,7 @@ type RouteFamily[T Validatable] struct {
 
 // Handle adds one or more ApiRoutes to this RouteFamily and applies the
 // routes to the provided gin.Engine.
-func (r *RouteFamily[T]) Handle(e *gin.Engine, routes ...ApiRoute[T]) {
+func (r *RouteFamily[T]) Handle(e *gin.RouterGroup, routes ...ApiRoute[T]) {
 
 	// if DatabaseProvider was not set on the RouteFamily, we will use the global one
 	if r.DatabaseProvider == nil {
@@ -135,7 +134,7 @@ func (r *RouteFamily[T]) Handle(e *gin.Engine, routes ...ApiRoute[T]) {
 // This is a shim layer to convert the RouteFamily syntax into the format
 // needed by a gin.Engine (i.e. getting the method and route from each ApiRoute
 // and applying the middleware and RouteWrapper.Handle function to the engine)
-func (r *RouteFamily[T]) addToEngine(e *gin.Engine) {
+func (r *RouteFamily[T]) addToEngine(e *gin.RouterGroup) {
 	// handle each ApiRoute in the family
 	for _, wrapper := range r.wrappers {
 
@@ -171,7 +170,7 @@ func (r *routeWrapper[T]) Handle(c *gin.Context) {
 	if r.UseAuth {
 		token, err = GetToken(c)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}
 	}
@@ -219,7 +218,7 @@ func (r *routeWrapper[T]) getPathId(c *gin.Context) (RecordId, error) {
 	if ok {
 
 		// parse the record ID into a base-10 uint64
-		id, err := strconv.ParseUint(v, 10, 64)
+		id, err := RecordIdFromString(v)
 		if err != nil {
 			return InvalidRecordId, fmt.Errorf("invalid field for :%s path parameter: %s", PathIdField, v)
 		}

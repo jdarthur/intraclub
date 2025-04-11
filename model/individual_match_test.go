@@ -104,6 +104,29 @@ func TestMatchFlow2(t *testing.T) {
 	fmt.Println(match2.String(match1))
 }
 
+var thirdSetTiebreak = []bool{
+	true, true, false, true, false, false, true, false, true, true, // win set one, 6-4
+	true, true, false, false, true, false, false, true, false, true, false, false, // lost set two, 5-7
+	false, true, true, false, false, true, false, true, true, true, false, false, true, false, true, false, true, true, // won set three, 10-8
+}
+
+func TestMatchFlowThirdSetTiebreak(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	ss := newThirdSetTiebreakScoringStructure(t, db)
+	match1, match2 := newStoredMatchPair(t, db, ss)
+
+	runMatchFlow(t, db, match1, match2, thirdSetTiebreak)
+
+	if match1.Status != MatchWon {
+		t.Fatal("expected match to be won")
+	}
+	if match2.Status != MatchLost {
+		t.Fatal("expected match to be lost")
+	}
+	fmt.Println(match1.String(match2))
+	fmt.Println(match2.String(match1))
+}
+
 func TestIndividualPointTotals(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	ss := newDefaultStoredScoringStructure(t, db)

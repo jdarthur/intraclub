@@ -1,4 +1,4 @@
-import {LogoutOutlined, UserOutlined} from "@ant-design/icons";
+import {LoadingOutlined, LogoutOutlined, UserOutlined} from "@ant-design/icons";
 import {Avatar, Button, Divider, Popover} from "antd";
 import * as React from "react";
 import {ProduceCssColorFromHashedName} from "../navigation/NavBarUserIcon";
@@ -15,10 +15,17 @@ type User = {
     ShowLogout?: boolean
 }
 
-export function UserIcon({FirstName, LastName, Email, UserId, UseLink, ShowLogout}: User) {
+type NameAndUserIconProps = User & {
+    Loading: boolean
+}
+
+
+export function UserIcon({FirstName, LastName, Email, UserId, UseLink, ShowLogout, Loading}: NameAndUserIconProps) {
     const color = ProduceCssColorFromHashedName(FirstName, LastName)
 
-    const title = <NameAndUserIcon FirstName={FirstName} LastName={LastName} UserId={UserId} UseLink={UseLink}/>
+    const title = <NameAndUserIcon FirstName={FirstName} LastName={LastName}
+                                   UserId={UserId} UseLink={UseLink}
+                                   Loading={Loading}/>
 
     const logout = <Button type={"primary"} onClick={() => dispatch(logoutUser())}>
         <LogoutOutlined/>
@@ -44,11 +51,13 @@ export function UserIcon({FirstName, LastName, Email, UserId, UseLink, ShowLogou
     </Popover>
 }
 
-export function NameAndUserIcon({FirstName, LastName, UserId, UseLink}: User) {
+export function NameAndUserIcon({FirstName, LastName, UserId, UseLink, Loading}: NameAndUserIconProps) {
+
+    const name = Loading ? <LoadingOutlined/> : `${FirstName} ${LastName}`
 
     const content = <span>
         <UserOutlined style={{marginRight: "1em"}}/>
-        {FirstName} {LastName}
+        {name}
     </span>
 
     if (UseLink) {

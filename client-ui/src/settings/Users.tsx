@@ -10,7 +10,7 @@ const columns = [
         title: "Action",
         key: "action",
         dataIndex: "",
-        render: (_: any, user: User) => <UserAction user_id={user.user_id} first_name={user.first_name}
+        render: (_: any, user: User) => <UserAction id={user.id} first_name={user.first_name}
                                                     last_name={user.last_name} email={user.email} skill_info={user.skill_info}/>,
     },
     {
@@ -39,26 +39,26 @@ export function Users() {
 }
 
 export type User = {
-    user_id: string
+    id: string
     first_name: string
     last_name: string
     email: string
     skill_info: string[]
 }
 
-function UserAction({user_id, first_name, last_name, email, skill_info}: User) {
+function UserAction({id, first_name, last_name, email, skill_info}: User) {
 
     const deleteSelf = () => {
-        console.log(`Delete user ${user_id}`)
+        console.log(`Delete user ${id}`)
     }
 
     const edit = () => {
-        const u: User = {first_name, last_name, email, user_id, skill_info}
+        const u: User = {first_name, last_name, email, id, skill_info}
         console.log("Edit user", u)
     }
 
     return <Space>
-        <a href={`/user/${user_id}`} key={"view"}>View</a>
+        <a href={`/user/${id}`} key={"view"}>View</a>
         <DeleteConfirm deleteFunction={deleteSelf} objectType={"user"} key={"delete"}/>
         <EditOutlined style={{cursor: "pointer"}} key={"edit"} onClick={edit}/>
     </Space>

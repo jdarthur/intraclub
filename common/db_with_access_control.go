@@ -16,7 +16,7 @@ func NewWithAccessControl[T CrudRecord](db DatabaseProvider, accessControlUser R
 
 var SysAdminCheck func(db DatabaseProvider, c RecordId) (bool, error)
 
-func (w WithAccessControl[T]) CanUserAccess(record T) bool {
+func (w *WithAccessControl[T]) CanUserAccess(record T) bool {
 	list := record.AccessibleTo(w.Database)
 	if len(list) == 0 {
 		fmt.Println("Access list is empty")
@@ -32,7 +32,7 @@ func (w WithAccessControl[T]) CanUserAccess(record T) bool {
 	return w.CanUserEdit(record)
 }
 
-func (w WithAccessControl[T]) CanUserEdit(record T) bool {
+func (w *WithAccessControl[T]) CanUserEdit(record T) bool {
 	list := record.EditableBy(w.Database)
 	if len(list) == 0 {
 		fmt.Println("Editable-by list is empty")
@@ -77,13 +77,13 @@ func (w WithAccessControl[T]) CanUserEdit(record T) bool {
 	return false
 }
 
-func (w WithAccessControl[T]) GetAll(recordType T) ([]T, error) {
+func (w *WithAccessControl[T]) GetAll(recordType T) ([]T, error) {
 	filter := func(c T) bool { return w.CanUserAccess(c) }
 	return GetAllWhere[T](w.Database, recordType, filter)
 }
 
 // GetOneById retrieves a CrudRecord by RecordId
-func (w WithAccessControl[T]) GetOneById(record T, id RecordId) (t T, exists bool, err error) {
+func (w *WithAccessControl[T]) GetOneById(record T, id RecordId) (t T, exists bool, err error) {
 	t, exists, err = GetOneById(w.Database, record, id)
 	if err != nil {
 		return t, false, err
@@ -96,7 +96,7 @@ func (w WithAccessControl[T]) GetOneById(record T, id RecordId) (t T, exists boo
 	return t, true, nil
 }
 
-func (w WithAccessControl[T]) DeleteOneById(record T, id RecordId) (t T, exists bool, err error) {
+func (w *WithAccessControl[T]) DeleteOneById(record T, id RecordId) (t T, exists bool, err error) {
 	t, exists, err = GetOneById(w.Database, record, id)
 	if err != nil {
 		return t, false, err
@@ -109,7 +109,7 @@ func (w WithAccessControl[T]) DeleteOneById(record T, id RecordId) (t T, exists 
 	return DeleteOneById(w.Database, record, id)
 }
 
-func (w WithAccessControl[T]) UpdateOneById(record T) (err error) {
+func (w *WithAccessControl[T]) UpdateOneById(record T) (err error) {
 	// check that a record exists with this ID. we will do this again in
 	// the call to UpdateOne function below, but we need the common validate
 	// and post-update logic that that function provides here.

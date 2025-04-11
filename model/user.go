@@ -8,6 +8,10 @@ import (
 
 type UserId common.RecordId
 
+func (id UserId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
 func (id UserId) RecordId() common.RecordId {
 	return common.RecordId(id)
 }
@@ -25,11 +29,11 @@ func UserIdListToRecordIdList(input []UserId) []common.RecordId {
 }
 
 type User struct {
-	ID          UserId
-	FirstName   string
-	LastName    string
-	PhoneNumber PhoneNumber
-	Email       EmailAddress
+	ID          UserId       `json:"id"`
+	FirstName   string       `json:"first_name"`
+	LastName    string       `json:"last_name"`
+	PhoneNumber PhoneNumber  `json:"phone_number"`
+	Email       EmailAddress `json:"email"`
 }
 
 func (u *User) UniquenessEquivalent(other *User) error {
@@ -83,7 +87,6 @@ func (u *User) TrimValues() {
 	if u.PhoneNumber != "" {
 		u.PhoneNumber = u.PhoneNumber.AddDashes()
 	}
-
 }
 
 func (u *User) StaticallyValid() error {

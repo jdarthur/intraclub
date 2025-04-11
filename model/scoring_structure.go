@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"intraclub/common"
 )
@@ -25,15 +26,15 @@ const (
 func (s ScoreCountingType) String() string {
 	switch s {
 	case Point:
-		return "Point"
+		return "point"
 	case Game:
-		return "Game"
+		return "game"
 	case Set:
-		return "Set"
+		return "set"
 	case NotApplicable:
-		return "NotApplicable"
+		return "not applicable"
 	default:
-		return "Invalid"
+		return "invalid"
 	}
 }
 
@@ -47,163 +48,206 @@ func (id ScoringStructureId) String() string {
 	return id.RecordId().String()
 }
 
-type ScoringStructure struct {
-	// ID is a unique identifier for this ScoringStructure
-	ID ScoringStructureId
-
-	Owner UserId
-
-	// WinConditionCountingType is the ScoreCountingType that determines who wins
-	// in this ScoringStructure.
-	WinConditionCountingType ScoreCountingType
-
-	// MainScoreWinsAt determines where a team must get to in the WinConditionCountingType
-	// in order to win in this ScoringStructure. They must also satisfy the MainScoreMustWinBy
-	// threshold in order to reach the win condition.
-	MainScoreWinsAt int
-
-	// MainScoreMustWinBy determines the value that a team must beat the other team by in
-	// order to trigger the win condition, e.g. a win-by-two constraint
-	MainScoreMustWinBy int
-
-	// A team wins automatically if they reach this number, for example to short-circuit
-	// a win-by-two constraint for sudden-death purposes
-	MainScoreInstantWinAt int
-
-	// SecondaryScoreCountingType is the ScoreCountingType that is used to increment
-	// the WinConditionCountingType, if applicable. For example, you may trigger the
-	// win condition if you win 3 games to 11 points, or win 2 sets each played to 6 games
-	SecondaryScoreCountingType ScoreCountingType
-
-	// SecondaryScoreWinsAt is the threshold that a team must reach in order
-	// to increment the main ScoreCountingType (as long as they also satisfy
-	// the SecondaryScoreMustWinBy constraint)
-	SecondaryScoreWinsAt int
-
-	// SecondaryScoreMustWinBy is a constraint that delays the win condition for the
-	// SecondaryScoreCountingType until a team has X amount of that type compared to the
-	// other team. For example, scoring might be played to 11, but with a win-by-two constraint
-	SecondaryScoreMustWinBy int
-
-	// SecondaryScoreInstantWinAt is a threshold that, when reached, causes a team to instantly
-	// reach the SecondaryScoreCountingType win condition. For example, this can be used to e.g,
-	// disregard a "first-to-seven, win-by-two" constraint when either team hits 10
-	SecondaryScoreInstantWinAt int
+type WinCondition struct {
+	WinThreshold        int
+	MustWinBy           int
+	InstantWinThreshold int
 }
 
-func (s *ScoringStructure) Type() string {
+func (w WinCondition) HasInstantWinThreshold() bool {
+	return w.InstantWinThreshold > 0
+}
+
+func (w WinCondition) WinByTwoOrMore() bool {
+	return w.MustWinBy > 1
+}
+
+func (w WinCondition) StaticallyValid() error {
+	if w.WinThreshold < 1 {
+		return errors.New("win threshold must be >= 1")
+	}
+
+	// disallow win-by-zero or e.g. win-by-negative-one
+	if w.MustWinBy < 1 {
+		return errors.New("must-win-by constraint must be >= 1")
+	}
+
+	// disallow e.g. first-to-one, win-by-two
+	if w.WinThreshold < w.MustWinBy {
+		return errors.New("win threshold cannot be lower than must-win-by constraint")
+	}
+
+	if w.HasInstantWinThreshold() {
+		// if we have an instant win threshold, it must be at least
+		// as large as the main win threshold. Doesn't make sense to
+		// have e.g. an instant win at 3 if you don't "win" until you
+		// reach 5 points, etc.
+		if w.InstantWinThreshold < w.WinThreshold {
+			return errors.New("instant-win-at threshold must be >= main win threshold")
+		}
+		// can't have the instant win threshold the same as the win threshold in e.g. win-by-two
+		// constraint. In this situation the win-by-two constraint would be meaningless
+		if w.InstantWinThreshold == w.WinThreshold && w.WinByTwoOrMore() {
+			return fmt.Errorf("instant-win-at threshold cannot be the same as main win threshold in win-by-%d", w.MustWinBy)
+		}
+	}
+	return nil
+}
+
+type ScoringStructure struct {
+	// ID is a unique ID for this scoring structure.
+	// This can be referenced by composite scoring structures
+	// or things like Schedule or PlayoffStructure objects
+	// which need to reference a particular way that their
+	// matches are played out from a scoring perspective
+	ID ScoringStructureId
+
+	// Owner is the UserId who created this ScoringStructure.
+	// This is only used to allow deletion / update and to
+	// filter on one's own ScoringStructure records
+	Owner UserId
+
+	// WinConditionCountingType is the ScoreCountingType
+	// that determines when someone wins in this ScoringStructure.
+	// The win condition will occur when a team in a Match
+	// gets to a particular number of points, games, or sets
+	// won, based on the configuration of this ScoringStructure
+	WinConditionCountingType ScoreCountingType
+
+	// WinCondition sets out the thresholds at which a team wins
+	// a Match using this ScoringStructure. This includes a main
+	// win threshold, a possible must-win-by-X constraint, and a
+	// threshold that a team instantly wins at, bypassing the
+	// win-by-X constraint
+	WinCondition WinCondition
+
+	// SecondaryScoringStructures is a list of ScoringStructure
+	// references that are used as a secondary mechanism to increment
+	// the WinConditionCountingType. For example in a standard tennis
+	// scoring structure, the primary win condition is winning 2 out
+	// of 3 sets. But to win a _set_, you must first win a requisite
+	// number of _games_, i.e. first to 6, win-by-two
+	//
+	// You could theoretically make the scoring even further nested
+	// by specifying that _games_ must be won by winning a requisite
+	// number of _points_, but this requires very active score-keeping
+	// during a match and does not provide a lot of extra value for
+	// the most part (i.e. a 6-0, 6-0 match does not gain much explanatory
+	// context by recording that individual games were typically won
+	// from a 40-15 or 40-love score)
+	SecondaryScoringStructures []ScoringStructureId
+}
+
+func NewScoringStructure() *ScoringStructure {
+	return &ScoringStructure{}
+}
+
+func (c *ScoringStructure) Type() string {
 	return "scoring_structure"
 }
 
-func (s *ScoringStructure) GetId() common.RecordId {
-	return s.ID.RecordId()
+func (c *ScoringStructure) GetId() common.RecordId {
+	return c.ID.RecordId()
 }
 
-func (s *ScoringStructure) SetId(id common.RecordId) {
-	s.ID = ScoringStructureId(id)
+func (c *ScoringStructure) SetId(id common.RecordId) {
+	c.ID = ScoringStructureId(id)
 }
 
-func (s *ScoringStructure) EditableBy(db common.DatabaseProvider) []common.RecordId {
-	return common.SysAdminAndUsers(s.Owner.RecordId())
+func (c *ScoringStructure) EditableBy(db common.DatabaseProvider) []common.RecordId {
+	return common.SysAdminAndUsers(c.Owner.RecordId())
 }
 
-func (s *ScoringStructure) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (c *ScoringStructure) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
-func (s *ScoringStructure) SetOwner(recordId common.RecordId) {
-	s.Owner = UserId(recordId)
+func (c *ScoringStructure) SetOwner(recordId common.RecordId) {
+	c.Owner = UserId(recordId)
 }
 
-func (s *ScoringStructure) StaticallyValid() error {
-	err := s.WinConditionCountingType.StaticallyValid()
-	if err != nil {
-		return err
+func (c *ScoringStructure) MaximumScoreCountingUnitsPlayed() (int, error) {
+	if c.WinCondition.HasInstantWinThreshold() {
+		// if we have an instant win at e.g. 3 sets, we can play at most (3 * 2) - 1 = 5 total sets
+		return (c.WinCondition.InstantWinThreshold * 2) - 1, nil
 	}
-	err = s.SecondaryScoreCountingType.StaticallyValid()
+
+	normalWinThreshold := (c.WinCondition.WinThreshold * 2) - 1
+
+	if c.WinCondition.WinByTwoOrMore() {
+		if c.IsComposite() {
+			return normalWinThreshold, fmt.Errorf("composite scoring structure does not support win-by-two-or-more constraint without instant win threshold")
+		} else {
+			return -1, nil
+		}
+	}
+	return normalWinThreshold, nil
+}
+
+func (c *ScoringStructure) IsComposite() bool {
+	return len(c.SecondaryScoringStructures) > 0
+}
+
+func (c *ScoringStructure) StaticallyValid() error {
+	// make sure the win condition counting type is legitimate
+	err := c.WinConditionCountingType.StaticallyValid()
 	if err != nil {
 		return err
 	}
 
-	err = s.validateWinIntegers(s.MainScoreWinsAt, s.MainScoreMustWinBy, s.MainScoreInstantWinAt, true)
+	err = c.WinCondition.StaticallyValid()
 	if err != nil {
 		return err
 	}
 
-	if s.IsComposite() {
-		return s.validateWinIntegers(s.SecondaryScoreWinsAt, s.SecondaryScoreMustWinBy, s.SecondaryScoreInstantWinAt, false)
+	if c.IsComposite() {
+
+		// get the maximum number of win-condition scoring units that we might play.
+		// e.g. in a first-to-2 sets "standard tennis" scoring structure the max
+		// amount of sets you can play is 3. In a "first to 10 points, straight up"
+		// scoring structure, the maximum amount of total points would be in a 10 to 9
+		// victory, so 19 total points.
+		maxUnits, err := c.MaximumScoreCountingUnitsPlayed()
+		if err != nil {
+			return err
+		}
+
+		l := len(c.SecondaryScoringStructures)
+		if l != maxUnits {
+
+			// we must have the same length of secondary scoring structures as the max amount of
+			// main score-counting units in the scoring win-condition scoring configuration. For
+			// example, if we can play a max number of 3 sets in this scoring structure, we must
+			// have a way to score all three of those sets using a ScoringStructure reference.
+			return fmt.Errorf("secondary scoring structures length is %d, but we can play %d max %ss in this structure", l, maxUnits, c.WinConditionCountingType)
+		}
 	}
 	return nil
 }
 
-func (s *ScoringStructure) validateWinIntegers(winsAt, winBy, instantWin int, isMainScore bool) error {
-	descriptor := "main"
-	if !isMainScore {
-		descriptor = "secondary"
+func (c *ScoringStructure) DynamicallyValid(db common.DatabaseProvider) error {
+	for _, id := range c.SecondaryScoringStructures {
+		err := common.ExistsById(db, &ScoringStructure{}, id.RecordId())
+		if err != nil {
+			return err
+		}
 	}
-
-	if instantWin > 0 && instantWin < winsAt {
-		return fmt.Errorf("%s instant win (%d) is less than %s wins-at (%d)", descriptor, instantWin, descriptor, winsAt)
-	}
-	if winsAt <= 0 {
-		return fmt.Errorf("%s wins-at must be > 0 (got %d)", descriptor, winsAt)
-	}
-	if winBy <= 0 {
-		return fmt.Errorf("%s win-by value must be > 0 (got %d)", descriptor, winBy)
-	}
-	if instantWin == winsAt && winBy > 1 {
-		return fmt.Errorf("%s instant win cannot be the same as %s wins-at in win-by-%d", descriptor, descriptor, winBy)
-	}
-	return nil
+	return common.ExistsById(db, &User{}, c.Owner.RecordId())
 }
 
-func (s *ScoringStructure) WinningScore(myScore, yourScore int, isMain bool) bool {
+func (c *ScoringStructure) WinningScore(myScore, yourScore int) bool {
 	diff := myScore - yourScore
 
-	if isMain {
-		// check against main winning threshold if (isMain)
-		if s.MainScoreInstantWinAt > 0 && myScore >= s.MainScoreInstantWinAt {
-			return true
-		}
-		if myScore >= s.MainScoreWinsAt && diff >= s.MainScoreMustWinBy {
-			return true
-		}
-		return false
-	}
-	// otherwise check against secondary
-	if s.SecondaryScoreInstantWinAt > 0 && myScore >= s.SecondaryScoreInstantWinAt {
+	// check against instant-win threshold if applicable
+	if c.WinCondition.HasInstantWinThreshold() && myScore >= c.WinCondition.InstantWinThreshold {
 		return true
 	}
-	if myScore >= s.SecondaryScoreWinsAt && diff >= s.SecondaryScoreMustWinBy {
+
+	// if we haven't hit the instant win threshold, check if we have hit the
+	// main win threshold and cleared the win-by-X constraint
+	if myScore >= c.WinCondition.WinThreshold && diff >= c.WinCondition.MustWinBy {
 		return true
 	}
+
 	return false
-
-}
-
-func (s *ScoringStructure) DynamicallyValid(db common.DatabaseProvider) error {
-	return common.ExistsById(db, &User{}, s.Owner.RecordId())
-}
-
-func (s *ScoringStructure) IsComposite() bool {
-	return s.SecondaryScoreCountingType != NotApplicable
-}
-
-var TennisScoringStructure = ScoringStructure{
-	WinConditionCountingType:   Set,
-	MainScoreWinsAt:            2,
-	MainScoreMustWinBy:         1,
-	SecondaryScoreCountingType: Game,
-	SecondaryScoreWinsAt:       6,
-	SecondaryScoreMustWinBy:    2,
-	SecondaryScoreInstantWinAt: 7,
-}
-
-var ThreeOutOfFiveGamesTo11 = ScoringStructure{
-	WinConditionCountingType:   Game,
-	MainScoreWinsAt:            3,
-	MainScoreMustWinBy:         1,
-	SecondaryScoreCountingType: Point,
-	SecondaryScoreWinsAt:       11,
-	SecondaryScoreMustWinBy:    2,
 }

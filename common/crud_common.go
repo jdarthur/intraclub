@@ -7,6 +7,8 @@ import (
 	"net/http"
 )
 
+var ResourceKey = "resource"
+
 type CrudWrapperFunctionType int
 
 const (
@@ -35,7 +37,6 @@ type genericApiRoute[T CrudRecord] struct {
 	path           string
 	requestBody    T
 	useRequestBody bool
-	apiRoute       ApiRoute[T]
 	handle         func(route ApiRoute[T], request ApiRequest[T]) (any, int, error)
 }
 
@@ -48,7 +49,7 @@ func (g genericApiRoute[T]) RequestBody() (T, bool) {
 }
 
 func (g genericApiRoute[T]) Handler(request ApiRequest[T]) (any, int, error) {
-	return g.handle(g.apiRoute, request)
+	return g.handle(g, request)
 }
 
 // CrudCommon is a wrapper class implementing a common mechanism to
@@ -82,9 +83,9 @@ func NewCrudCommon[T CrudRecord](createFunc func() T, userAuth bool) *CrudCommon
 	return &CrudCommon[T]{
 		CreateRecord: createFunc,
 		UseAuth:      userAuth,
-
 		// baseRoute is automatically set up based on the table name of the provided createFunc
-		baseRoute: fmt.Sprintf("/%s", baseRoute),
+		baseRoute:        fmt.Sprintf("/%s", baseRoute),
+		DatabaseProvider: GlobalDatabaseProvider,
 	}
 }
 
@@ -113,7 +114,7 @@ func (c *CrudCommon[T]) createCrudRecord(route ApiRoute[T], request ApiRequest[T
 	if err != nil {
 		return nil, http.StatusBadRequest, err
 	}
-	return v, http.StatusOK, nil
+	return gin.H{ResourceKey: v}, http.StatusOK, nil
 }
 
 // getCrudRecordById gets a CrudRecord base on the type T that this CrudCommon is configured to use,
@@ -132,7 +133,7 @@ func (c *CrudCommon[T]) getCrudRecordById(route ApiRoute[T], req ApiRequest[T]) 
 	if !exists {
 		return t, http.StatusNotFound, nil
 	}
-	return v, http.StatusOK, nil
+	return gin.H{ResourceKey: v}, http.StatusOK, nil
 }
 
 // getAllCrudRecordsById gets all CrudRecord of the type T that this CrudCommon is configured to use,
@@ -145,7 +146,7 @@ func (c *CrudCommon[T]) getAllCrudRecords(route ApiRoute[T], req ApiRequest[T]) 
 	if err != nil {
 		return t, http.StatusInternalServerError, err
 	}
-	return v, http.StatusOK, nil
+	return gin.H{ResourceKey: v}, http.StatusOK, nil
 }
 
 // deleteCrudRecordById deletes a CrudRecord by RecordId as long as the user in the provided ApiRequest is able to do so
@@ -165,7 +166,7 @@ func (c *CrudCommon[T]) deleteCrudRecordById(route ApiRoute[T], req ApiRequest[T
 		return t, http.StatusOK, nil
 	}
 
-	return v, http.StatusOK, err
+	return gin.H{ResourceKey: v}, http.StatusOK, err
 }
 
 func (c *CrudCommon[T]) updateCrudRecord(route ApiRoute[T], request ApiRequest[T]) (t any, status int, err error) {
@@ -178,13 +179,13 @@ func (c *CrudCommon[T]) updateCrudRecord(route ApiRoute[T], request ApiRequest[T
 	if err != nil {
 		return nil, http.StatusBadRequest, err
 	}
-	return request.Body, http.StatusOK, nil
+	return gin.H{ResourceKey: request.Body}, http.StatusOK, nil
 }
 
 // HandleRouteTypes configures which CrudWrapperFunctionType values this CrudCommon should listen for,
 // e.g. CrudWrapperFunctionAll for all HTTP methods or a specific subset of methods such as create,
 // get all, and delete
-func (c *CrudCommon[T]) HandleRouteTypes(e *gin.Engine, crudRouteTypes ...CrudWrapperFunctionType) {
+func (c *CrudCommon[T]) HandleRouteTypes(e *gin.RouterGroup, crudRouteTypes ...CrudWrapperFunctionType) {
 	if c.CreateRecord == nil {
 		panic("CreateRecord function was not set on CrudCommon instance")
 	}

@@ -1,22 +1,17 @@
-import {Link} from "react-router-dom";
 import * as React from "react";
-import {logoutUser, useToken} from "../redux/auth.js";
+import {useToken} from "../redux/auth.js";
 import {useWhoAmIQuery} from "../redux/api.js";
 import {UserIcon} from "../user/UserIcon";
-import {Button} from "antd";
-import {LogoutOutlined, SettingOutlined} from "@ant-design/icons";
-import {useDispatch} from "react-redux";
-
 
 export function UserIconSelfFetching() {
     const token = useToken()
-    const {data} = useWhoAmIQuery({}, {skip: !token})
+
+    const {data,} = useWhoAmIQuery({}, {skip: !token})
 
     const first_name = data?.first_name
     const last_name = data?.last_name
-    const user_id = data?.user_id
+    const user_id = data?.id
     const email = data?.email
-
 
     const show = token && data
 
@@ -24,7 +19,6 @@ export function UserIconSelfFetching() {
         {show ? <UserIcon UserId={user_id} Email={email} FirstName={first_name}
                           LastName={last_name} UseLink ShowLogout/> : null}
     </div>
-
 }
 
 

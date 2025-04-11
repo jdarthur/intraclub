@@ -6,8 +6,7 @@ import {useEffect} from "react";
 import {useDispatch} from "react-redux";
 
 type GetTokenRequest = {
-    email: string,
-    uuid: string,
+    token: string,
 }
 
 // AuthPage is a redirecting page that does the following:
@@ -18,8 +17,7 @@ type GetTokenRequest = {
 export function AuthPage() {
     const [searchParams] = useSearchParams()
 
-    const email = searchParams.get('email')
-    const uuid = searchParams.get('uuid')
+    const token = searchParams.get('token')
     const returnPath = searchParams.get("return")
 
     const [getToken] = useGetTokenMutation()
@@ -37,8 +35,7 @@ export function AuthPage() {
     useEffect(() => {
 
         const body: GetTokenRequest = {
-            email: email,
-            uuid: uuid,
+            token: token,
         }
 
         // call API
@@ -49,7 +46,7 @@ export function AuthPage() {
                 console.log("error", res)
             } else {
                 // parse token out of the response
-                const token = res?.data?.token
+                const token = res?.data?.jwt
 
                 // set the token in the redux store
                 dispatch(setCredentials({token}))

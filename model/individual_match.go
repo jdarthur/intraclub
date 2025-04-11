@@ -64,7 +64,8 @@ type IndividualMatch struct {
 	SecondaryValue int
 	WinOverride    bool
 	Status         IndividualMatchStatus
-	_structure     *ScoringStructure `json:"-" bson:"-"`
+	_structure     *ScoringStructure   `json:"-" bson:"-"`
+	_subStructures []*ScoringStructure `json:"-" bson:"-"`
 	_completed     []CompletedSecondary
 }
 
@@ -144,6 +145,18 @@ func (s *IndividualMatch) Initialize(db common.DatabaseProvider) error {
 			return err
 		}
 		s._structure = v
+
+		// if the scoring structure is composite, we need to retrieve all
+		// the sub-structures referenced by it as well
+		if v.IsComposite() {
+			for _, id := range v.SecondaryScoringStructures {
+				sub, err := common.GetExistingRecordById(db, &ScoringStructure{}, id.RecordId())
+				if err != nil {
+					return err
+				}
+				s._subStructures = append(s._subStructures, sub)
+			}
+		}
 	}
 	return nil
 }
@@ -156,7 +169,7 @@ func (s *IndividualMatch) Victorious(opp *IndividualMatch) bool {
 		panic("match._structure is not initialized")
 	}
 
-	return s._structure.WinningScore(s.MainValue, opp.MainValue, true)
+	return s._structure.WinningScore(s.MainValue, opp.MainValue)
 }
 
 func (s *IndividualMatch) WonSecondary(opp *IndividualMatch) bool {
@@ -166,8 +179,16 @@ func (s *IndividualMatch) WonSecondary(opp *IndividualMatch) bool {
 	if s._structure == nil {
 		panic("match._structure is not initialized")
 	}
+	if !s._structure.IsComposite() {
+		panic("match._structure is not composite, WonSecondary does not make sense to call")
+	} else {
+		if len(s._subStructures) == 0 {
+			panic("match._subStructures is not initialized")
+		}
+	}
 
-	return s._structure.WinningScore(s.SecondaryValue, opp.SecondaryValue, false)
+	currentSubstructure := s._subStructures[len(s._completed)]
+	return currentSubstructure.WinningScore(s.SecondaryValue, opp.SecondaryValue)
 }
 
 func (s *IndividualMatch) MarkStatus(db common.DatabaseProvider, newStatus IndividualMatchStatus, opp *IndividualMatch) error {

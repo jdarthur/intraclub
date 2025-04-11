@@ -12,7 +12,7 @@ export function Login() {
     const [email, setEmail] = useState<string>("")
     const [error, setError] = useState<string>("")
     const [success, setSuccess] = useState<boolean>(false)
-    const [uuid, setUUID] = useState<string>("")
+    const [token, setToken] = useState<string>("")
 
     const [searchParams, setSearchParams] = useSearchParams()
     const returnTo = searchParams.get('return')
@@ -29,7 +29,7 @@ export function Login() {
         } else if (response?.data) {
             setError("")
             setSuccess(true)
-            setUUID(response?.data?.uuid)
+            setToken(response?.data?.token.token)
         }
     }
 
@@ -48,7 +48,7 @@ export function Login() {
             {success ? <Alert type={"success"} message={LoginCodeMessage(email)} style={{marginBottom: "1em"}}/> : null}
             <Button onClick={login} type={"primary"} disabled={buttonDisabled} loading={isLoading}>Send login
                 code</Button>
-            {success ? <DebugAuthLink email={email} uuid={uuid} returnPath={returnTo}/> : null}
+            {success ? <DebugAuthLink email={email} token={token} returnPath={returnTo}/> : null}
         </div>
     </Card>
 

@@ -1,20 +1,31 @@
 import {createApi, fetchBaseQuery} from '@reduxjs/toolkit/query/react';
+import {logoutUser} from "./auth.js";
 
 export const baseQuery = fetchBaseQuery({
     baseUrl: '/api/',
     prepareHeaders: (headers, {getState}) => {
         const userToken = getState().auth.token
         if (userToken) {
-            headers.set('x-session-token', userToken);
+            headers.set('X-INTRACLUB-TOKEN', userToken);
         }
 
         return headers;
     }
 });
 
+const baseQueryWithLogout = async (args, api, extraOptions) => {
+    let result = await baseQuery(args, api, extraOptions)
+    if (result?.error && result?.error?.status === 401)
+    {
+        api.dispatch(logoutUser());
+    }
+    return result
+}
+
+
 export const mainApi = createApi({
     reducerPath: 'mainApi',
-    baseQuery: baseQuery,
+    baseQuery: baseQueryWithLogout,
     endpoints: (builder) => ({
         createOneTimePassword: builder.mutation({
             query: (body) => ({url: `one_time_password`, method: 'POST', body: body}),
@@ -34,11 +45,11 @@ export const mainApi = createApi({
             providesTags: ['whoami']
         }),
         getUsers: builder.query({
-            query: () => ({url: `users`}),
+            query: () => ({url: `user`}),
             providesTags: ['users']
         }),
         getUserById: builder.query({
-            query: (userId) => ({url: `users/${userId}`}),
+            query: (userId) => ({url: `user/${userId}`}),
             providesTags: ["user_by_id"]
         }),
         getTeamsByUserId: builder.query({
@@ -53,31 +64,31 @@ export const mainApi = createApi({
             providesTags: ["leagues"]
         }),
         getFacilities: builder.query({
-            query: () => ({url: `facilities`}),
-            providesTags: ["facilities"]
+            query: () => ({url: `facility`}),
+            providesTags: ["facility"]
         }),
         createFacility: builder.mutation({
-            query: (body) => ({url: `facilities`, body: body, method: 'POST'}),
-            invalidatesTags: ["facilities"]
+            query: (body) => ({url: `facility`, body: body, method: 'POST'}),
+            invalidatesTags: ["facility"]
         }),
         updateFacility: builder.mutation({
-            query: (req) => ({url: `facilities/${req.id}`, body: req.body, method: 'put'}),
-            invalidatesTags: ["facilities"]
+            query: (req) => ({url: `facility/${req.id}`, body: req.body, method: 'put'}),
+            invalidatesTags: ["facility"]
         }),
         deleteFacility: builder.mutation({
-            query: (id) => ({url: `facilities/${id}`, method: 'DELETE'}),
-            invalidatesTags: ["facilities"]
+            query: (id) => ({url: `facility/${id}`, method: 'DELETE'}),
+            invalidatesTags: ["facility"]
         }),
         createWeek: builder.mutation({
-            query: (body) => ({url: `weeks`, method: 'POST', body: body}),
+            query: (body) => ({url: `week`, method: 'POST', body: body}),
             invalidatesTags: ["weeks", "league_weeks"]
         }),
         createLeague: builder.mutation({
-            query: (body) => ({url: `leagues`, method: 'POST', body: body}),
+            query: (body) => ({url: `league`, method: 'POST', body: body}),
             invalidatesTags: ["leagues"]
         }),
         updateLeague: builder.mutation({
-            query: (args) => ({url: `leagues/${args.id}`, method: 'PUT', body: args.body}),
+            query: (args) => ({url: `league/${args.id}`, method: 'PUT', body: args.body}),
             invalidatesTags: ["leagues", "league"]
         }),
         getWeekById: builder.query({
@@ -88,14 +99,14 @@ export const mainApi = createApi({
             providesTags: ["league_weeks"]
         }),
         deleteWeek: builder.mutation({
-            query: (id) => ({url: `weeks/${id}`, method: 'DELETE'}),
+            query: (id) => ({url: `week/${id}`, method: 'DELETE'}),
             invalidatesTags: ["weeks", "league_weeks", "league"]
         }),
         getFacilityById: builder.query({
-            query: (id) => ({url: `facilities/${id}`}),
+            query: (id) => ({url: `facility/${id}`}),
         }),
         deleteLeague: builder.mutation({
-            query: (id) => ({url: `leagues/${id}`, method: 'DELETE'}),
+            query: (id) => ({url: `league/${id}`, method: 'DELETE'}),
             invalidatesTags: ["leagues", "league"]
         }),
         // get multiple weeks by a list of IDs

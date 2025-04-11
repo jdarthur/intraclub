@@ -30,12 +30,12 @@ func (id FacilityId) String() string {
 // A Facility must have a Name, Address, and a non-zero
 // NumberOfCourts. It may also have a
 type Facility struct {
-	ID             FacilityId // Unique ID for this Facility
-	UserId         UserId     // ID of the User who owns the record
-	Name           string     // Unique name for the Facility (to prevent duplicate records)
-	Address        string     // Unique street address for the Facility (to prevent duplicate records)
-	NumberOfCourts int        // Number of courts available at the Facility
-	LayoutPhoto    PhotoId    // ID of a Photo showing the layout of the Facility (i.e. orientation of courts, parking, etc.)
+	ID             FacilityId `json:"id"`           // Unique ID for this Facility
+	UserId         UserId     `json:"-"`            // ID of the User who owns the record
+	Name           string     `json:"name"`         // Unique name for the Facility (to prevent duplicate records)
+	Address        string     `json:"address"`      // Unique street address for the Facility (to prevent duplicate records)
+	NumberOfCourts int        `json:"courts"`       // Number of courts available at the Facility
+	LayoutPhoto    PhotoId    `json:"layout_photo"` // ID of a Photo showing the layout of the Facility (i.e. orientation of courts, parking, etc.)
 }
 
 func (f *Facility) UniquenessEquivalent(other *Facility) error {

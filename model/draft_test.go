@@ -171,6 +171,27 @@ func TestSnakeSelection(t *testing.T) {
 	selectRandomAvailableByCaptain(t, draft, captain1)
 }
 
+func TestLastPickDoubleSelection(t *testing.T) {
+	db := common.NewUnitTestDBProvider()
+	draft := newRandomDraft(t, db, 100, 3)
+	draft.DraftOrderPattern = DraftOrderPatternLastPickDouble{}
+
+	captain1 := draft.Captains[0].CaptainId
+	captain2 := draft.Captains[1].CaptainId
+	captain3 := draft.Captains[2].CaptainId
+
+	selectRandomAvailableByCaptain(t, draft, captain1)
+	selectRandomAvailableByCaptain(t, draft, captain2)
+	selectRandomAvailableByCaptain(t, draft, captain3)
+	selectRandomAvailableByCaptain(t, draft, captain3)
+	selectRandomAvailableByCaptain(t, draft, captain1)
+	selectRandomAvailableByCaptain(t, draft, captain2)
+	selectRandomAvailableByCaptain(t, draft, captain2)
+	selectRandomAvailableByCaptain(t, draft, captain3)
+	selectRandomAvailableByCaptain(t, draft, captain1)
+
+}
+
 func TestDoubleSelectPlayer(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	draft := newRandomDraft(t, db, 100, 3)

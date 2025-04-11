@@ -4,7 +4,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"intraclub/common"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -15,12 +17,14 @@ var LoginTokenPurgeTimePeriod = time.Hour * 24 * 7
 var TokenPrintfLayout = "2006-01-02_15:04:05"
 var BaseUrl = "https://localhost:5000"
 
+var UseDevTokenMode = false
+
 type LoginToken struct {
-	UserId   UserId
-	Expiry   time.Time
-	UsedAt   time.Time
-	Token    string
-	ReturnTo string
+	UserId   UserId    `json:"user_id"`
+	Expiry   time.Time `json:"expiry"`
+	UsedAt   time.Time `json:"used_at"`
+	Token    string    `json:"token"`
+	ReturnTo string    `json:"return_to"`
 }
 
 // NewLoginToken creates a new one-time-use login token for a particular UserId with
@@ -173,32 +177,47 @@ func (m *StartLoginTokenManager) DeleteToken(token string) {
 // valid, then this function will return a JWT which can be attached by
 // the web application to future API requests for authenticated calls
 type RequestForLoginToken struct {
-	UserId   UserId `json:"user_id"`
-	ReturnTo string `json:"return_to"`
+	Email    EmailAddress `json:"email"`
+	ReturnTo string       `json:"return_to"`
 }
 
 // RequestToken requests that a
-func (m *StartLoginTokenManager) RequestToken(db common.DatabaseProvider, req *RequestForLoginToken) (*LoginToken, error) {
+func (m *StartLoginTokenManager) RequestToken(db common.DatabaseProvider, req *RequestForLoginToken) (token *LoginToken, doesNotExist bool, err error) {
 
-	token, err := NewLoginToken(req.UserId)
+	user, err := common.GetAllWhere(db, &User{}, func(c *User) bool {
+		return c.Email == req.Email
+	})
+
 	if err != nil {
-		return nil, err
+		return nil, false, err
+	}
+	if len(user) == 0 {
+		return nil, true, fmt.Errorf("email '%s' was not found", req.Email)
+	}
+
+	token, err = NewLoginToken(user[0].ID)
+	if err != nil {
+		return nil, false, err
 	}
 
 	err = common.Validate(db, token)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	token.ReturnTo = req.ReturnTo
 	m.AddToken(token)
 
-	email, err := m.GenerateTokenEmail(db, token)
-	if err != nil {
-		return nil, err
+	if UseDevTokenMode {
+		return token, false, nil
 	}
 
-	return token, email.Send()
+	email, err := m.GenerateTokenEmail(db, token)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return token, false, email.Send()
 }
 
 func (m *StartLoginTokenManager) GenerateTokenEmail(db common.DatabaseProvider, token *LoginToken) (*Email, error) {
@@ -222,6 +241,55 @@ type LoginResponse struct {
 	JWT      string `json:"jwt"`
 	ReturnTo string `json:"return_to"`
 	Error    error  `json:"error"`
+}
+
+func (m *StartLoginTokenManager) OneTimePassword(c *gin.Context) {
+
+	db := common.GlobalDatabaseProvider
+	request := &RequestForLoginToken{}
+	err := c.Bind(request)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	fmt.Println(request)
+
+	token, doesNotExist, err := m.RequestToken(db, request)
+	if err != nil {
+		code := http.StatusInternalServerError
+		if doesNotExist {
+			code = http.StatusUnauthorized
+		}
+		c.AbortWithStatusJSON(code, gin.H{"error": err.Error()})
+		return
+	}
+
+	if UseDevTokenMode {
+		c.JSON(http.StatusCreated, gin.H{"token": token})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	}
+}
+
+type tokenBody struct {
+	Token string `json:"token"`
+}
+
+func (m *StartLoginTokenManager) CreateJwtFromOneTimePassword(c *gin.Context) {
+	request := &tokenBody{}
+	err := c.Bind(request)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	resp := m.LoginViaToken(request.Token)
+	if resp.Error != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": resp.Error.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"jwt": resp.JWT, "user_id": resp.UserId})
 }
 
 func (m *StartLoginTokenManager) LoginViaToken(token string) LoginResponse {

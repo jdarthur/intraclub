@@ -35,7 +35,7 @@ export function ExperienceForUser({UserId}: ExperienceForUserProps) {
     }
 
     let extra = null
-    if (whoami.user_id == UserId) {
+    if (whoami?.id == UserId) {
         extra = <ExperienceForm UserId={UserId}/>
     }
 

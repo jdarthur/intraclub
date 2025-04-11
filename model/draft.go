@@ -58,14 +58,15 @@ func (id DraftId) String() string {
 }
 
 type Draft struct {
-	ID            DraftId
-	Owner         UserId                   // This will be the commissioner of the league
-	Captains      []*TeamCaptainAssignment // This stores a cache of team and captain ID for validation purposes
-	Available     []UserId                 // All user IDs who are available to be drafted
-	Selections    []UserId                 // All user IDs who have been drafted, in order
-	Format        FormatId                 // Format in which the Season associated with this draft will be played
-	RatingCutoffs map[RatingId]int         // map from rating ID to the last selection index matching that ID
-	CompletedAt   time.Time
+	ID                DraftId
+	Owner             UserId                   // This will be the commissioner of the league
+	Captains          []*TeamCaptainAssignment // This stores a cache of team and captain ID for validation purposes
+	Available         []UserId                 // All user IDs who are available to be drafted
+	Selections        []UserId                 // All user IDs who have been drafted, in order
+	Format            FormatId                 // Format in which the Season associated with this draft will be played
+	RatingCutoffs     map[RatingId]int         // map from rating ID to the last selection index matching that ID
+	CompletedAt       time.Time
+	DraftOrderPattern DraftOrderPattern
 }
 
 func (d *Draft) SetOwner(recordId common.RecordId) {
@@ -73,7 +74,9 @@ func (d *Draft) SetOwner(recordId common.RecordId) {
 }
 
 func NewDraft() *Draft {
-	return &Draft{}
+	return &Draft{
+		DraftOrderPattern: DraftOrderPatternSnake{},
+	}
 }
 
 func (d *Draft) EditableBy(common.DatabaseProvider) []common.RecordId {
@@ -207,13 +210,9 @@ func (d *Draft) GetCaptainOnTheClock() (UserId, error) {
 	// get the round and pick of the next selection
 	round, pick := d.GetRoundAndPick(len(d.Selections))
 
-	// if this is an even round, we draft in reverse order (snake draft)
-	if round%2 == 0 {
-		return d.Captains[len(d.Captains)-pick].CaptainId, nil
-	}
-
-	// otherwise we draft in the order of the TeamCaptainAssignment
-	return d.Captains[pick-1].CaptainId, nil
+	// get the captain index based on our draft order
+	captainIndex := d.DraftOrderPattern.GetCaptainOnTheClock(round, pick, len(d.Captains))
+	return d.Captains[captainIndex].CaptainId, nil
 }
 
 // IsADifferentCaptainId checks if this player ID belongs to a different captain

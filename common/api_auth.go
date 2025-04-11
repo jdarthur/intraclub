@@ -11,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"io"
-	"io/ioutil"
 	"os"
 	"time"
 )
@@ -72,6 +71,8 @@ func ValidateToken(token string) (*AuthToken, error) {
 	}, nil
 }
 
+var UserType CrudRecord
+
 func GetToken(c *gin.Context) (*AuthToken, error) {
 	token := c.Request.Header.Get(AuthTokenHeaderValue)
 	if token == "" {
@@ -81,6 +82,15 @@ func GetToken(c *gin.Context) (*AuthToken, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	userId := valid.UserId
+	if UserType != nil {
+		err := ExistsById(GlobalDatabaseProvider, UserType, userId)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return valid, nil
 }
 
@@ -112,6 +122,7 @@ func GenerateJwtKeyPairIfNotExists() error {
 		return err
 	}
 	if exists {
+		fmt.Println("Already exists")
 		JwtPublicKey, JwtPrivateKey, err = LoadKeyPair()
 		if err != nil {
 			return err
@@ -159,7 +170,7 @@ func LoadKeyPair() (*ecdsa.PublicKey, *ecdsa.PrivateKey, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	privateKey, err := pemDecodeFromFile(JwtKeyFile, false)
+	privateKey, err := pemDecodeFromFile(JwtKeyFile, true)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -167,6 +178,7 @@ func LoadKeyPair() (*ecdsa.PublicKey, *ecdsa.PrivateKey, error) {
 }
 
 func GenerateKeyPair() (*ecdsa.PublicKey, *ecdsa.PrivateKey, error) {
+	fmt.Println("generating key pair")
 	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
 		return nil, nil, err
@@ -192,7 +204,7 @@ func SerializeKeyPair(publicKey *ecdsa.PublicKey, privateKey *ecdsa.PrivateKey) 
 		return err
 	}
 
-	return pemEncodeToFile(encoded, JwtCertFile, "EC PRIVATE KEY")
+	return pemEncodeToFile(encoded, JwtKeyFile, "EC PRIVATE KEY")
 }
 
 func pemEncodeToFile(b []byte, filename string, blockType string) error {
@@ -219,7 +231,7 @@ func pemDecodeFromFile(filename string, private bool) (any, error) {
 	}
 	defer f.Close()
 
-	b, err := ioutil.ReadAll(f)
+	b, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}

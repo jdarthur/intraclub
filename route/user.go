@@ -34,3 +34,27 @@ func (c SelfRegister) Handler(req common.ApiRequest[*model.User]) (any, int, err
 	}
 	return user, http.StatusCreated, nil
 }
+
+var WhoAmIRoute = "/whoami"
+
+type WhoAmI struct{}
+
+func (c WhoAmI) Path() (common.HttpMethod, string) {
+	return common.HttpMethodGet, WhoAmIRoute
+}
+
+func (c WhoAmI) RequestBody() (*model.User, bool) {
+	return &model.User{}, true
+}
+
+func (c WhoAmI) Handler(req common.ApiRequest[*model.User]) (any, int, error) {
+	if req.Token == nil {
+		return nil, http.StatusUnauthorized, errors.New("token must be passed into create user route")
+	}
+
+	user, err := common.GetExistingRecordById(req.DatabaseProvider, &model.User{}, req.Token.UserId)
+	if err != nil {
+		return nil, http.StatusUnauthorized, err
+	}
+	return user, http.StatusOK, nil
+}
