@@ -24,6 +24,10 @@ type PlayoffStructure struct {
 	NumberOfTeams int // number of teams which make the playoffs
 }
 
+func (p *PlayoffStructure) GetOwner() common.RecordId {
+	return p.UserId.RecordId()
+}
+
 func (p *PlayoffStructure) PreUpdate(db common.DatabaseProvider, existingValues common.CrudRecord) error {
 	s, err := p.GetAssignedSeasons(db)
 	if err != nil {

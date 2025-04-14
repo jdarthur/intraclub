@@ -22,6 +22,10 @@ func (id FacilityId) String() string {
 	return id.RecordId().String()
 }
 
+func (id FacilityId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
 // Facility is a physical location where a Season is played.
 // It is owned by a particular UserId, but is publicly
 // accessible to all users (so that multiple seasons may
@@ -31,11 +35,15 @@ func (id FacilityId) String() string {
 // NumberOfCourts. It may also have a
 type Facility struct {
 	ID             FacilityId `json:"id"`           // Unique ID for this Facility
-	UserId         UserId     `json:"-"`            // ID of the User who owns the record
+	UserId         UserId     `json:"user_id"`      // ID of the User who owns the record
 	Name           string     `json:"name"`         // Unique name for the Facility (to prevent duplicate records)
 	Address        string     `json:"address"`      // Unique street address for the Facility (to prevent duplicate records)
 	NumberOfCourts int        `json:"courts"`       // Number of courts available at the Facility
 	LayoutPhoto    PhotoId    `json:"layout_photo"` // ID of a Photo showing the layout of the Facility (i.e. orientation of courts, parking, etc.)
+}
+
+func (f *Facility) GetOwner() common.RecordId {
+	return f.UserId.RecordId()
 }
 
 func (f *Facility) UniquenessEquivalent(other *Facility) error {

@@ -54,6 +54,10 @@ type Season struct {
 	LateAdditions    []UserId           // IDs of any User s who were added to the Season after the season's Draft
 }
 
+func (s *Season) GetOwner() common.RecordId {
+	return s.Commissioners[0].RecordId()
+}
+
 func (s *Season) UniquenessEquivalent(other *Season) error {
 	if s.DraftId == other.DraftId {
 		return fmt.Errorf("duplicate season for draft ID %s", s.DraftId)

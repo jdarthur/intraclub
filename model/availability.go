@@ -41,6 +41,10 @@ type Availability struct {
 	Available AvailabilityOption
 }
 
+func (a *Availability) GetOwner() common.RecordId {
+	return a.UserId.RecordId()
+}
+
 func (a *Availability) UniquenessEquivalent(other *Availability) error {
 	if a.UserId == other.UserId && a.WeekId == other.WeekId {
 		return fmt.Errorf("duplicate record for user ID & week ID")

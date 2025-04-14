@@ -25,6 +25,10 @@ type Week struct {
 	Note    string
 }
 
+func (w *Week) GetOwner() common.RecordId {
+	return common.InvalidRecordId
+}
+
 func (w *Week) PreDelete(db common.DatabaseProvider) error {
 	draft, exists, err := common.GetOneById(db, &Draft{}, w.DraftId.RecordId())
 	if err != nil {

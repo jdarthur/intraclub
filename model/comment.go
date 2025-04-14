@@ -29,6 +29,10 @@ type Comment struct {
 	Reactions ReactionList `json:"reactions" bson:"reactions"`   // list of user reactions to this comment, if any
 }
 
+func (c *Comment) GetOwner() common.RecordId {
+	return c.Owner.RecordId()
+}
+
 func (c *Comment) CanOnlyDelete(db common.DatabaseProvider, userId common.RecordId) bool {
 	return UserId(userId) != c.Owner
 }

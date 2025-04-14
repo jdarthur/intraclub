@@ -36,6 +36,11 @@ type User struct {
 	Email       EmailAddress `json:"email"`
 }
 
+func (u *User) GetOwner() common.RecordId {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (u *User) UniquenessEquivalent(other *User) error {
 	if u.Email == other.Email {
 		return fmt.Errorf("user with email address %s already exists", u.Email)

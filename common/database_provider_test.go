@@ -13,6 +13,10 @@ type testRecord struct {
 	UpdatedAt time.Time
 }
 
+func (t *testRecord) GetOwner() RecordId {
+	return t.Owner
+}
+
 func newTestRecord() *testRecord {
 	return &testRecord{
 		ID: NewRecordId(),

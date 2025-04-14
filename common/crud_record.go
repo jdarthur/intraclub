@@ -5,10 +5,22 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 )
 
 type RecordId uint64
+
+func (r RecordId) UnmarshalJSON(bytes []byte) error {
+	var err error
+	r, err = RecordIdFromString(strings.Trim(string(bytes), "\""))
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(err)
+	return nil
+}
 
 func (r RecordId) MarshalJSON() ([]byte, error) {
 	str := "\""
@@ -34,6 +46,9 @@ func (r RecordId) ValidRecordId() bool {
 }
 
 func RecordIdFromString(s string) (RecordId, error) {
+	if s == "" {
+		return InvalidRecordId, nil
+	}
 	b := make([]byte, 8)
 	n, err := hex.Decode(b, []byte(s))
 	if err != nil {
@@ -76,6 +91,7 @@ type CrudRecord interface {
 	EditableBy(db DatabaseProvider) []RecordId
 	AccessibleTo(db DatabaseProvider) []RecordId
 	SetOwner(recordId RecordId)
+	GetOwner() RecordId
 	DatabaseValidatable
 }
 

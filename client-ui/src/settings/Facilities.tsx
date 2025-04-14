@@ -1,26 +1,19 @@
 import * as React from 'react';
 import {useGetFacilitiesQuery, useDeleteFacilityMutation} from "../redux/api.js";
-import {Card, Empty, Space, Tag} from "antd";
+import {Card, Empty, Space,} from "antd";
 import {FacilityForm} from "./FacilityForm";
 import {LabeledValue} from "../common/LabeledValue";
 import {DeleteConfirm} from "../common/DeleteConfirm";
 import {Ellipsis} from "../common/Ellipsis";
-import {EditOutlined} from "@ant-design/icons";
 
-export type Facility = {
-    id?: string
-    user_id?: string
-    address: string
-    name: string
-    courts: number
-    layout_image?: string
-}
+import {Facility} from "../model/facility"
+
 
 export function Facilities() {
     const {data} = useGetFacilitiesQuery()
 
     const facilities = data?.resource?.map((f: Facility) => (
-        <OneFacility key={f.id} id={f.id} user_id={f.user_id} address={f.address} name={f.name} courts={f.courts}/>
+        <OneFacility key={f.id} id={f.id} user_id={f.user_id} address={f.address} name={f.name} courts={f.courts} layout_photo={f.layout_photo}/>
     ))
 
     return <div>
@@ -31,7 +24,7 @@ export function Facilities() {
 
 }
 
-export function OneFacility({id, name, address, courts, layout_image}: Facility) {
+export function OneFacility({id, user_id, name, address, courts, layout_photo}: Facility) {
 
     const [deleteFacility] = useDeleteFacilityMutation()
 
@@ -50,7 +43,7 @@ export function OneFacility({id, name, address, courts, layout_image}: Facility)
     }
 
     const initialState: Facility = {
-        id, name, address, courts, layout_image
+        id, user_id, name, address, courts, layout_photo
     }
 
     const editForm = <FacilityForm FacilityId={id} InitialState={initialState} Update/>

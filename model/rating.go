@@ -28,6 +28,10 @@ type Rating struct {
 	Description string
 }
 
+func (r *Rating) GetOwner() common.RecordId {
+	return r.UserId.RecordId()
+}
+
 func (r *Rating) PreDelete(db common.DatabaseProvider) error {
 	formats, err := common.GetAllWhere(db, &Format{}, func(c *Format) bool {
 		return c.IsRatingInOptionsList(r.ID)

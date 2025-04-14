@@ -1,8 +1,7 @@
 import * as React from 'react';
-import {Form} from "antd";
 import {InputFormItem, NumberInputFormItem} from "../common/FormItem";
 import {useCreateFacilityMutation, useUpdateFacilityMutation} from "../redux/api.js" ;
-import {Facility} from "./Facilities";
+import {Facility} from "../model/facility";
 import {CommonFormModal} from "../common/CommonFormModal";
 
 type FacilityFormProps = {
@@ -20,7 +19,8 @@ export function FacilityForm({Update, InitialState, FacilityId,}: FacilityFormPr
         const body: Facility = {
             name: formValues.name,
             address: formValues.address,
-            courts: formValues.courts
+            courts: formValues.courts,
+            layout_photo:""
         }
 
         let func = () => createFacility(body)
@@ -28,7 +28,7 @@ export function FacilityForm({Update, InitialState, FacilityId,}: FacilityFormPr
             func = () => updateFacility({id: FacilityId, body: body})
         }
 
-        return await func();
+        return func();
     }
 
 

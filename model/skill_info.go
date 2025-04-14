@@ -30,42 +30,46 @@ type SkillInfo struct {
 	Line           string          `json:"line"`                   // line that you played at, e.g. line 1 or line 5
 }
 
-func (s SkillInfo) Type() string {
+func (s *SkillInfo) GetOwner() common.RecordId {
+	return s.UserId.RecordId()
+}
+
+func (s *SkillInfo) Type() string {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s SkillInfo) GetId() common.RecordId {
+func (s *SkillInfo) GetId() common.RecordId {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s SkillInfo) SetId(id common.RecordId) {
+func (s *SkillInfo) SetId(id common.RecordId) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s SkillInfo) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (s *SkillInfo) EditableBy(db common.DatabaseProvider) []common.RecordId {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s SkillInfo) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (s *SkillInfo) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s SkillInfo) SetOwner(recordId common.RecordId) {
+func (s *SkillInfo) SetOwner(recordId common.RecordId) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s SkillInfo) StaticallyValid() error {
+func (s *SkillInfo) StaticallyValid() error {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s SkillInfo) DynamicallyValid(db common.DatabaseProvider) error {
+func (s *SkillInfo) DynamicallyValid(db common.DatabaseProvider) error {
 	//TODO implement me
 	panic("implement me")
 }

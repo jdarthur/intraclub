@@ -28,6 +28,10 @@ type Blurb struct {
 	Reactions ReactionList
 }
 
+func (b *Blurb) GetOwner() common.RecordId {
+	return b.Owner.RecordId()
+}
+
 func (b *Blurb) EditableBy(db common.DatabaseProvider) []common.RecordId {
 	return []common.RecordId{
 		b.Owner.RecordId(),

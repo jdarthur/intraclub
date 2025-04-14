@@ -48,12 +48,24 @@ func (id PhotoId) String() string {
 	return id.RecordId().String()
 }
 
+func (id PhotoId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
+func (id PhotoId) UnmarshalJSON(data []byte) error {
+	return id.RecordId().UnmarshalJSON(data)
+}
+
 type Photo struct {
 	ID       PhotoId
 	Owner    UserId
 	AltText  string
 	Contents []byte
 	FileType PhotoType
+}
+
+func (p *Photo) GetOwner() common.RecordId {
+	return p.Owner.RecordId()
 }
 
 func NewPhoto() *Photo {

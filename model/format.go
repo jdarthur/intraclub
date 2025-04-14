@@ -83,6 +83,10 @@ type Format struct {
 	Lines           []Line     // Rating pairings that will play during a matchup
 }
 
+func (f *Format) GetOwner() common.RecordId {
+	return f.UserId.RecordId()
+}
+
 func (f *Format) PreUpdate(db common.DatabaseProvider, existingValues common.CrudRecord) error {
 	return f.CheckHasAssignedDrafts(db, true)
 }

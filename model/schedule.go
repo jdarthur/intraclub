@@ -21,6 +21,10 @@ type Schedule struct {
 	Matchups []WeeklyMatchupId
 }
 
+func (s *Schedule) GetOwner() common.RecordId {
+	return common.InvalidRecordId
+}
+
 func (s *Schedule) UniquenessEquivalent(other *Schedule) error {
 	// can only have one schedule per season ID
 	if s.SeasonId == other.SeasonId {

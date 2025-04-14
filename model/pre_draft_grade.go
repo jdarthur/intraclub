@@ -27,6 +27,10 @@ type PreDraftGrade struct {
 	Rating   RatingId
 }
 
+func (p *PreDraftGrade) GetOwner() common.RecordId {
+	return p.GraderId.RecordId()
+}
+
 func (p *PreDraftGrade) UniquenessEquivalent(other *PreDraftGrade) error {
 	if p.PlayerId == other.PlayerId && p.GraderId == other.GraderId && p.DraftId == other.DraftId {
 		return fmt.Errorf("duplicate record for player ID, grader ID and draft ID")

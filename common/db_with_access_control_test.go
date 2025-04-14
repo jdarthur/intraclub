@@ -12,6 +12,10 @@ type PrivateTestRecord struct {
 	Value    string
 }
 
+func (p *PrivateTestRecord) GetOwner() RecordId {
+	return p.Owner
+}
+
 func (p *PrivateTestRecord) SetOwner(recordId RecordId) {
 	p.Owner = recordId
 }

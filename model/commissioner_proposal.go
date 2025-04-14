@@ -20,6 +20,10 @@ type CommissionerProposal struct {
 	MustBeUnanimous bool            // true if this proposal must get unanimous consent to pass
 }
 
+func (c *CommissionerProposal) GetOwner() common.RecordId {
+	return common.InvalidRecordId
+}
+
 func (c *CommissionerProposal) PreUpdate(db common.DatabaseProvider, existingValues common.CrudRecord) error {
 	old := existingValues.(*CommissionerProposal)
 	if c.MustBeUnanimous != old.MustBeUnanimous {

@@ -25,6 +25,10 @@ type Team struct {
 	RatingsMap map[UserId]RatingId
 }
 
+func (t *Team) GetOwner() common.RecordId {
+	return common.InvalidRecordId
+}
+
 func (t *Team) SetOwner(recordId common.RecordId) {
 	// don't need to do anything as Captain will not necessarily
 	// be the same as the RecordId that was passed into the

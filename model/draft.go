@@ -73,6 +73,10 @@ func (d *Draft) SetOwner(recordId common.RecordId) {
 	d.Owner = UserId(recordId)
 }
 
+func (d *Draft) GetOwner() common.RecordId {
+	return d.Owner.RecordId()
+}
+
 func NewDraft() *Draft {
 	return &Draft{
 		DraftOrderPattern: DraftOrderPatternSnake{},

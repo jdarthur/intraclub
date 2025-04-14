@@ -21,6 +21,10 @@ type Lineup struct {
 	WeekId WeekId // Week that this Lineup applies to
 }
 
+func (l *Lineup) GetOwner() common.RecordId {
+	return common.InvalidRecordId
+}
+
 func (l *Lineup) UniquenessEquivalent(other *Lineup) error {
 	if l.WeekId == other.WeekId && l.TeamId == other.TeamId {
 		return fmt.Errorf("duplicate record for team ID & week ID")

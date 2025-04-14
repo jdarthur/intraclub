@@ -57,6 +57,10 @@ type WeeklyMatchup struct {
 	Matchups []*TeamMatchup // List of TeamMatchup s for this WeeklyMatchup, e.g. team 1 playing team 2, team 3 on bye, etc.
 }
 
+func (w *WeeklyMatchup) GetOwner() common.RecordId {
+	return common.InvalidRecordId
+}
+
 func (w *WeeklyMatchup) UniquenessEquivalent(other *WeeklyMatchup) error {
 	if w.SeasonId == other.SeasonId && w.WeekId == other.WeekId {
 		return fmt.Errorf("duplicate record for season ID and week ID")

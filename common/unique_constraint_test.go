@@ -11,6 +11,10 @@ type testUnique struct {
 	ReferenceId2 RecordId
 }
 
+func (t *testUnique) GetOwner() RecordId {
+	return InvalidRecordId
+}
+
 func (t *testUnique) UniquenessEquivalent(other *testUnique) error {
 	if t.ReferenceId1 == other.ReferenceId1 && t.ReferenceId2 == other.ReferenceId2 {
 		return fmt.Errorf("duplicate reference value pair")

@@ -138,6 +138,10 @@ type ScoringStructure struct {
 	SecondaryScoringStructures []ScoringStructureId
 }
 
+func (c *ScoringStructure) GetOwner() common.RecordId {
+	return c.Owner.RecordId()
+}
+
 func NewScoringStructure() *ScoringStructure {
 	return &ScoringStructure{}
 }

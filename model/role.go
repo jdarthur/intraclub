@@ -64,6 +64,10 @@ type UserRoleAssignment struct {
 	ReferenceId common.RecordId // ID of referenced record base on role, e.g. Team ID for a TeamMember role
 }
 
+func (u *UserRoleAssignment) GetOwner() common.RecordId {
+	return common.InvalidRecordId
+}
+
 func (u *UserRoleAssignment) SetOwner(recordId common.RecordId) {
 	// don't need to do anything as the Owner field this record type
 	// will necessarily be present in the Create request

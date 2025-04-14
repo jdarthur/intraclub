@@ -69,6 +69,10 @@ type IndividualMatch struct {
 	_completed     []CompletedSecondary
 }
 
+func (s *IndividualMatch) GetOwner() common.RecordId {
+	return s.Editors[0].RecordId()
+}
+
 func NewMatch() *IndividualMatch {
 	return &IndividualMatch{}
 }

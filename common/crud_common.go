@@ -173,6 +173,9 @@ func (c *CrudCommon[T]) updateCrudRecord(route ApiRoute[T], request ApiRequest[T
 	if request.Token == nil {
 		return t, http.StatusBadRequest, errors.New("token must be passed into delete route")
 	}
+	// set the path ID on the request body so that our GetOneById call at the top of
+	// wax.UpdateOneById gets the correct record from the DatabaseProvider
+	request.Body.SetId(request.PathId)
 
 	wac := WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(request)}
 	err = wac.UpdateOneById(request.Body)

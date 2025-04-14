@@ -74,6 +74,7 @@ func (w *WithAccessControl[T]) CanUserEdit(record T) bool {
 		return isSysAdmin
 	}
 
+	fmt.Println("User cannot edit")
 	return false
 }
 
@@ -103,9 +104,11 @@ func (w *WithAccessControl[T]) DeleteOneById(record T, id RecordId) (t T, exists
 	}
 
 	if !exists || !w.CanUserEdit(t) {
+		fmt.Println("Does not exist or cannot edit")
 		return t, false, nil
 	}
 
+	fmt.Println("deleting record", id)
 	return DeleteOneById(w.Database, record, id)
 }
 
@@ -121,6 +124,12 @@ func (w *WithAccessControl[T]) UpdateOneById(record T) (err error) {
 	// validate the record exists and the AccessControlUser can edit it
 	if !exists || !w.CanUserEdit(t) {
 		return fmt.Errorf("%s with ID %s was not found\n", record.Type(), record.GetId())
+	}
+
+	// make sure the owner is set on the record after we have validated that
+	// this user can edit
+	if record.GetOwner() == InvalidRecordId {
+		record.SetOwner(t.GetOwner())
 	}
 
 	// update it, validating the type while doing so

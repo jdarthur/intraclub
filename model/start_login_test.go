@@ -21,13 +21,13 @@ func init() {
 func TestInvalidUserId(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	m := &StartLoginTokenManager{}
-	userId := common.NewRecordId()
+	email := "fake@email.com"
 
 	request := &RequestForLoginToken{
-		UserId: UserId(userId),
+		Email: EmailAddress(email),
 	}
 
-	_, err := m.RequestToken(db, request)
+	_, _, err := m.RequestToken(db, request)
 	if err == nil {
 		t.Fatalf("InvalidUserId should fail")
 	}
@@ -40,12 +40,15 @@ func TestValidUserId(t *testing.T) {
 	user := newStoredUser(t, db)
 
 	request := &RequestForLoginToken{
-		UserId: user.ID,
+		Email: user.Email,
 	}
 
-	token, err := m.RequestToken(db, request)
+	token, doesNotExist, err := m.RequestToken(db, request)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if doesNotExist {
+		t.Fatalf("Token should exist")
 	}
 	fmt.Printf("%s\n", token)
 }
@@ -56,10 +59,10 @@ func TestGetLoginResponse(t *testing.T) {
 	user := newStoredUser(t, db)
 
 	request := &RequestForLoginToken{
-		UserId: user.ID,
+		Email: user.Email,
 	}
 
-	token, err := m.RequestToken(db, request)
+	token, _, err := m.RequestToken(db, request)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,10 +80,10 @@ func TestDoubleLogin(t *testing.T) {
 	user := newStoredUser(t, db)
 
 	request := &RequestForLoginToken{
-		UserId: user.ID,
+		Email: user.Email,
 	}
 
-	token, err := m.RequestToken(db, request)
+	token, _, err := m.RequestToken(db, request)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,10 +104,10 @@ func TestTokenExpired(t *testing.T) {
 	LoginTokenDefaultExpirationTime = time.Millisecond * 5
 
 	request := &RequestForLoginToken{
-		UserId: user.ID,
+		Email: user.Email,
 	}
 
-	token, err := m.RequestToken(db, request)
+	token, _, err := m.RequestToken(db, request)
 	if err != nil {
 		t.Fatal(err)
 	}
