@@ -35,7 +35,7 @@ var CrudWrapperFunctionAll = []CrudWrapperFunctionType{
 type genericApiRoute[T CrudRecord] struct {
 	httpMethod     HttpMethod
 	path           string
-	requestBody    T
+	requestBody    func() T
 	useRequestBody bool
 	handle         func(route ApiRoute[T], request ApiRequest[T]) (any, int, error)
 }
@@ -45,7 +45,7 @@ func (g genericApiRoute[T]) Path() (HttpMethod, string) {
 }
 
 func (g genericApiRoute[T]) RequestBody() (T, bool) {
-	return g.requestBody, g.useRequestBody
+	return g.requestBody(), g.useRequestBody
 }
 
 func (g genericApiRoute[T]) Handler(request ApiRequest[T]) (any, int, error) {
@@ -201,7 +201,7 @@ func (c *CrudCommon[T]) HandleRouteTypes(e *gin.RouterGroup, crudRouteTypes ...C
 	// generate as many genericApiRoutes as we need
 	routes := make([]ApiRoute[T], 0, len(crudRouteTypes))
 	for _, f := range crudRouteTypes {
-		r := genericApiRoute[T]{requestBody: c.CreateRecord()}
+		r := genericApiRoute[T]{requestBody: c.CreateRecord}
 		if f == CrudWrapperFunctionGetOne {
 			r.httpMethod = HttpMethodGet
 			r.path = AppendPathId(c.baseRoute)

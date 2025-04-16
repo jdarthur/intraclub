@@ -22,10 +22,10 @@ Tokens are necessary to call authenticated endpoints such as create, update, del
 
 ### c) Create a facility
  - [x] Only one person has to create the Martin's Landing River Club facility
- - [x] Facilities may not overlap
+ - [x] Formats may not overlap
    - [x] uniqueness on name
    - [x] uniqueness on address
- - [x] Facilities that are assigned to a season may not 
+ - [x] Formats that are assigned to a season may not 
 
 ### d) Create other users
 You must have some users to be able to create a draft (at least like 8 or so users)

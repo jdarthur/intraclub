@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func newStoredFormat(t *testing.T, db common.DatabaseProvider, lines []Line) *Format {
+func newStoredFormat(t *testing.T, db common.DatabaseProvider, lines []FormatLine) *Format {
 	f := NewFormat()
 	f.Lines = lines
 
@@ -17,8 +17,8 @@ func newStoredFormat(t *testing.T, db common.DatabaseProvider, lines []Line) *Fo
 	return v
 }
 
-func newLine(t *testing.T, db common.DatabaseProvider) Line {
-	return Line{
+func newLine(t *testing.T, db common.DatabaseProvider) FormatLine {
+	return FormatLine{
 		Player1Rating: newStoredRating(t, db).ID,
 		Player2Rating: newStoredRating(t, db).ID,
 	}
@@ -28,7 +28,7 @@ func newDefaultFormat(t *testing.T, db common.DatabaseProvider) *Format {
 	user := newStoredUser(t, db)
 	f := NewFormat()
 	f.UserId = user.ID
-	lines := []Line{
+	lines := []FormatLine{
 		newLine(t, db),
 		newLine(t, db),
 	}
@@ -57,7 +57,7 @@ func TestFormatDuplicateLine(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 
 	format := newDefaultFormat(t, db)
-	format.Lines = []Line{format.Lines[0], format.Lines[0]}
+	format.Lines = []FormatLine{format.Lines[0], format.Lines[0]}
 	err := format.StaticallyValid()
 	if err == nil {
 		t.Fatal("Expected duplicate line to fail")
@@ -70,9 +70,9 @@ func TestFormatReversedValueDuplicateLine(t *testing.T) {
 	format := newDefaultFormat(t, db)
 
 	line1 := format.Lines[0]
-	line2 := Line{Player1Rating: line1.Player2Rating, Player2Rating: line1.Player1Rating}
+	line2 := FormatLine{Player1Rating: line1.Player2Rating, Player2Rating: line1.Player1Rating}
 
-	format.Lines = []Line{line1, line2}
+	format.Lines = []FormatLine{line1, line2}
 	err := format.StaticallyValid()
 	if err == nil {
 		t.Fatal("Expected duplicate line to fail")
@@ -128,7 +128,7 @@ func TestFormatHasInvalidUserId(t *testing.T) {
 func TestFormatHasEmptyLines(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	format := newDefaultStoredFormat(t, db)
-	format.Lines = []Line{}
+	format.Lines = []FormatLine{}
 	err := format.StaticallyValid()
 	if err == nil {
 		t.Fatal("Expected empty lines to fail")
@@ -139,7 +139,7 @@ func TestFormatHasEmptyLines(t *testing.T) {
 func TestFormatHasLineRatingsNotInPossibleLinesList(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	format := newDefaultStoredFormat(t, db)
-	format.Lines = []Line{
+	format.Lines = []FormatLine{
 		newLine(t, db),
 	}
 	err := format.StaticallyValid()

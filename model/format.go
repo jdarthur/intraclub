@@ -7,17 +7,17 @@ import (
 	"strings"
 )
 
-// Line is a pairing of two players that have a particular Rating.
-// Each week, a given Format will be composed of one or more Line s
+// FormatLine is a pairing of two players that have a particular Rating.
+// Each week, a given Format will be composed of one or more FormatLine s
 // from which each Team will compose a Lineup. A Lineup from one
 // team on a given Week in a Season will play a Lineup from the
 // opposing Team based on the Schedule
-type Line struct {
-	Player1Rating RatingId // ID of the Rating record for player two in this Line
-	Player2Rating RatingId // ID of the Rating record for player one in this Line
+type FormatLine struct {
+	Player1Rating RatingId `json:"player_1_rating"` // ID of the Rating record for player two in this FormatLine
+	Player2Rating RatingId `json:"player_2_rating"` // ID of the Rating record for player one in this FormatLine
 }
 
-func (l Line) EquivalentTo(other Line) bool {
+func (l FormatLine) EquivalentTo(other FormatLine) bool {
 	if l.Player1Rating == other.Player1Rating && l.Player2Rating == other.Player2Rating {
 		return true
 	}
@@ -29,11 +29,11 @@ func (l Line) EquivalentTo(other Line) bool {
 	return false
 }
 
-func (l Line) StaticallyValid() error {
+func (l FormatLine) StaticallyValid() error {
 	return nil
 }
 
-func (l Line) DynamicallyValid(db common.DatabaseProvider) error {
+func (l FormatLine) DynamicallyValid(db common.DatabaseProvider) error {
 	err := common.ExistsById(db, &Rating{}, l.Player1Rating.RecordId())
 	if err != nil {
 		return err
@@ -41,11 +41,19 @@ func (l Line) DynamicallyValid(db common.DatabaseProvider) error {
 	return common.ExistsById(db, &Rating{}, l.Player2Rating.RecordId())
 }
 
-func (l Line) String() string {
+func (l FormatLine) String() string {
 	return fmt.Sprintf("%s / %s", l.Player1Rating, l.Player2Rating)
 }
 
 type FormatId common.RecordId
+
+func (id FormatId) UnmarshalJSON(bytes []byte) error {
+	return id.RecordId().UnmarshalJSON(bytes)
+}
+
+func (id FormatId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
 
 func (id FormatId) RecordId() common.RecordId {
 	return common.RecordId(id)
@@ -57,7 +65,7 @@ func (id FormatId) String() string {
 
 // Format is a globally-available common.CrudRecord type which allows
 // a user to specify a format that a Season will be played in. This is
-// composed of a list of possible Rating IDs, and a list of Line records
+// composed of a list of possible Rating IDs, and a list of FormatLine records
 // which compose a pairing of two Rating types.
 //
 // For example, this could be a 1/2/3 division of skilled, medium, and
@@ -71,16 +79,16 @@ func (id FormatId) String() string {
 //
 // Another format type could be "old guy / young guy" in which players
 // are classed into either "old guy" status or "young guy" status, with
-// Line options of:
+// FormatLine options of:
 //   - old guy / old guy
 //   - old guy / young guy
 //   - young guy / young guy.
 type Format struct {
-	ID              FormatId   // unique ID for the Format
-	UserId          UserId     // owner of the Format
-	Name            string     // name for the Format, e.g. "Men's Intraclub 1/2/3"
-	PossibleRatings []RatingId // list of possible Rating values for the lines, highest to lowest skill
-	Lines           []Line     // Rating pairings that will play during a matchup
+	ID              FormatId     `json:"id"`               // unique ID for the Format
+	UserId          UserId       `json:"user_id"`          // owner of the Format
+	Name            string       `json:"name"`             // name for the Format, e.g. "Men's Intraclub 1/2/3"
+	PossibleRatings []RatingId   `json:"possible_ratings"` // list of possible Rating values for the lines, highest to lowest skill
+	Lines           []FormatLine `json:"lines"`            // Rating pairings that will play during a matchup
 }
 
 func (f *Format) GetOwner() common.RecordId {

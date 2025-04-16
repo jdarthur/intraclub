@@ -1,15 +1,18 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"intraclub/common"
+	"net/http"
 )
 
 type ScoreCountingType int
 
 func (s ScoreCountingType) StaticallyValid() error {
-	if s >= Invalid {
+	if s >= InvalidScoreCountingType {
 		return fmt.Errorf("invalid score counting type: %d", s)
 	}
 	return nil
@@ -19,8 +22,7 @@ const (
 	Point ScoreCountingType = iota
 	Game
 	Set
-	NotApplicable
-	Invalid
+	InvalidScoreCountingType
 )
 
 func (s ScoreCountingType) String() string {
@@ -31,14 +33,63 @@ func (s ScoreCountingType) String() string {
 		return "game"
 	case Set:
 		return "set"
-	case NotApplicable:
-		return "not applicable"
 	default:
 		return "invalid"
 	}
 }
 
+// Label is the same as ScoreCountingType.String, except with
+// capitalized values. This is used in the UI to populate a dropdown
+func (s ScoreCountingType) Label() string {
+	switch s {
+	case Point:
+		return "Point"
+	case Game:
+		return "Game"
+	case Set:
+		return "Set"
+	default:
+		return "InvalidScoreCountingType"
+	}
+}
+
+func (s ScoreCountingType) Secondary() ScoreCountingType {
+	switch s {
+	case Game:
+		return Point
+	case Set:
+		return Game
+	default:
+		return InvalidScoreCountingType
+	}
+}
+
+var ScoreCountingTypes = []ScoreCountingType{Point, Game, Set}
+
+func getScoreCountingTypes() []map[string]interface{} {
+	output := make([]map[string]interface{}, 0)
+	for _, scoreType := range ScoreCountingTypes {
+		output = append(output, map[string]interface{}{
+			"type": scoreType,
+			"name": scoreType.Label(),
+		})
+	}
+	return output
+}
+
+func GetScoreCountingTypes(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{common.ResourceKey: getScoreCountingTypes()})
+}
+
 type ScoringStructureId common.RecordId
+
+func (id ScoringStructureId) UnmarshalJSON(bytes []byte) error {
+	return id.RecordId().UnmarshalJSON(bytes)
+}
+
+func (id ScoringStructureId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
 
 func (id ScoringStructureId) RecordId() common.RecordId {
 	return common.RecordId(id)
@@ -49,9 +100,9 @@ func (id ScoringStructureId) String() string {
 }
 
 type WinCondition struct {
-	WinThreshold        int
-	MustWinBy           int
-	InstantWinThreshold int
+	WinThreshold        int `json:"win_threshold"`
+	MustWinBy           int `json:"must_win_by"`
+	InstantWinThreshold int `json:"instant_win_threshold"`
 }
 
 func (w WinCondition) HasInstantWinThreshold() bool {
@@ -94,32 +145,54 @@ func (w WinCondition) StaticallyValid() error {
 	return nil
 }
 
+type ScoringStructureList []ScoringStructureId
+
+func (s *ScoringStructureList) UnmarshalJSON(bytes []byte) error {
+	s2 := make([]string, 0)
+	fmt.Println(string(bytes))
+	err := json.Unmarshal(bytes, &s2)
+	if err != nil {
+		return err
+	}
+	for _, id := range s2 {
+		recordId, err := common.RecordIdFromString(id)
+		if err != nil {
+			return err
+		}
+		*s = append(*s, ScoringStructureId(recordId))
+	}
+	return nil
+}
+
 type ScoringStructure struct {
 	// ID is a unique ID for this scoring structure.
 	// This can be referenced by composite scoring structures
 	// or things like Schedule or PlayoffStructure objects
 	// which need to reference a particular way that their
 	// matches are played out from a scoring perspective
-	ID ScoringStructureId
+	ID ScoringStructureId `json:"id"`
 
 	// Owner is the UserId who created this ScoringStructure.
 	// This is only used to allow deletion / update and to
 	// filter on one's own ScoringStructure records
-	Owner UserId
+	Owner UserId `json:"owner"`
+
+	// Name is a descriptive name for this ScoringStructure
+	Name string `json:"name"`
 
 	// WinConditionCountingType is the ScoreCountingType
 	// that determines when someone wins in this ScoringStructure.
 	// The win condition will occur when a team in a Match
 	// gets to a particular number of points, games, or sets
 	// won, based on the configuration of this ScoringStructure
-	WinConditionCountingType ScoreCountingType
+	WinConditionCountingType ScoreCountingType `json:"win_condition_counting_type"`
 
 	// WinCondition sets out the thresholds at which a team wins
 	// a Match using this ScoringStructure. This includes a main
 	// win threshold, a possible must-win-by-X constraint, and a
 	// threshold that a team instantly wins at, bypassing the
 	// win-by-X constraint
-	WinCondition WinCondition
+	WinCondition WinCondition `json:"win_condition"`
 
 	// SecondaryScoringStructures is a list of ScoringStructure
 	// references that are used as a secondary mechanism to increment
@@ -135,7 +208,14 @@ type ScoringStructure struct {
 	// the most part (i.e. a 6-0, 6-0 match does not gain much explanatory
 	// context by recording that individual games were typically won
 	// from a 40-15 or 40-love score)
-	SecondaryScoringStructures []ScoringStructureId
+	SecondaryScoringStructures ScoringStructureList `json:"secondary_scoring_structures"`
+}
+
+func (c *ScoringStructure) UniquenessEquivalent(other *ScoringStructure) error {
+	if c.Name == other.Name {
+		return fmt.Errorf("scoring structure with name %s already exists", other.Name)
+	}
+	return nil
 }
 
 func (c *ScoringStructure) GetOwner() common.RecordId {
@@ -206,6 +286,10 @@ func (c *ScoringStructure) StaticallyValid() error {
 
 	if c.IsComposite() {
 
+		if c.WinConditionCountingType == Point {
+			return fmt.Errorf("cannot use point-based win condition in a composite scoring structure")
+		}
+
 		// get the maximum number of win-condition scoring units that we might play.
 		// e.g. in a first-to-2 sets "standard tennis" scoring structure the max
 		// amount of sets you can play is 3. In a "first to 10 points, straight up"
@@ -231,10 +315,15 @@ func (c *ScoringStructure) StaticallyValid() error {
 
 func (c *ScoringStructure) DynamicallyValid(db common.DatabaseProvider) error {
 	for _, id := range c.SecondaryScoringStructures {
-		err := common.ExistsById(db, &ScoringStructure{}, id.RecordId())
+		secondary, err := common.GetExistingRecordById(db, &ScoringStructure{}, id.RecordId())
 		if err != nil {
 			return err
 		}
+
+		if secondary.WinConditionCountingType != c.WinConditionCountingType.Secondary() {
+			return fmt.Errorf("cannot use %s-based secondary scoring structure in %s-based win condition", secondary.WinConditionCountingType, c.WinConditionCountingType)
+		}
+
 	}
 	return common.ExistsById(db, &User{}, c.Owner.RecordId())
 }

@@ -41,6 +41,7 @@ func (u *UnitTestDBProvider) GetAllWhere(recordType CrudRecord, where WhereFunc)
 			output = append(output, record)
 		}
 	}
+	//u.Dump()
 	return output, nil
 }
 
@@ -82,4 +83,13 @@ func (u *UnitTestDBProvider) Delete(record CrudRecord) error {
 	cache := u.getOrCreateRecordCache(record)
 	delete(cache, record.GetId())
 	return nil
+}
+
+func (u *UnitTestDBProvider) Dump() {
+	for tableName, cache := range u.Caches {
+		for id, record := range cache {
+			fmt.Printf("%s %s\n", tableName, id)
+			fmt.Printf("  ---> %+v\n", record)
+		}
+	}
 }

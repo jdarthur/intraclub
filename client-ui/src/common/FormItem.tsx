@@ -8,7 +8,10 @@ type FormItemProps = {
     children?: React.ReactNode
     inputType?: string
     disabled?: boolean
-    placeholder?: string
+    placeholder?: string,
+    min?: number;
+    max?: number;
+    suffix?: string
 }
 
 const INPUT = "input"
@@ -16,7 +19,7 @@ const SUGGESTION_INPUT = "suggestion_input"
 const NUMBER_INPUT = "number_input"
 const TEXT_AREA = "text_area"
 
-export function FormItem({name, label, children, inputType, disabled, placeholder}: FormItemProps) {
+export function FormItem({name, label, children, inputType, disabled, placeholder, min, max, suffix}: FormItemProps) {
 
     let content = children
     if (!content && inputType) {
@@ -24,7 +27,7 @@ export function FormItem({name, label, children, inputType, disabled, placeholde
         if (inputType == INPUT) {
             content = <Input disabled={disabled} placeholder={placeholder}/>
         } else if (inputType == NUMBER_INPUT) {
-            content = <InputNumber disabled={disabled} placeholder={placeholder}/>
+            content = <InputNumber disabled={disabled} placeholder={placeholder} min={min} max={max} suffix={suffix} style={{width:'100%'}}/>
         } else if (inputType == TEXT_AREA) {
             content = <Input.TextArea disabled={disabled} placeholder={placeholder}/>
         } else if (inputType == SUGGESTION_INPUT) {
@@ -45,7 +48,7 @@ export function FormItem({name, label, children, inputType, disabled, placeholde
 }
 
 export type NameAndLabel = {
-    name: string
+    name: any
     label: string
     disabled?: boolean
     placeholder?: string
@@ -55,8 +58,14 @@ export function InputFormItem({name, label, disabled, placeholder}: NameAndLabel
     return <FormItem name={name} label={label} inputType={INPUT} disabled={disabled} placeholder={placeholder}/>
 }
 
-export function NumberInputFormItem({name, label}: NameAndLabel) {
-    return <FormItem name={name} label={label} inputType={NUMBER_INPUT}/>
+type NumberInputFormItemProps = NameAndLabel & {
+    min?: number;
+    max?: number;
+    suffix?: string
+}
+
+export function NumberInputFormItem({name, label, min, max, suffix}: NumberInputFormItemProps) {
+    return <FormItem name={name} label={label} inputType={NUMBER_INPUT} min={min} max={max} suffix={suffix}/>
 }
 
 
@@ -65,12 +74,18 @@ export function TextAreaFormItem({name, label}: NameAndLabel) {
 }
 
 type SelectProps = NameAndLabel & {
-    options: { label: string, value: string }[]
+    options: { label: string, value: any }[]
+    multiple?: boolean
 }
 
-export function SelectFormItem({name, label, options, disabled}: SelectProps) {
+export function SelectFormItem({name, label, options, disabled, multiple}: SelectProps) {
+    let mode = undefined
+    if (multiple) {
+        mode = "multiple"
+    }
+
     return <FormItem name={name} label={label}>
-        <Select options={options} disabled={disabled}/>
+        <Select options={options} disabled={disabled} mode={mode}/>
     </FormItem>
 }
 

@@ -37,6 +37,7 @@ export type CommonModalProps = {
     open?: boolean
     setOpen?: (b: boolean) => void
     onCancel?: () => Promise<SubmitResult>
+    onValuesChange?: (changedValues: any, values: any) => void
 }
 
 // SubmitResult is the expected result from an `OnSubmit` call in `CommonModalProps`
@@ -90,8 +91,8 @@ export function CommonFormModal({...props}: CommonModalProps) {
 
 
     // title of the modal
-    let title = props.IsUpdate ? `Update ${props.ObjectType}` : `Create a new ${props.ObjectType}`
-    if (props.title != "") {
+    let title = props.IsUpdate ? `Update ${props.ObjectType?.replace("_", " ")}` : `New ${props.ObjectType?.replace("_", " ")}`
+    if (props.title) {
         title = props.title;
     }
 
@@ -122,9 +123,14 @@ export function CommonFormModal({...props}: CommonModalProps) {
         }
     }
 
-    const printChanges = (v: any) => {
-        //console.log(v)
+    const onFormChange = (changedValues: any, values: any) => {
+        if (props.onValuesChange) {
+            props.onValuesChange(changedValues, values)
+        } else {
+            //console.log(changedValues, values)
+        }
     }
+
 
     const clickCancel = async (): Promise<SubmitResult> => {
         if (props.onCancel) {
@@ -144,7 +150,7 @@ export function CommonFormModal({...props}: CommonModalProps) {
                footer={props.footer}>
             <div style={{height: "1em"}}/>
             <Form form={formToUse} layout={"horizontal"} initialValues={props.InitialState}
-                  onValuesChange={printChanges}>
+                  onValuesChange={onFormChange}>
                 {props.children}
             </Form>
 

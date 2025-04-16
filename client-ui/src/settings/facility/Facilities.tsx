@@ -1,13 +1,13 @@
 import * as React from 'react';
-import {useGetFacilitiesQuery, useDeleteFacilityMutation} from "../redux/api.js";
+import {useGetFacilitiesQuery, useDeleteFacilityMutation} from "../../redux/api.js";
 import {Card, Empty, Space,} from "antd";
 import {FacilityForm} from "./FacilityForm";
-import {LabeledValue} from "../common/LabeledValue";
-import {DeleteConfirm} from "../common/DeleteConfirm";
-import {Ellipsis} from "../common/Ellipsis";
+import {LabeledValue} from "../../common/LabeledValue";
+import {DeleteConfirm} from "../../common/DeleteConfirm";
+import {Ellipsis} from "../../common/Ellipsis";
 
-import {Facility} from "../model/facility"
-
+import {Facility} from "../../model/facility"
+import {useState} from "react";
 
 export function Facilities() {
     const {data} = useGetFacilitiesQuery()
@@ -21,7 +21,6 @@ export function Facilities() {
         <div style={{height: "1em"}}/>
         <FacilityForm/>
     </div>
-
 }
 
 export function OneFacility({id, user_id, name, address, courts, layout_photo}: Facility) {
@@ -32,14 +31,13 @@ export function OneFacility({id, user_id, name, address, courts, layout_photo}: 
         {address}
     </a>
 
-    const deleteSelf = () => {
-        deleteFacility(id).then((res: { error: any, data: any }) => {
+    const deleteSelf = ():string => {
+        return deleteFacility(id).then((res: { error: any; data: any; }) => {
             if (res.error) {
-                console.log(res.error)
-            } else if (res.data) {
-                console.log(res.error)
+                return res.error;
             }
-        })
+            return "";
+        });
     }
 
     const initialState: Facility = {

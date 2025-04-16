@@ -1,8 +1,8 @@
 import * as React from 'react';
-import {InputFormItem, NumberInputFormItem} from "../common/FormItem";
-import {useCreateFacilityMutation, useUpdateFacilityMutation} from "../redux/api.js" ;
-import {Facility} from "../model/facility";
-import {CommonFormModal} from "../common/CommonFormModal";
+import {InputFormItem, NumberInputFormItem} from "../../common/FormItem";
+import {useCreateFacilityMutation, useUpdateFacilityMutation} from "../../redux/api.js" ;
+import {Facility} from "../../model/facility";
+import {CommonFormModal} from "../../common/CommonFormModal";
 
 type FacilityFormProps = {
     Update?: boolean // is this updating an existing record or creating a new record

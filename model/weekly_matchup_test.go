@@ -46,7 +46,7 @@ func TestWeeklyMatchupInvalidHomeTeamId(t *testing.T) {
 	w.Matchups[0].HomeTeam = TeamId(common.InvalidRecordId)
 	err := w.DynamicallyValid(db)
 	if err == nil {
-		t.Fatal("Invalid home team ID should produce error")
+		t.Fatal("InvalidScoreCountingType home team ID should produce error")
 	}
 	fmt.Println(err)
 }
@@ -57,7 +57,7 @@ func TestWeeklyMatchupInvalidAwayTeamId(t *testing.T) {
 	w.Matchups[0].AwayTeam = TeamId(common.InvalidRecordId)
 	err := w.DynamicallyValid(db)
 	if err == nil {
-		t.Fatal("Invalid away team ID should produce error")
+		t.Fatal("InvalidScoreCountingType away team ID should produce error")
 	}
 	fmt.Println(err)
 }
@@ -68,7 +68,7 @@ func TestWeeklyMatchupInvalidSeasonId(t *testing.T) {
 	w.SeasonId = SeasonId(common.InvalidRecordId)
 	err := w.DynamicallyValid(db)
 	if err == nil {
-		t.Fatal("Invalid season ID should produce error")
+		t.Fatal("InvalidScoreCountingType season ID should produce error")
 	}
 	fmt.Println(err)
 }
@@ -79,7 +79,7 @@ func TestWeeklyMatchupInvalidWeekId(t *testing.T) {
 	w.WeekId = WeekId(common.InvalidRecordId)
 	err := w.DynamicallyValid(db)
 	if err == nil {
-		t.Fatal("Invalid week ID should produce error")
+		t.Fatal("InvalidScoreCountingType week ID should produce error")
 	}
 	fmt.Println(err)
 }
@@ -94,7 +94,7 @@ func TestWeeklyMatchupWeekDoesNotBelongToSeason(t *testing.T) {
 	w.WeekId = someOtherWeek.ID
 	err := w.DynamicallyValid(db)
 	if err == nil {
-		t.Fatal("Invalid week ID should produce error")
+		t.Fatal("InvalidScoreCountingType week ID should produce error")
 	}
 	fmt.Println(err)
 }

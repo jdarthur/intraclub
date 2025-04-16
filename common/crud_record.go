@@ -12,13 +12,13 @@ import (
 type RecordId uint64
 
 func (r RecordId) UnmarshalJSON(bytes []byte) error {
-	var err error
-	r, err = RecordIdFromString(strings.Trim(string(bytes), "\""))
+	v, err := RecordIdFromString(strings.Trim(string(bytes), "\""))
 	if err != nil {
 		return err
 	}
 
 	fmt.Println(err)
+	r = v
 	return nil
 }
 
@@ -38,6 +38,9 @@ func (r RecordId) Uint64() uint64 {
 }
 
 func (r RecordId) String() string {
+	if r == InvalidRecordId {
+		return ""
+	}
 	return fmt.Sprintf("%016x", r.Uint64())
 }
 

@@ -1,5 +1,5 @@
 import * as React from "react"
-import {Button, Space, Steps} from "antd";
+import {Alert, Button, Space, Steps} from "antd";
 import {useState} from "react";
 import {SubmitResult} from "./CommonFormModal";
 
@@ -14,9 +14,10 @@ export type StepFormProps = {
     onStepFormFinish: () => Promise<SubmitResult>
     update?: boolean
     setDisabled?: (b: boolean) => void
+    error?: string
 }
 
-export function StepForm({steps, onStepFormFinish, update, setDisabled}: StepFormProps) {
+export function StepForm({steps, onStepFormFinish, update, setDisabled, error}: StepFormProps) {
 
     const [currentStep, setCurrentStep] = useState<number>(0)
     const [_disabled, _setDisabled] = useState<boolean>(false)
@@ -79,7 +80,6 @@ export function StepForm({steps, onStepFormFinish, update, setDisabled}: StepFor
             }
         }
 
-
         setCurrentStep(value)
     };
 
@@ -89,6 +89,8 @@ export function StepForm({steps, onStepFormFinish, update, setDisabled}: StepFor
         <div style={{marginBottom: "1.5em"}}/>
         <div style={{display: "flex", flexDirection: "column"}}>
             {visibleStep.content}
+
+            {error? <Alert message={error} type={"error"} style={{marginBottom: "1.5em"}}/>:null}
 
             <Space style={{alignSelf: "flex-end"}}>
                 <Button onClick={back} disabled={currentStep == 0}>

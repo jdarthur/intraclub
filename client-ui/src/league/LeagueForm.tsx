@@ -12,7 +12,7 @@ import {
     SelectFormItem,
     TimePickerFormItem
 } from "../common/FormItem";
-import {Facility} from "../settings/Facilities";
+import {Facility} from "../model/facility";
 import dayjs from "dayjs";
 import {useState} from "react";
 import {WeekSelect, WeekSelectState} from "./WeekSelect";

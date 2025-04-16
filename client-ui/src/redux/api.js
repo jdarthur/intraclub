@@ -163,6 +163,58 @@ export const mainApi = createApi({
             query: (id) => ({url: `league/${id}`}),
             providesTags: ["league"]
         }),
+        getScoreCountingTypes: builder.query({
+            query: () => ({url: `score_counting_types`}),
+            providesTags: ["score_counting_types"]
+        }),
+        getScoringStructures: builder.query({
+            query: () => ({url: `scoring_structure`}),
+            providesTags: ["scoring_structure"]
+        }),
+        createScoringStructure: builder.mutation({
+            query: (body) => ({url: `scoring_structure`, body: body, method: 'POST'}),
+            invalidatesTags: ["scoring_structure"]
+        }),
+        updateScoringStructure: builder.mutation({
+            query: (req) => ({url: `scoring_structure/${req.id}`, body: req.body, method: 'put'}),
+            invalidatesTags: ["scoring_structure"]
+        }),
+        deleteScoringStructure: builder.mutation({
+            query: (id) => ({url: `scoring_structure/${id}`, method: 'DELETE'}),
+            invalidatesTags: ["scoring_structure"]
+        }),
+        getRatings: builder.query({
+            query: () => ({url: `rating`}),
+            providesTags: ["rating"]
+        }),
+        createRating: builder.mutation({
+            query: (body) => ({url: `rating`, body: body, method: 'POST'}),
+            invalidatesTags: ["rating"]
+        }),
+        updateRating: builder.mutation({
+            query: (req) => ({url: `rating/${req.id}`, body: req.body, method: 'put'}),
+            invalidatesTags: ["rating"]
+        }),
+        deleteRating: builder.mutation({
+            query: (id) => ({url: `rating/${id}`, method: 'DELETE'}),
+            invalidatesTags: ["rating"]
+        }),
+        getFormats: builder.query({
+            query: () => ({url: `format`}),
+            providesTags: ["format"]
+        }),
+        createFormat: builder.mutation({
+            query: (body) => ({url: `format`, body: body, method: 'POST'}),
+            invalidatesTags: ["format"]
+        }),
+        updateFormat: builder.mutation({
+            query: (req) => ({url: `format/${req.id}`, body: req.body, method: 'put'}),
+            invalidatesTags: ["format"]
+        }),
+        deleteFormat: builder.mutation({
+            query: (id) => ({url: `format/${id}`, method: 'DELETE'}),
+            invalidatesTags: ["format"]
+        }),
     })
 });
 
@@ -198,4 +250,17 @@ export const {
     useGetSkillInfoOptionsQuery,
     useDeleteSkillInfoMutation,
     useGetLeagueQuery,
+    useGetScoreCountingTypesQuery,
+    useGetScoringStructuresQuery,
+    useCreateScoringStructureMutation,
+    useUpdateScoringStructureMutation,
+    useDeleteScoringStructureMutation,
+    useGetRatingsQuery,
+    useCreateRatingMutation,
+    useUpdateRatingMutation,
+    useDeleteRatingMutation,
+    useGetFormatsQuery,
+    useCreateFormatMutation,
+    useUpdateFormatMutation,
+    useDeleteFormatMutation,
 } = mainApi

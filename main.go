@@ -19,8 +19,10 @@ func main() {
 	// parse command-line flags
 	parseFlags()
 
-	// seed users for development mode
-	seedDevUsers()
+	// seed data for development mode
+	if model.UseDevTokenMode {
+		model.SeedDevData()
+	}
 
 	// generate or load JWT key pair
 	err := common.GenerateJwtKeyPairIfNotExists()
@@ -54,6 +56,16 @@ func main() {
 	facilities := common.NewCrudCommon(model.NewFacility, true)
 	facilities.HandleRouteTypes(api, common.CrudWrapperFunctionAll...)
 
+	api.GET("/score_counting_types", model.GetScoreCountingTypes)
+	scoringStructures := common.NewCrudCommon(model.NewScoringStructure, true)
+	scoringStructures.HandleRouteTypes(api, common.CrudWrapperFunctionAll...)
+
+	ratings := common.NewCrudCommon(model.NewRating, true)
+	ratings.HandleRouteTypes(api, common.CrudWrapperFunctionAll...)
+
+	formats := common.NewCrudCommon(model.NewFormat, true)
+	formats.HandleRouteTypes(api, common.CrudWrapperFunctionAll...)
+
 	err = r.Run("127.0.0.1:8080")
 	if err != nil {
 		panic(err)
@@ -67,18 +79,5 @@ func parseFlags() {
 	if useDevTokenMode != nil && *useDevTokenMode == true {
 		model.UseDevTokenMode = true
 		fmt.Println("Using development token mode")
-	}
-}
-
-func seedDevUsers() {
-	user1 := &model.User{
-		FirstName: "JD",
-		LastName:  "Arthur",
-		Email:     "jdarthur@gatech.edu",
-	}
-
-	_, err := common.CreateOne(common.GlobalDatabaseProvider, user1)
-	if err != nil {
-		panic(err)
 	}
 }

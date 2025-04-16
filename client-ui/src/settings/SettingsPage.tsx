@@ -1,10 +1,13 @@
 import * as React from "react"
 import {NavigationBreadcrumb} from "../navigation/NavigationBreadcrumb";
-import {Facilities} from "./Facilities";
+import {Facilities} from "./facility/Facilities";
 import {useToken} from "../redux/auth.js";
 import {LoginRequired} from "../login/LoginRequired";
 import {Tabs} from "antd";
 import {Users} from "./Users";
+import {ScoringStructures} from "./scoring_structure/ScoringStructures";
+import {Ratings} from "./rating/Ratings";
+import {Formats} from "./formats/Formats";
 
 
 export function SettingsPage() {
@@ -19,7 +22,22 @@ export function SettingsPage() {
         {
             label: "Users",
             key: "users",
-            children: <Users />,
+            children: <Users/>,
+        },
+        {
+            label: "Scoring Structures",
+            key: "scoring_structures",
+            children: <ScoringStructures/>,
+        },
+        {
+            label: "Ratings",
+            key: "ratings",
+            children: <Ratings/>,
+        },
+        {
+            label: "Formats",
+            key: "formats",
+            children: <Formats/>,
         },
     ]
 

@@ -32,7 +32,7 @@ func (r Role) String() string {
 	case BlurbReporter:
 		return "Blurb Reporter"
 	default:
-		return "Invalid Role"
+		return "InvalidScoreCountingType Role"
 	}
 }
 
