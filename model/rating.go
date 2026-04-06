@@ -29,6 +29,20 @@ func (id RatingId) String() string {
 	return id.RecordId().String()
 }
 
+type RatingList []RatingId
+
+func (r *RatingList) UnmarshalJSON(bytes []byte) error {
+	idList, err := common.UnmarshalStringIdList(bytes)
+	if err != nil {
+		return err
+	}
+
+	for _, id := range idList {
+		*r = append(*r, RatingId(id))
+	}
+	return nil
+}
+
 type Rating struct {
 	ID          RatingId `json:"id"`
 	UserId      UserId   `json:"user_id"`

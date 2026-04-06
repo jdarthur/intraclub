@@ -2,25 +2,31 @@ package model
 
 import (
 	"fmt"
-	"intraclub/common"
 	"testing"
+
+	"intraclub/common"
 )
 
 func newStoredWeeklyMatchup(t *testing.T, db common.DatabaseProvider) (*Season, *WeeklyMatchup) {
-	season := newDefaultSeasonWithTeams(t, db, 4)
+	season, _ := newDefaultSeasonWithTeams(t, db, 4)
 	week := newStoredWeek(t, db, season)
+
+	teams, err := season.GetTeams(db)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	w := NewWeeklyMatchup()
 	w.WeekId = week.ID
 	w.SeasonId = season.ID
 
 	matchup := TeamMatchup{
-		HomeTeam: season.Teams[0],
-		AwayTeam: season.Teams[1],
+		HomeTeam: teams[0].ID,
+		AwayTeam: teams[1].ID,
 	}
 	matchup2 := TeamMatchup{
-		HomeTeam: season.Teams[2],
-		AwayTeam: season.Teams[3],
+		HomeTeam: teams[2].ID,
+		AwayTeam: teams[3].ID,
 	}
 
 	w.Matchups = []*TeamMatchup{&matchup, &matchup2}
@@ -88,7 +94,7 @@ func TestWeeklyMatchupWeekDoesNotBelongToSeason(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
 
-	otherSeason := newDefaultSeason(t, db)
+	otherSeason, _ := newDefaultSeason(t, db)
 	someOtherWeek := newStoredWeek(t, db, otherSeason)
 
 	w.WeekId = someOtherWeek.ID
@@ -131,13 +137,18 @@ func TestWeeklyMatchupTeamPlayingInMultipleMatchups(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	season, w := newStoredWeeklyMatchup(t, db)
 
+	teams, err := season.GetTeams(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	anotherMatchup := TeamMatchup{
-		HomeTeam: season.Teams[0],
-		AwayTeam: season.Teams[2],
+		HomeTeam: teams[0].ID,
+		AwayTeam: teams[2].ID,
 	}
 	w.Matchups = append(w.Matchups, &anotherMatchup)
 
-	err := w.StaticallyValid()
+	err = w.StaticallyValid()
 	if err == nil {
 		t.Fatal("Double matchup for team 1 should produce error")
 	}
@@ -163,12 +174,17 @@ func TestWeeklyMatchupTeamHasBye(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	season, w := newStoredWeeklyMatchup(t, db)
 
+	teams, err := season.GetTeams(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	w.Matchups[1].Bye = true
 	w.Matchups[1].AwayTeam = TeamId(common.InvalidRecordId)
-	anotherBye := TeamMatchup{HomeTeam: season.Teams[3], Bye: true}
+	anotherBye := TeamMatchup{HomeTeam: teams[3].ID, Bye: true}
 	w.Matchups = append(w.Matchups, &anotherBye)
 
-	err := common.Validate(db, w)
+	err = common.Validate(db, w)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -2,8 +2,9 @@ package model
 
 import (
 	"fmt"
-	"intraclub/common"
 	"testing"
+
+	"intraclub/common"
 )
 
 func newValidBlurb(owner UserId, season SeasonId) *Blurb {
@@ -16,8 +17,8 @@ func newValidBlurb(owner UserId, season SeasonId) *Blurb {
 }
 
 func newDefaultBlurb(t *testing.T, db common.DatabaseProvider) (*Blurb, *Season) {
-	season := newDefaultSeason(t, db)
-	b := newStoredBlurb(t, db, season.Commissioners[0], season.ID)
+	season, commissioner := newDefaultSeason(t, db)
+	b := newStoredBlurb(t, db, commissioner.ID, season.ID)
 	return b, season
 }
 
@@ -93,8 +94,8 @@ func TestBlurbSeasonIdDoesNotExist(t *testing.T) {
 
 func TestBlurbPhotoIdDoesNotExist(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season := newDefaultSeason(t, db)
-	b := newValidBlurb(season.Commissioners[0], season.ID)
+	season, commish := newDefaultSeason(t, db)
+	b := newValidBlurb(commish.ID, season.ID)
 	b.Photos = []PhotoId{0}
 	err := b.DynamicallyValid(db)
 	if err == nil {
@@ -122,9 +123,9 @@ func TestBlurbPhotoDoesNotBelongToUser(t *testing.T) {
 
 func TestInvalidReaction(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season := newDefaultSeason(t, db)
-	b := newStoredBlurb(t, db, season.Commissioners[0], season.ID)
-	err := b.React(db, season.Commissioners[0], reactionType(99999))
+	season, commish := newDefaultSeason(t, db)
+	b := newStoredBlurb(t, db, commish.ID, season.ID)
+	err := b.React(db, commish.ID, reactionType(99999))
 	if err == nil {
 		t.Fatal("expected error on invalid reaction")
 	}
@@ -133,10 +134,10 @@ func TestInvalidReaction(t *testing.T) {
 
 func TestUserIdIsNotAMemberOfSeason(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season := newDefaultSeason(t, db)
-	otherUser := newStoredUser(t, db)
+	season, commish := newDefaultSeason(t, db)
+	b := newStoredBlurb(t, db, commish.ID, season.ID)
 
-	b := newStoredBlurb(t, db, season.Commissioners[0], season.ID)
+	otherUser := newStoredUser(t, db)
 	err := b.React(db, otherUser.ID, ThumbsUp)
 	if err == nil {
 		t.Fatal("expected error on reaction from user who is not participating in season")
@@ -146,9 +147,9 @@ func TestUserIdIsNotAMemberOfSeason(t *testing.T) {
 
 func TestUserSuccessfulReact(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season := newDefaultSeason(t, db)
-	b := newStoredBlurb(t, db, season.Commissioners[0], season.ID)
-	err := b.React(db, season.Commissioners[0], ThumbsUp)
+	season, commish := newDefaultSeason(t, db)
+	b := newStoredBlurb(t, db, commish.ID, season.ID)
+	err := b.React(db, commish.ID, ThumbsUp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,13 +157,13 @@ func TestUserSuccessfulReact(t *testing.T) {
 
 func TestDuplicateReaction(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season := newDefaultSeason(t, db)
-	b := newStoredBlurb(t, db, season.Commissioners[0], season.ID)
-	err := b.React(db, season.Commissioners[0], ThumbsUp)
+	season, commish := newDefaultSeason(t, db)
+	b := newStoredBlurb(t, db, commish.ID, season.ID)
+	err := b.React(db, commish.ID, ThumbsUp)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.React(db, season.Commissioners[0], ThumbsUp)
+	err = b.React(db, commish.ID, ThumbsUp)
 	if err == nil {
 		t.Fatal("expected error on duplicate reaction")
 	}
@@ -171,13 +172,13 @@ func TestDuplicateReaction(t *testing.T) {
 
 func TestReactAndUnreact(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season := newDefaultSeason(t, db)
-	b := newStoredBlurb(t, db, season.Commissioners[0], season.ID)
-	err := b.React(db, season.Commissioners[0], ThumbsUp)
+	season, commish := newDefaultSeason(t, db)
+	b := newStoredBlurb(t, db, commish.ID, season.ID)
+	err := b.React(db, commish.ID, ThumbsUp)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = b.Unreact(db, season.Commissioners[0], ThumbsUp)
+	err = b.Unreact(db, commish.ID, ThumbsUp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,9 +186,10 @@ func TestReactAndUnreact(t *testing.T) {
 
 func TestUnreactWhereNotPresent(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season := newDefaultSeason(t, db)
-	b := newStoredBlurb(t, db, season.Commissioners[0], season.ID)
-	err := b.Unreact(db, season.Commissioners[0], ThumbsUp)
+	season, commish := newDefaultSeason(t, db)
+	b := newStoredBlurb(t, db, commish.ID, season.ID)
+
+	err := b.Unreact(db, commish.ID, ThumbsUp)
 	if err == nil {
 		t.Fatal("expected error on unreact where existing reaction doesn't exist")
 	}

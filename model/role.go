@@ -128,7 +128,7 @@ func IsUserAssignedToTeam(db common.DatabaseProvider, userId UserId, teamId Team
 	if !exists {
 		return false, fmt.Errorf("team with ID %s does not exist", teamId)
 	}
-	return team.IsTeamMember(userId), nil
+	return team.IsTeamMember(db, userId)
 }
 
 func IsUserAssignedToSeason(db common.DatabaseProvider, userId UserId, seasonId common.RecordId) (bool, error) {

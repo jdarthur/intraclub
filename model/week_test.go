@@ -2,9 +2,10 @@ package model
 
 import (
 	"fmt"
-	"intraclub/common"
 	"testing"
 	"time"
+
+	"intraclub/common"
 )
 
 func newStoredWeek(t *testing.T, db common.DatabaseProvider, season *Season) *Week {
@@ -30,7 +31,7 @@ func newStoredWeekAt(t *testing.T, db common.DatabaseProvider, season *Season, d
 }
 
 func newDefaultSeasonWithWeeks(t *testing.T, db common.DatabaseProvider, weekCount int) (*Season, []*Week) {
-	season := newDefaultSeasonWithTeams(t, db, 4)
+	season, _ := newDefaultSeasonWithTeams(t, db, 4)
 
 	weeks := make([]*Week, 0)
 	for i := 0; i < weekCount; i++ {
@@ -40,7 +41,11 @@ func newDefaultSeasonWithWeeks(t *testing.T, db common.DatabaseProvider, weekCou
 }
 
 func newDefaultSeasonWithWeeksAndTeams(t *testing.T, db common.DatabaseProvider, teams []*Team, weekCount int) (*Season, []*Week) {
-	commissioner := teams[0].Captain
+	captain, err := teams[0].GetCaptain(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	commissioner := captain
 	season := newStoredSeason(t, db, commissioner, teams)
 
 	weeks := make([]*Week, 0)

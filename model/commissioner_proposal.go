@@ -111,7 +111,10 @@ func (c *CommissionerProposal) GetAllVoterIds(db common.DatabaseProvider) ([]Use
 	}
 	// add all commissioners as valid voters
 	output := make([]UserId, 0)
-	output = append(output, season.Commissioners...)
+	commissioners, err := season.GetCommissioners(db)
+	if err == nil {
+		output = append(output, commissioners...)
+	}
 
 	// get all team captains as the other voters
 	teamCaptains, err := season.GetTeamCaptains(db)

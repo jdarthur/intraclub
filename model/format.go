@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"intraclub/common"
@@ -17,7 +18,27 @@ type FormatLine struct {
 	Player2Rating RatingId `json:"player_2_rating"` // ID of the Rating record for player one in this FormatLine
 }
 
-func (l FormatLine) EquivalentTo(other FormatLine) bool {
+func (l *FormatLine) UnmarshalJSON(bytes []byte) error {
+	m := map[string]string{}
+	err := json.Unmarshal(bytes, &m)
+	if err != nil {
+		return err
+	}
+	rating1, err := common.RecordIdFromString(m["player_1_rating"])
+	if err != nil {
+		return err
+	}
+	rating2, err := common.RecordIdFromString(m["player_2_rating"])
+	if err != nil {
+		return err
+	}
+
+	l.Player1Rating = RatingId(rating1)
+	l.Player2Rating = RatingId(rating2)
+	return nil
+}
+
+func (l *FormatLine) EquivalentTo(other FormatLine) bool {
 	if l.Player1Rating == other.Player1Rating && l.Player2Rating == other.Player2Rating {
 		return true
 	}
@@ -29,11 +50,11 @@ func (l FormatLine) EquivalentTo(other FormatLine) bool {
 	return false
 }
 
-func (l FormatLine) StaticallyValid() error {
+func (l *FormatLine) StaticallyValid() error {
 	return nil
 }
 
-func (l FormatLine) DynamicallyValid(db common.DatabaseProvider) error {
+func (l *FormatLine) DynamicallyValid(db common.DatabaseProvider) error {
 	err := common.ExistsById(db, &Rating{}, l.Player1Rating.RecordId())
 	if err != nil {
 		return err
@@ -41,7 +62,7 @@ func (l FormatLine) DynamicallyValid(db common.DatabaseProvider) error {
 	return common.ExistsById(db, &Rating{}, l.Player2Rating.RecordId())
 }
 
-func (l FormatLine) String() string {
+func (l *FormatLine) String() string {
 	return fmt.Sprintf("%s / %s", l.Player1Rating, l.Player2Rating)
 }
 
@@ -87,7 +108,7 @@ type Format struct {
 	ID              FormatId     `json:"id"`               // unique ID for the Format
 	UserId          UserId       `json:"user_id"`          // owner of the Format
 	Name            string       `json:"name"`             // name for the Format, e.g. "Men's Intraclub 1/2/3"
-	PossibleRatings []RatingId   `json:"possible_ratings"` // list of possible Rating values for the lines, highest to lowest skill
+	PossibleRatings RatingList   `json:"possible_ratings"` // list of possible Rating values for the lines, highest to lowest skill
 	Lines           []FormatLine `json:"lines"`            // Rating pairings that will play during a matchup
 }
 
@@ -144,6 +165,8 @@ func (f *Format) StaticallyValid() error {
 	if f.Name == "" {
 		return errors.New("format has no name")
 	}
+
+	fmt.Println(f)
 
 	for i, line1 := range f.Lines {
 		if !f.IsRatingInOptionsList(line1.Player1Rating) {

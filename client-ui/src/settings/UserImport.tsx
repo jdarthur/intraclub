@@ -25,7 +25,7 @@ export function UserImport() {
 
     const importUsers = async (): Promise<SubmitResult> => {
         console.log("Importing users from data:", fileData)
-        return await doImport(fileData)
+        return doImport(fileData);
     }
 
     const onChange = async (file: any) => {

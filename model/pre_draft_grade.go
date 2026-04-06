@@ -2,8 +2,9 @@ package model
 
 import (
 	"fmt"
-	"intraclub/common"
 	"sort"
+
+	"intraclub/common"
 )
 
 type PreDraftRatingModifier int
@@ -97,11 +98,11 @@ func (p *PreDraftGrade) DynamicallyValid(db common.DatabaseProvider) error {
 		return err
 	}
 
-	if draft.IsDraftCompleted() {
+	if draft.IsDraftCompleted(db) {
 		return fmt.Errorf("draft is already completed")
 	}
 
-	if !draft.IsInDraftList(p.PlayerId) {
+	if !draft.IsInDraftList(db, p.PlayerId) {
 		return fmt.Errorf("player ID '%s' is not in draft list", p.PlayerId)
 	}
 
@@ -219,7 +220,11 @@ func GetSortedListOfAllPreDraftGradesDescending(db common.DatabaseProvider, draf
 
 	// for each player in the available-to-draft list, get their pre-draft aggregate
 	aggregates := make([]PreDraftAggregate, 0)
-	for _, player := range draft.Available {
+	availablePlayers, err := draft.GetAvailablePlayers(db)
+	if err != nil {
+		return nil, err
+	}
+	for _, player := range availablePlayers {
 		// get pre-draft aggregate for each player in the list
 		a := GetDraftAggregateForPlayer(allGrades, format, player)
 		aggregates = append(aggregates, a)

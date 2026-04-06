@@ -2,8 +2,9 @@ package model
 
 import (
 	"fmt"
-	"intraclub/common"
 	"testing"
+
+	"intraclub/common"
 )
 
 func newStoredAvailability(t *testing.T, db common.DatabaseProvider, u UserId, week WeekId) *Availability {
@@ -22,7 +23,7 @@ func newStoredAvailability(t *testing.T, db common.DatabaseProvider, u UserId, w
 }
 
 func newDefaultAvailability(t *testing.T, db common.DatabaseProvider) *Availability {
-	season := newDefaultSeason(t, db)
+	season, _ := newDefaultSeason(t, db)
 	userId := getAnyTeamCaptain(t, db, season)
 	week := newStoredWeek(t, db, season)
 	v := newStoredAvailability(t, db, userId, week.ID)
@@ -46,7 +47,7 @@ func TestAvailabilityOnlyAccessibleToTeamMembers(t *testing.T) {
 
 func TestAvailabilityIsAccessibleToTeamMembers(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season := newDefaultSeason(t, db)
+	season, _ := newDefaultSeason(t, db)
 	userId := getAnyTeamCaptain(t, db, season)
 	week := newStoredWeek(t, db, season)
 	v := newStoredAvailability(t, db, userId, week.ID)
@@ -86,7 +87,7 @@ func TestAvailabilityUserDoesNotExist(t *testing.T) {
 
 func TestAvailabilityWeekDoesNotExist(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season := newDefaultSeason(t, db)
+	season, _ := newDefaultSeason(t, db)
 	userId := getAnyTeamCaptain(t, db, season)
 	v := NewAvailability()
 	v.UserId = userId
@@ -111,7 +112,10 @@ func createAvailabilityForAllCaptains(t *testing.T, db common.DatabaseProvider, 
 	// for every week in the list, then add the availability
 	// record to the output list
 	for _, team := range teams {
-		captain := team.Captain
+		captain, err := team.GetCaptain(db)
+		if err != nil {
+			t.Fatal(err)
+		}
 		for _, week := range weeks {
 			output = append(output, newStoredAvailability(t, db, captain, week.ID))
 		}

@@ -2,7 +2,7 @@ import {FlagOutlined, HomeOutlined, SettingOutlined, TrophyOutlined} from "@ant-
 import {Link, useLocation} from "react-router-dom";
 import * as React from "react";
 import {Menu} from "antd";
-import {ROOT, LEAGUES, TEAM, SETTINGS, LOGIN} from "./router"
+import {ROOT, TEAM, SETTINGS, LOGIN, SEASONS} from "./router"
 import {IntraclubTokenKey, setCredentials, useToken} from "../redux/auth.js";
 import {UserIconSelfFetching} from "./NavBarUserIcon";
 import {useEffect} from "react";
@@ -29,8 +29,8 @@ export function NavMenu() {
         <Menu.Item key={ROOT} icon={<HomeOutlined/>}>
             <Link to={ROOT}>Home</Link>
         </Menu.Item>
-        <Menu.Item key={LEAGUES} icon={<TrophyOutlined/>}>
-            <Link to={LEAGUES}>Leagues</Link>
+        <Menu.Item key={SEASONS} icon={<TrophyOutlined/>}>
+            <Link to={SEASONS}>Seasons</Link>
         </Menu.Item>
         <Menu.Item key={TEAM} icon={<FlagOutlined/>}>
             <Link to={TEAM}>Teams</Link>

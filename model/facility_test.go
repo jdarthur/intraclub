@@ -2,9 +2,10 @@ package model
 
 import (
 	"fmt"
-	"intraclub/common"
 	"math/rand"
 	"testing"
+
+	"intraclub/common"
 )
 
 func newStoredFacility(t *testing.T, db common.DatabaseProvider, owner UserId) *Facility {
@@ -114,12 +115,11 @@ func TestAddressAlreadyExists(t *testing.T) {
 
 func TestFacilityAppliedToSeasonCannotBeDeleted(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season := newDefaultSeason(t, db)
+	season, commish := newDefaultSeason(t, db)
 
-	userId := season.Commissioners[0].RecordId()
 	facilityId := season.Facility.RecordId()
 
-	wac := common.NewWithAccessControl[*Facility](db, userId)
+	wac := common.NewWithAccessControl[*Facility](db, commish.ID.RecordId())
 	_, _, err := wac.DeleteOneById(&Facility{}, facilityId)
 	if err == nil {
 		t.Fatal("expected error on delete")

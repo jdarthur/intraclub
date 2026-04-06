@@ -1,6 +1,9 @@
 package model
 
-import "intraclub/common"
+import (
+	"intraclub/common"
+	"sort"
+)
 
 func SeedDevData() {
 	user := seedDevUsers()
@@ -56,10 +59,14 @@ func seedDevScoringStructures(u UserId) {
 	}
 }
 
+var MensOne = "Men's 1"
+var MensTwo = "Men's 2"
+var MensThree = "Men's 3"
+
 func seedDevRatings(u UserId) {
 	r := NewRating()
 	r.UserId = u
-	r.Name = "Men's 1"
+	r.Name = MensOne
 	r.Description = RatingOne
 
 	_, err := common.CreateOne(common.GlobalDatabaseProvider, r)
@@ -69,7 +76,7 @@ func seedDevRatings(u UserId) {
 
 	r = NewRating()
 	r.UserId = u
-	r.Name = "Men's 2"
+	r.Name = MensTwo
 	r.Description = RatingTwo
 
 	_, err = common.CreateOne(common.GlobalDatabaseProvider, r)
@@ -79,7 +86,7 @@ func seedDevRatings(u UserId) {
 
 	r = NewRating()
 	r.UserId = u
-	r.Name = "Men's 3"
+	r.Name = MensThree
 	r.Description = RatingThree
 
 	_, err = common.CreateOne(common.GlobalDatabaseProvider, r)
@@ -97,6 +104,11 @@ func seedDevFormat(u UserId) {
 	format := NewFormat()
 	format.UserId = u
 	format.Name = "Men's Intraclub"
+
+	sort.Slice(ratings, func(i, j int) bool {
+		return ratings[i].Name < ratings[j].Name
+	})
+
 	for i, rating := range ratings {
 		// add possible ratings
 		format.PossibleRatings = append(format.PossibleRatings, rating.ID)

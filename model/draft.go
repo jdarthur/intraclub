@@ -3,8 +3,9 @@ package model
 import (
 	"errors"
 	"fmt"
-	"intraclub/common"
 	"time"
+
+	"intraclub/common"
 )
 
 // TeamCaptainAssignment is a struct which binds a TeamId to its captain
@@ -12,8 +13,8 @@ import (
 // e.g. who is on the clock, captains picking themselves, etc. without having
 // to re-query the team from the database on each call
 type TeamCaptainAssignment struct {
-	TeamId    TeamId
-	CaptainId UserId
+	TeamId    TeamId `json:"team_id"`
+	CaptainId UserId `json:"captain_idt"`
 }
 
 func (t TeamCaptainAssignment) StaticallyValid() error {
@@ -29,8 +30,13 @@ func (t TeamCaptainAssignment) DynamicallyValid(db common.DatabaseProvider) erro
 		return err
 	}
 
-	if team.Captain != t.CaptainId {
-		return fmt.Errorf("team/captain assignment (%s/%s) in draft does not match captain set on team record (%s)", t.TeamId, t.CaptainId, team.Captain)
+	captain, err := team.GetCaptain(db)
+	if err != nil {
+		return fmt.Errorf("team has no captain: %w", err)
+	}
+
+	if captain != t.CaptainId {
+		return fmt.Errorf("team/captain assignment (%s/%s) in draft does not match captain set on team record (%s)", t.TeamId, t.CaptainId, captain)
 	}
 
 	return common.ExistsById(db, &User{}, t.CaptainId.RecordId())
@@ -58,15 +64,13 @@ func (id DraftId) String() string {
 }
 
 type Draft struct {
-	ID                DraftId
-	Owner             UserId                   // This will be the commissioner of the league
-	Captains          []*TeamCaptainAssignment // This stores a cache of team and captain ID for validation purposes
-	Available         []UserId                 // All user IDs who are available to be drafted
-	Selections        []UserId                 // All user IDs who have been drafted, in order
-	Format            FormatId                 // Format in which the Season associated with this draft will be played
-	RatingCutoffs     map[RatingId]int         // map from rating ID to the last selection index matching that ID
-	CompletedAt       time.Time
-	DraftOrderPattern DraftOrderPattern
+	ID                DraftId           `json:"id"`
+	Name              string            `json:"name"`                // descriptive name for the draft, e.g. "2025 Men's Intraclub". this will become the default name of the Season post-draft
+	Owner             UserId            `json:"owner"`               // This will be the commissioner of the league
+	Format            FormatId          `json:"format"`              // Format in which the Season associated with this draft will be played
+	RatingCutoffs     map[RatingId]int  `json:"rating_cutoffs"`      // map from rating ID to the last selection index matching that ID
+	CompletedAt       time.Time         `json:"completed_at"`        // timestamp when the draft was completed
+	DraftOrderPattern DraftOrderPattern `json:"draft_order_pattern"` // draft order pattern, e.g. snake, straight-up, etc.
 }
 
 func (d *Draft) SetOwner(recordId common.RecordId) {
@@ -121,36 +125,6 @@ func (d *Draft) DynamicallyValid(db common.DatabaseProvider) error {
 		}
 	}
 
-	for _, captainAssignment := range d.Captains {
-		// validate that the team-to-captain assignment is correct
-		err = captainAssignment.DynamicallyValid(db)
-		if err != nil {
-			return err
-		}
-
-		// validate that the captain is in the available-to-draft list
-		if !d.IsInDraftList(captainAssignment.CaptainId) {
-			return fmt.Errorf("captain %s is not in draft list", captainAssignment.CaptainId)
-		}
-	}
-
-	// validate that each user marked available-to-draft exists
-	for _, a := range d.Available {
-		err = common.ExistsById(db, &User{}, a.RecordId())
-		if err != nil {
-			return err
-		}
-	}
-
-	for i, s := range d.Selections {
-		// validate that each selection is in the available-to-draft list
-		// we don't need to validate the user ID against the DB as we just
-		// did that for each available-to-draft player
-		if !d.IsInDraftList(s) {
-			return fmt.Errorf("user %s selected at index %d is not in draft list", s, i)
-		}
-	}
-
 	return nil
 }
 
@@ -168,8 +142,12 @@ func (d *Draft) SetId(id common.RecordId) {
 
 // IsInDraftList returns true if a particular UserId is present in
 // the available-to-draft list for this Draft
-func (d *Draft) IsInDraftList(userId UserId) bool {
-	for _, a := range d.Available {
+func (d *Draft) IsInDraftList(db common.DatabaseProvider, userId UserId) bool {
+	availablePlayers, err := d.GetAvailablePlayers(db)
+	if err != nil {
+		return false
+	}
+	for _, a := range availablePlayers {
 		if a == userId {
 			return true
 		}
@@ -178,52 +156,94 @@ func (d *Draft) IsInDraftList(userId UserId) bool {
 }
 
 // IsSelected returns true if this particular User has been selected
-func (d *Draft) IsSelected(userId UserId) bool {
-	for _, a := range d.Selections {
-		if a == userId {
+func (d *Draft) IsSelected(db common.DatabaseProvider, userId UserId) bool {
+	picks, err := d.GetPicks(db)
+	if err != nil {
+		return false
+	}
+	for _, p := range picks {
+		if p.UserId == userId {
 			return true
 		}
 	}
 	return false
 }
 
-// GetAllAvailableToSelect returns a list of all UserId values which
-// the provided captain is allowed to select.
-func (d *Draft) GetAllAvailableToSelect(captainId UserId) []UserId {
+// GetAvailablePlayers returns all userIds who are available to be drafted
+func (d *Draft) GetAvailablePlayers(db common.DatabaseProvider) ([]UserId, error) {
+	availablePlayers, err := common.GetAllWhere[*DraftAvailablePlayer](db, &DraftAvailablePlayer{}, func(dap *DraftAvailablePlayer) bool {
+		return dap.DraftId == d.ID
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]UserId, 0, len(availablePlayers))
+	for _, ap := range availablePlayers {
+		result = append(result, ap.PlayerId)
+	}
+	return result, nil
+}
+
+// GetPicks returns all draft picks ordered by their creation
+func (d *Draft) GetPicks(db common.DatabaseProvider) ([]*DraftPick, error) {
+	return common.GetAllWhere[*DraftPick](db, &DraftPick{}, func(dp *DraftPick) bool {
+		return dp.DraftId == d.ID
+	})
+}
+
+// GetCaptains retrieves all team captain assignments for this draft from the DraftCaptain join table.
+func (d *Draft) GetCaptains(db common.DatabaseProvider) ([]*DraftCaptain, error) {
+	return common.GetAllWhere[*DraftCaptain](db, &DraftCaptain{}, func(dc *DraftCaptain) bool {
+		return dc.DraftId == d.ID
+	})
+}
+
+// GetAllAvailableToSelect returns a list of all UserId values which the provided captain
+// is allowed to select. This excludes captains (except themselves) and already-selected players.
+func (d *Draft) GetAllAvailableToSelect(captainId UserId, db common.DatabaseProvider) []UserId {
 	output := make([]UserId, 0)
-	for _, v := range d.Available {
+	availablePlayers, _ := d.GetAvailablePlayers(db)
+	for _, v := range availablePlayers {
 		// check if this user is a different captain
-		err := d.IsADifferentCaptainId(v, captainId)
+		err := d.IsADifferentCaptainId(v, captainId, db)
 
 		// if the user is not a different captain, and they are
 		// not already selected, add to the available list
-		if err == nil && !d.IsSelected(v) {
+		if err == nil && !d.IsSelected(db, v) {
 			output = append(output, v)
 		}
 	}
 	return output
 }
 
-// GetCaptainOnTheClock gets which captain is currently on the clock
-// to select, based on the order in the TeamCaptainAssignment
-func (d *Draft) GetCaptainOnTheClock() (UserId, error) {
-	if len(d.Captains) == 0 {
+// GetCaptainOnTheClock determines which captain is currently on the clock to make a selection,
+// based on the draft order pattern and the current round/pick count.
+func (d *Draft) GetCaptainOnTheClock(db common.DatabaseProvider) (UserId, error) {
+	captains, err := d.GetCaptains(db)
+	if err != nil {
+		return 0, fmt.Errorf("no captains set for draft")
+	}
+	if len(captains) == 0 {
 		return 0, fmt.Errorf("no captains set for draft")
 	}
 
 	// get the round and pick of the next selection
-	round, pick := d.GetRoundAndPick(len(d.Selections))
+	round, pick := d.GetRoundAndPick(db)
 
 	// get the captain index based on our draft order
-	captainIndex := d.DraftOrderPattern.GetCaptainOnTheClock(round, pick, len(d.Captains))
-	return d.Captains[captainIndex].CaptainId, nil
+	captainIndex := d.DraftOrderPattern.GetCaptainOnTheClock(round, pick, len(captains))
+	return captains[captainIndex].CaptainId, nil
 }
 
-// IsADifferentCaptainId checks if this player ID belongs to a different captain
-// assigned to this Draft. This is used to validate that a captain cannot select
-// another captain in the Draft.
-func (d *Draft) IsADifferentCaptainId(player, captain UserId) error {
-	for _, otherCaptain := range d.Captains {
+// IsADifferentCaptainId checks if the given player ID belongs to a different captain
+// assigned to this Draft. Returns an error if the player is a different captain,
+// which prevents a captain from drafting another captain.
+func (d *Draft) IsADifferentCaptainId(player, captain UserId, db common.DatabaseProvider) error {
+	captains, err := d.GetCaptains(db)
+	if err != nil {
+		return nil
+	}
+	for _, otherCaptain := range captains {
 		// captain can draft themselves but not a different captain
 		if otherCaptain.CaptainId != captain && player == otherCaptain.CaptainId {
 			return fmt.Errorf("captain %s cannot select another captain %s", captain, otherCaptain.CaptainId)
@@ -232,12 +252,15 @@ func (d *Draft) IsADifferentCaptainId(player, captain UserId) error {
 	return nil
 }
 
-// SelectByCaptain selects a particular player by a particular captain. This validates that
-// the given captain is currently on the clock and that the player is
-func (d *Draft) SelectByCaptain(player, captain UserId) error {
+// SelectByCaptain selects a player on behalf of a captain. Validates that:
+// 1. The captain is currently on the clock to make a selection
+// 2. The player is not another captain
+// 3. The player is in the available-to-draft list
+// 4. The player has not already been selected
+func (d *Draft) SelectByCaptain(player, captain UserId, db common.DatabaseProvider) error {
 	// get the captain who is currently on the clock. If the
 	// captains have not yet been set, this will return an error
-	onTheClock, err := d.GetCaptainOnTheClock()
+	onTheClock, err := d.GetCaptainOnTheClock(db)
 	if err != nil {
 		return err
 	}
@@ -248,31 +271,68 @@ func (d *Draft) SelectByCaptain(player, captain UserId) error {
 	}
 
 	// return an error if the selected user ID belongs to a different captain
-	err = d.IsADifferentCaptainId(player, captain)
+	err = d.IsADifferentCaptainId(player, captain, db)
 	if err != nil {
 		return err
 	}
 
 	// select the player, returning an error if they are not available to select
-	return d.Select(player)
+	return d.Select(player, db)
 }
 
-// Select validates that this particular user is available to select and
-// adds them to the selections list if so
-func (d *Draft) Select(u UserId) error {
-	if !d.IsInDraftList(u) {
-		return fmt.Errorf("user with id %s is not in the available-to-draft list", u)
+// Select creates a new DraftPick record for the given player. Validates that:
+// 1. The player is in the available-to-draft list
+// 2. The player has not already been selected
+// The round, pick number, and rating are automatically calculated based on the draft state.
+func (d *Draft) Select(player UserId, db common.DatabaseProvider) error {
+	if !d.IsInDraftList(db, player) {
+		return fmt.Errorf("user with id %s is not in the available-to-draft list", player)
 	}
-	if d.IsSelected(u) {
-		return fmt.Errorf("user with id %s has already been selected", u)
+	if d.IsSelected(db, player) {
+		return fmt.Errorf("user with id %s has already been selected", player)
 	}
-	d.Selections = append(d.Selections, u)
-	return nil
+
+	// Get the last pick index to determine round and pick
+	picks, _ := d.GetPicks(db)
+	round, pick := d.GetRoundAndPickFromPicks(db, len(picks))
+
+	// Find the team for this pick
+	captains, _ := d.GetCaptains(db)
+	var teamId TeamId
+	// Simple logic: round-robin assignment
+	if round%2 != 0 {
+		pickIndex := (pick - 1) % len(captains)
+		teamId = captains[pickIndex].TeamId
+	} else {
+		pickIndex := (len(captains) - pick) % len(captains)
+		teamId = captains[pickIndex].TeamId
+	}
+
+	// Get the rating for this pick
+	format, _ := common.GetExistingRecordById(db, &Format{}, d.Format.RecordId())
+	rating := d.GetRatingForPick(format.PossibleRatings, len(picks))
+
+	// Create the pick record
+	draftPick := &DraftPick{
+		DraftId: d.ID,
+		TeamId:  teamId,
+		UserId:  player,
+		Round:   round,
+		Pick:    pick,
+		Rating:  rating,
+	}
+	_, err := common.CreateOne(db, draftPick)
+	return err
 }
 
-// GetTeamIndexByTeam gets the index in the team captain assignment list for a particular TeamId
-func (d *Draft) GetTeamIndexByTeam(teamId TeamId) (int, error) {
-	for i, assignment := range d.Captains {
+// GetTeamIndexByTeam returns the 0-based index for a team in the draft captain assignment order.
+// This index is used to determine the team's draft position in each round.
+func (d *Draft) GetTeamIndexByTeam(db common.DatabaseProvider, teamId TeamId) (int, error) {
+	captains, err := d.GetCaptains(db)
+	if err != nil {
+		return -1, err
+	}
+	for i, assignment := range captains {
 		if assignment.TeamId == teamId {
 			return i, nil
 		}
@@ -280,10 +340,14 @@ func (d *Draft) GetTeamIndexByTeam(teamId TeamId) (int, error) {
 	return -1, fmt.Errorf("team id %s not found", teamId)
 }
 
-// GetTeamIndexByCaptain gets the index in the team captain assignment list for a particular
-// captain ID. This is used to get draft results for a particular captain
-func (d *Draft) GetTeamIndexByCaptain(captainId UserId) (int, error) {
-	for i, assignment := range d.Captains {
+// GetTeamIndexByCaptain returns the 0-based index for a team captain in the draft order.
+// This is used to retrieve draft results for a particular captain.
+func (d *Draft) GetTeamIndexByCaptain(db common.DatabaseProvider, captainId UserId) (int, error) {
+	captains, err := d.GetCaptains(db)
+	if err != nil {
+		return -1, err
+	}
+	for i, assignment := range captains {
 		if assignment.CaptainId == captainId {
 			return i, nil
 		}
@@ -291,29 +355,42 @@ func (d *Draft) GetTeamIndexByCaptain(captainId UserId) (int, error) {
 	return -1, fmt.Errorf("captain id %s not found", captainId)
 }
 
-// GetRoundAndPick gets the round and pick for a particular index in the selection list,
-// e.g. selections[8] is round 3, pick 1 in a 4-team Draft
-func (d *Draft) GetRoundAndPick(selectionIndex int) (round int, pick int) {
-	return (selectionIndex / len(d.Captains)) + 1, (selectionIndex % len(d.Captains)) + 1
+// GetRoundAndPick returns the round and pick number for the next selection,
+// based on the current number of picks already made.
+func (d *Draft) GetRoundAndPick(db common.DatabaseProvider) (round int, pick int) {
+	picks, _ := d.GetPicks(db)
+	return d.GetRoundAndPickFromPicks(db, len(picks))
 }
 
-// GetDraftSelections gets the DraftSelection results for a particular team
+// GetRoundAndPickFromPicks calculates the round and pick number from a selection index.
+// For example, index 8 with 4 teams returns round 3, pick 1.
+func (d *Draft) GetRoundAndPickFromPicks(db common.DatabaseProvider, selectionIndex int) (round int, pick int) {
+	captains, _ := d.GetCaptains(db)
+	return (selectionIndex / len(captains)) + 1, (selectionIndex % len(captains)) + 1
+}
+
+// GetDraftSelections returns the list of DraftSelection results for a particular team,
+// ordered by pick number within each round.
 func (d *Draft) GetDraftSelections(db common.DatabaseProvider, teamId TeamId) ([]DraftSelection, error) {
-	teamIndex, err := d.GetTeamIndexByTeam(teamId)
+	teamIndex, err := d.GetTeamIndexByTeam(db, teamId)
 	if err != nil {
 		return nil, err
 	}
 	return d.getDraftSelectionsByTeamIndex(db, teamIndex)
 }
 
+// GetDraftSelectionsByCaptainId returns the list of DraftSelection results for a particular captain.
+// This is a convenience method that looks up the captain's team and retrieves their selections.
 func (d *Draft) GetDraftSelectionsByCaptainId(db common.DatabaseProvider, captainId UserId) ([]DraftSelection, error) {
-	teamIndex, err := d.GetTeamIndexByCaptain(captainId)
+	teamIndex, err := d.GetTeamIndexByCaptain(db, captainId)
 	if err != nil {
 		return nil, err
 	}
 	return d.getDraftSelectionsByTeamIndex(db, teamIndex)
 }
 
+// GetRatingForPick returns the rating assigned to a pick based on the draft's rating cutoffs.
+// The rating is determined by comparing the pick number against the stored cutoffs.
 func (d *Draft) GetRatingForPick(ratings []RatingId, pick int) RatingId {
 	// check if this pick is below one of the cutoffs
 	for _, rating := range ratings[:len(ratings)-1] {
@@ -356,39 +433,33 @@ func (d *Draft) ValidateRatingsCutoff(ratings []RatingId) error {
 
 func (d *Draft) getDraftSelectionsByTeamIndex(db common.DatabaseProvider, teamIndex int) ([]DraftSelection, error) {
 	selections := make([]DraftSelection, 0)
-	ratings, err := d.GetAvailableRatings(db)
+
+	picks, err := d.GetPicks(db)
 	if err != nil {
 		return nil, err
 	}
 
-	for i, userId := range d.Selections {
-		round, pick := d.GetRoundAndPick(i)
+	for i, pick := range picks {
+		round, pickNum := d.GetRoundAndPickFromPicks(db, i)
 
 		// this userId belongs to this team if it matches the team's
-		// selection index for the given round, e.g. the 1.1 for the
-		// team which received the first overall pick or the 2.3 for
-		// the team which received the second overall pick
+		// selection index for the given round
 		appliesToTeam := false
 		if round%2 != 0 {
-			if pick == (teamIndex + 1) {
-				// 1->2->3->4 round, e.g. first round, third round, etc.
+			if pickNum == (teamIndex + 1) {
 				appliesToTeam = true
 			}
-		} else if pick == (len(d.Captains) - teamIndex) {
-			// 4->3->2->1 round, e.g. second round, fourth round, etc.
-			appliesToTeam = true
 		}
 
 		// if this player applies to the team, retrieve the user for
 		// this particular selection and add it to the list
 		if appliesToTeam {
-			user, err := common.GetExistingRecordById(db, &User{}, userId.RecordId())
+			user, err := common.GetExistingRecordById(db, &User{}, pick.UserId.RecordId())
 			if err != nil {
 				return nil, err
 			}
 
-			rating := d.GetRatingForPick(ratings, i)
-			selections = append(selections, DraftSelection{Round: round, Pick: pick, User: user, Rating: rating})
+			selections = append(selections, DraftSelection{Round: round, Pick: pickNum, User: user, Rating: pick.Rating})
 		}
 	}
 	return selections, nil
@@ -403,58 +474,85 @@ func (d *Draft) GetAvailableRatings(db common.DatabaseProvider) ([]RatingId, err
 }
 
 func (d *Draft) Initialize(db common.DatabaseProvider, captains []UserId) error {
-	if len(d.Captains) != 0 {
+	captainsList, err := d.GetCaptains(db)
+	if err != nil || len(captainsList) != 0 {
 		return errors.New("draft is already initialized")
 	}
 
-	if len(d.Selections) != 0 {
+	picksList, err := d.GetPicks(db)
+	if err != nil || len(picksList) != 0 {
 		return errors.New("draft has selections assigned before initialization")
 	}
 
 	for i, captain := range captains {
-		err := common.ExistsById(db, &User{}, captain.RecordId())
+		err = common.ExistsById(db, &User{}, captain.RecordId())
 		if err != nil {
 			return err
 		}
 		name := fmt.Sprintf("Team %d", i+1)
 		team := NewDefaultTeam(captain, name)
-		v, err := common.CreateOne(db, team)
+		team, err = common.CreateOne(db, team)
 		if err != nil {
 			return err
 		}
 
-		d.Captains = append(d.Captains, &TeamCaptainAssignment{
-			TeamId:    v.ID,
+		// Create a draft captain record
+		draftCaptain := &DraftCaptain{
+			DraftId:   d.ID,
+			TeamId:    team.ID,
 			CaptainId: captain,
-		})
+		}
+		_, err = common.CreateOne(db, draftCaptain)
+		if err != nil {
+			return err
+		}
 
 		// add this captain to the available players list
-		if !d.IsInDraftList(captain) {
-			d.Available = append(d.Available, captain)
+		if !d.IsInDraftList(db, captain) {
+			availablePlayer := &DraftAvailablePlayer{
+				DraftId:  d.ID,
+				PlayerId: captain,
+			}
+			_, err = common.CreateOne(db, availablePlayer)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return common.UpdateOne(db, d)
 }
 
 func (d *Draft) AssignDraftablePlayers(db common.DatabaseProvider, players []UserId) error {
-	if d.IsDraftCompleted() {
+	if d.IsDraftCompleted(db) {
 		return errors.New("draft is already completed")
 	}
 
 	for _, player := range players {
-		if !d.IsInDraftList(player) {
-			d.Available = append(d.Available, player)
+		if !d.IsInDraftList(db, player) {
+			availablePlayer := &DraftAvailablePlayer{
+				DraftId:  d.ID,
+				PlayerId: player,
+			}
+			_, err := common.CreateOne(db, availablePlayer)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return common.UpdateOne(db, d)
 }
 
 func (d *Draft) AssignDraftedPlayersToTeams(db common.DatabaseProvider) error {
-	if !d.IsDraftCompleted() {
+	if !d.IsDraftCompleted(db) {
 		return errors.New("draft is not yet completed")
 	}
 
-	for _, assignment := range d.Captains {
+	captains, err := d.GetCaptains(db)
+	if err != nil {
+		return err
+	}
+
+	for _, assignment := range captains {
 		// get the team record corresponding to the assignment
 		team, err := common.GetExistingRecordById(db, &Team{}, assignment.TeamId.RecordId())
 		if err != nil {
@@ -467,12 +565,25 @@ func (d *Draft) AssignDraftedPlayersToTeams(db common.DatabaseProvider) error {
 			return err
 		}
 
-		team.RatingsMap = make(map[UserId]RatingId)
+		// create team assignment for each drafted player
 		for _, result := range results {
-			// if drafted player is not already a member of the team, add them.
-			// The only added player when this is called should be the captain
-			if !team.IsTeamMember(result.User.ID) {
-				team.Members = append(team.Members, result.User.ID)
+			// check if user is already assigned to this team
+			isMember, err := team.IsTeamMember(db, result.User.ID)
+			if err != nil {
+				return err
+			}
+			if !isMember {
+				// create team assignment for this player
+				teamAssignment := &TeamAssignment{
+					TeamId: team.ID,
+					UserId: result.User.ID,
+					Role:   TeamRoleMember,
+				}
+				_, err = common.CreateOne(db, teamAssignment)
+				if err != nil {
+					return err
+				}
+				// also add to ratings map
 				team.RatingsMap[result.User.ID] = result.Rating
 			}
 		}
@@ -487,7 +598,7 @@ func (d *Draft) AssignDraftedPlayersToTeams(db common.DatabaseProvider) error {
 }
 
 func (d *Draft) CreateSeason(db common.DatabaseProvider, name string, facility FacilityId, t StartTime) (*Season, error) {
-	if !d.IsDraftCompleted() {
+	if !d.IsDraftCompleted(db) {
 		return nil, errors.New("draft is not completed")
 	}
 
@@ -504,23 +615,49 @@ func (d *Draft) CreateSeason(db common.DatabaseProvider, name string, facility F
 	s.Name = name
 	s.Facility = facility
 	s.StartTime = t
-
-	// autofill the remaining required fields from the draft data
-	s.Commissioners = []UserId{d.Owner}
-	for _, tca := range d.Captains {
-		s.Teams = append(s.Teams, tca.TeamId)
-	}
 	s.DraftId = d.ID
 
-	// create a new Season record
-	return common.CreateOne(db, s)
+	// create a new Season record first
+	s, err = common.CreateOne(db, s)
+	if err != nil {
+		return nil, err
+	}
+
+	// autofill the remaining required fields from the draft data
+	err = s.AddCommissioner(db, d.Owner)
+	if err != nil {
+		return nil, err
+	}
+
+	captains, err := d.GetCaptains(db)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, tca := range captains {
+		err = s.AddTeam(db, tca.TeamId)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return s, nil
 }
 
-func (d *Draft) IsDraftCompleted() bool {
-	if len(d.Available) == 0 {
+func (d *Draft) IsDraftCompleted(db common.DatabaseProvider) bool {
+	availablePlayers, err := d.GetAvailablePlayers(db)
+	if err != nil {
 		return false
 	}
-	return len(d.Available) == len(d.Selections)
+	if len(availablePlayers) == 0 {
+		return false
+	}
+
+	picks, err := d.GetPicks(db)
+	if err != nil {
+		return false
+	}
+	return len(availablePlayers) == len(picks)
 }
 
 func (d *Draft) GetSeason(db common.DatabaseProvider) (*Season, error) {

@@ -5,23 +5,22 @@ import {Login} from "../login/Login.js";
 import * as React from "react";
 import {AuthPage} from "../login/AuthPage.js";
 import {UserPage} from "../user/UserPage";
-import {AllLeaguesPage} from "../league/AllLeaguesPage";
 import {TeamsPage} from "../team/TeamsPage";
 import {SettingsPage} from "../settings/SettingsPage";
 import {Register} from "../login/Register";
 import {DefaultScoreboard} from "../match_scoreboard/DefaultScoreboard";
-import {LeagueLandingPage} from "../league/LeagueLandingPage";
+import {Seasons} from "../season/Seasons";
 
 export const ROOT = "/"
 export const LOGIN = "/login"
 export const REGISTER = "/register"
-export const LEAGUES = "/leagues"
+export const SEASONS = "/seasons"
 export const TEAM = "/team"
 export const AUTH = "/auth"
 export const USER = "/user/:id"
 export const SETTINGS = "/settings"
 export const SCOREBOARD = "/scoreboard"
-export const LEAGUE = "/league/:id"
+export const SEASON = "/season/:id"
 
 export const router = createBrowserRouter([
     {
@@ -37,8 +36,8 @@ export const router = createBrowserRouter([
         element: <MainLayout content={<Register/>}/>
     },
     {
-        path: LEAGUES,
-        element: <MainLayout content={<AllLeaguesPage/>}/>
+        path: SEASONS,
+        element: <MainLayout content={<Seasons />}/>
     },
     {
         path: TEAM,
@@ -61,8 +60,8 @@ export const router = createBrowserRouter([
         element: <DefaultScoreboard/>
     },
     {
-        path: LEAGUE,
-        element: <MainLayout content={<LeagueLandingPage/>}/>
+        path: SEASON,
+        element: <MainLayout content={<>empty</>}/>
     }
 
 ]);

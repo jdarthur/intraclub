@@ -63,7 +63,7 @@ type RatingTooltipProps = {
     RatingId: string
 }
 
-function RatingTooltip({RatingId}: RatingTooltipProps) {
+export function RatingTooltip({RatingId}: RatingTooltipProps) {
     const {data, isFetching} = useGetRatingsQuery()
     if (isFetching) {
         return <Spin/>

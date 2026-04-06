@@ -2,8 +2,10 @@ package model
 
 import (
 	"fmt"
-	"intraclub/common"
+	"math/rand"
 	"testing"
+
+	"intraclub/common"
 )
 
 func newValidRating(u UserId) *Rating {
@@ -18,7 +20,7 @@ func newStoredRating(t *testing.T, db common.DatabaseProvider) *Rating {
 	user := newStoredUser(t, db)
 	r := NewRating()
 	r.UserId = user.ID
-	r.Name = "Rating 123"
+	r.Name = fmt.Sprintf("Rating %d", rand.Intn(10_000))
 	r.Description = "test description"
 	v, err := common.CreateOne(db, r)
 	if err != nil {

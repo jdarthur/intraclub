@@ -16,7 +16,13 @@ type CsvImportResult struct {
 }
 
 func HandleCsvImport(c *gin.Context) {
-	userList, err := model.ParseUserCsvFromReader(c.Request.Body)
+	v, ok := c.GetPostForm("file")
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "form file not provided"})
+		return
+	}
+
+	userList, err := model.ParseUserCsvFromString(v)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

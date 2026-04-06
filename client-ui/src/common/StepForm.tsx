@@ -7,6 +7,7 @@ export type StepFormStep = {
     title: string
     content: any
     onNext?: () => Promise<SubmitResult>
+    disabled?: boolean
 }
 
 export type StepFormProps = {

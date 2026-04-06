@@ -19,7 +19,11 @@ func getAnyTeamCaptain(t *testing.T, db common.DatabaseProvider, season *Season)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return teams[0].Captain
+	captain, err := teams[0].GetCaptain(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return captain
 }
 
 func copyComment(c *Comment) *Comment {
@@ -124,7 +128,8 @@ func TestEditByCommissioner(t *testing.T) {
 	teamCaptain := getAnyTeamCaptain(t, db, season)
 	c := newStoredComment(t, db, teamCaptain, blurb)
 
-	commissioner := season.Commissioners[0]
+	commissioners, _ := season.GetCommissioners(db)
+	commissioner := commissioners[0]
 
 	copied := copyComment(c)
 	copied.Content = "new content"
@@ -188,7 +193,8 @@ func TestDeleteByCommissioner(t *testing.T) {
 	teamCaptain := getAnyTeamCaptain(t, db, season)
 	c := newStoredComment(t, db, teamCaptain, blurb)
 
-	commissioner := season.Commissioners[0]
+	commissioners, _ := season.GetCommissioners(db)
+	commissioner := commissioners[0]
 
 	copied := copyComment(c)
 	copied.Content = "new content"

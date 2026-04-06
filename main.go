@@ -40,6 +40,8 @@ func main() {
 	whoAmI := common.RouteFamily[*model.User]{UseAuth: true}
 	whoAmI.Handle(api, route.WhoAmI{})
 
+	api.Handle(common.HttpMethodPost.String(), "/import_users_from_csv", route.HandleCsvImport)
+
 	startTokenMgr := &model.StartLoginTokenManager{}
 	api.POST("/one_time_password", startTokenMgr.OneTimePassword)
 	api.POST("/token", startTokenMgr.CreateJwtFromOneTimePassword)
@@ -65,6 +67,11 @@ func main() {
 
 	formats := common.NewCrudCommon(model.NewFormat, true)
 	formats.HandleRouteTypes(api, common.CrudWrapperFunctionAll...)
+
+	api.GET("/draft_order_patterns", model.GetDraftOrderPatterns)
+
+	seasonComposite := common.RouteFamily[*model.SeasonComposite]{UseAuth: true}
+	seasonComposite.Handle(api, route.GetMySeasons{})
 
 	err = r.Run("127.0.0.1:8080")
 	if err != nil {

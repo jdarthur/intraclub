@@ -77,10 +77,18 @@ func (l *LineupPairing) DynamicallyValid(db common.DatabaseProvider) error {
 	}
 
 	// validate that both players are members of this team
-	if !team.IsTeamMember(l.Player1) {
+	isMember1, err := team.IsTeamMember(db, l.Player1)
+	if err != nil {
+		return err
+	}
+	if !isMember1 {
 		return fmt.Errorf("player 1 is not team member for team %s", l.TeamId)
 	}
-	if !team.IsTeamMember(l.Player2) {
+	isMember2, err := team.IsTeamMember(db, l.Player2)
+	if err != nil {
+		return err
+	}
+	if !isMember2 {
 		return fmt.Errorf("player 2 is not team member for team %s", l.TeamId)
 	}
 

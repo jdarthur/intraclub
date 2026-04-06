@@ -19,12 +19,17 @@ func generateRandomPreDraftGrades(t *testing.T, db common.DatabaseProvider, play
 		t.Fatal(err)
 	}
 
-	for _, playerId := range randomDraft.Available {
+	availablePlayers, err := randomDraft.GetAvailablePlayers(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, playerId := range availablePlayers {
 
 		// create X grades per player
 		for i := 0; i < gradeCount; i++ {
 			// grader will just be the first X user IDs in the available list
-			grader := randomDraft.Available[i]
+			grader := availablePlayers[i%len(availablePlayers)]
 
 			ratingIndex := rand.Intn(len(format.PossibleRatings)) // random rating
 			modifier := PreDraftRatingModifier(rand.Intn(3))      // random modifier
@@ -52,9 +57,15 @@ func newValidGrade(t *testing.T, db common.DatabaseProvider) *PreDraftGrade {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	availablePlayers, err := randomDraft.GetAvailablePlayers(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	grade := NewPreDraftGrade()
-	grade.PlayerId = randomDraft.Available[0]
-	grade.GraderId = randomDraft.Available[0]
+	grade.PlayerId = availablePlayers[0]
+	grade.GraderId = availablePlayers[0]
 	grade.DraftId = randomDraft.ID
 	grade.Rating = format.PossibleRatings[0]
 	return grade
@@ -86,8 +97,13 @@ func TestPreDraftInvalidRating(t *testing.T) {
 	rating := newStoredRating(t, db)
 	draft := newRandomDraft(t, db, 5, 2)
 
-	player := draft.Available[0]
-	grader := draft.Available[1]
+	availablePlayers, err := draft.GetAvailablePlayers(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	player := availablePlayers[0]
+	grader := availablePlayers[1]
 
 	grade := NewPreDraftGrade()
 	grade.PlayerId = player
@@ -95,7 +111,7 @@ func TestPreDraftInvalidRating(t *testing.T) {
 	grade.DraftId = draft.ID
 	grade.Rating = rating.ID
 
-	err := grade.DynamicallyValid(db)
+	err = grade.DynamicallyValid(db)
 	if err == nil {
 		t.Fatal("Expected error, got nil")
 	}
@@ -136,10 +152,26 @@ func TestPreDraftInvalidDraftId(t *testing.T) {
 }
 
 func TestPreDraftInvalidRatingId(t *testing.T) {
+
 	db := common.NewUnitTestDBProvider()
-	grade := newValidGrade(t, db)
-	grade.Rating = RatingId(common.InvalidRecordId)
-	err := grade.DynamicallyValid(db)
+	rating := newStoredRating(t, db)
+	draft := newRandomDraft(t, db, 5, 2)
+
+	availablePlayers, err := draft.GetAvailablePlayers(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	player := availablePlayers[0]
+	grader := availablePlayers[1]
+
+	grade := NewPreDraftGrade()
+	grade.PlayerId = player
+	grade.GraderId = grader
+	grade.DraftId = draft.ID
+	grade.Rating = rating.ID
+
+	err = grade.DynamicallyValid(db)
 	if err == nil {
 		t.Fatal("Expected error, got nil")
 	}
@@ -197,11 +229,18 @@ func TestGetRatingAggregate(t *testing.T) {
 func TestCalculateNumericGrades(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	draft := newRandomDraft(t, db, 4, 4)
-	playerToGrade := draft.Available[0]
+
+	availablePlayers, err := draft.GetAvailablePlayers(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	format, err := common.GetExistingRecordById(db, &Format{}, draft.Format.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	playerToGrade := availablePlayers[0]
 
 	grade := NewPreDraftGrade()
 	grade.PlayerId = playerToGrade
@@ -240,11 +279,16 @@ func TestGradeWhenDraftIsCompleted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	completeExistingDraft(t, draft)
+	completeExistingDraft(t, draft, db)
+
+	availablePlayers, err := draft.GetAvailablePlayers(db)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	grade := NewPreDraftGrade()
-	grade.PlayerId = draft.Available[0]
-	grade.GraderId = draft.Available[0]
+	grade.PlayerId = availablePlayers[0]
+	grade.GraderId = availablePlayers[0]
 	grade.DraftId = draft.ID
 	grade.Rating = format.PossibleRatings[0]
 

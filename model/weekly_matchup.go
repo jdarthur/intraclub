@@ -31,7 +31,7 @@ func (t *TeamMatchup) Validate(db common.DatabaseProvider, season *Season) error
 		return fmt.Errorf("home team error: %s", err)
 	}
 
-	if !season.IsTeamAssignedToSeason(t.HomeTeam) {
+	if !season.IsTeamAssignedToSeason(db, t.HomeTeam) {
 		return fmt.Errorf("home team %s is not assigned to season %s", t.HomeTeam, season.ID)
 	}
 
@@ -41,7 +41,7 @@ func (t *TeamMatchup) Validate(db common.DatabaseProvider, season *Season) error
 			return fmt.Errorf("away team error: %s", err)
 		}
 
-		if !season.IsTeamAssignedToSeason(t.AwayTeam) {
+		if !season.IsTeamAssignedToSeason(db, t.AwayTeam) {
 			return fmt.Errorf("away team %s is not assigned to season %s", t.AwayTeam, season.ID)
 		}
 	}
@@ -145,10 +145,10 @@ func (w *WeeklyMatchup) DynamicallyValid(db common.DatabaseProvider) error {
 		}
 	}
 
-	return w.ValidateThatEachTeamHasOneMatchup(season)
+	return w.ValidateThatEachTeamHasOneMatchup(db, season)
 }
 
-func (w *WeeklyMatchup) ValidateThatEachTeamHasOneMatchup(season *Season) error {
+func (w *WeeklyMatchup) ValidateThatEachTeamHasOneMatchup(db common.DatabaseProvider, season *Season) error {
 	m := make(map[TeamId]bool)
 	for _, matchup := range w.Matchups {
 		m[matchup.HomeTeam] = true
@@ -157,11 +157,16 @@ func (w *WeeklyMatchup) ValidateThatEachTeamHasOneMatchup(season *Season) error 
 		}
 	}
 
-	if len(m) != len(season.Teams) {
-		for _, team := range season.Teams {
-			_, ok := m[team]
+	teams, err := season.GetTeams(db)
+	if err != nil {
+		return err
+	}
+
+	if len(m) != len(teams) {
+		for _, team := range teams {
+			_, ok := m[team.ID]
 			if !ok {
-				return fmt.Errorf("team %s does not have a matchup or bye", team)
+				return fmt.Errorf("team %s does not have a matchup or bye", team.ID)
 			}
 		}
 	}

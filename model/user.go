@@ -28,6 +28,17 @@ func UserIdListToRecordIdList(input []UserId) []common.RecordId {
 	return output
 }
 
+func UserIdSliceToUserSlice(input []UserId, db common.DatabaseProvider) []*User {
+	output := make([]*User, 0, len(input))
+	for _, id := range input {
+		user, err := common.GetExistingRecordById(db, &User{}, id.RecordId())
+		if err == nil {
+			output = append(output, user)
+		}
+	}
+	return output
+}
+
 type User struct {
 	ID          UserId       `json:"id"`
 	FirstName   string       `json:"first_name"`

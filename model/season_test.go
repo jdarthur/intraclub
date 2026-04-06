@@ -2,15 +2,16 @@ package model
 
 import (
 	"fmt"
-	"intraclub/common"
 	"testing"
+
+	"intraclub/common"
 )
 
-func newDefaultSeason(t *testing.T, db common.DatabaseProvider) *Season {
+func newDefaultSeason(t *testing.T, db common.DatabaseProvider) (s *Season, commish *User) {
 	return newDefaultSeasonWithTeams(t, db, 1)
 }
 
-func newDefaultSeasonWithTeams(t *testing.T, db common.DatabaseProvider, teamCount int) *Season {
+func newDefaultSeasonWithTeams(t *testing.T, db common.DatabaseProvider, teamCount int) (s *Season, commish *User) {
 	commissioner := newStoredUser(t, db)
 
 	teams := make([]*Team, 0)
@@ -19,7 +20,7 @@ func newDefaultSeasonWithTeams(t *testing.T, db common.DatabaseProvider, teamCou
 		teams = append(teams, newStoredTeam(t, db, teamCaptain.ID))
 	}
 
-	return newStoredSeason(t, db, commissioner.ID, teams)
+	return newStoredSeason(t, db, commissioner.ID, teams), commissioner
 }
 
 func newStoredSeason(t *testing.T, db common.DatabaseProvider, commissioner UserId, teams []*Team) *Season {
@@ -29,19 +30,28 @@ func newStoredSeason(t *testing.T, db common.DatabaseProvider, commissioner User
 
 	season := NewSeason()
 	season.Name = "Test Season"
-	season.Commissioners = []UserId{commissioner}
 	season.StartTime = NewStartTime(8, 30)
 	season.DraftId = draft.ID
 	season.Facility = facility.ID
 	season.PlayoffStructure = playoffStructure.ID
-	for _, team := range teams {
-		season.Teams = append(season.Teams, team.ID)
-	}
 
 	v, err := common.CreateOne(db, season)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	for _, team := range teams {
+		err := season.AddTeam(db, team.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	err = season.AddCommissioner(db, commissioner)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	return v
 }
 

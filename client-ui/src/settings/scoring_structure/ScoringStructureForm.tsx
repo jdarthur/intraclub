@@ -35,7 +35,6 @@ export function ScoringStructureForm({
     const [winCondition, setWinCondition] = useState<WinCondition>(InitialState.win_condition)
     const [isComposite, setIsComposite] = useState<boolean>(InitialState?.is_composite)
 
-
     const [f] = Form.useForm()
 
     const onChange = (changed: any, values: any) => {

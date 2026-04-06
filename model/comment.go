@@ -84,8 +84,12 @@ func (c *Comment) EditableBy(db common.DatabaseProvider) []common.RecordId {
 		c.Owner.RecordId(),
 		blurb.Owner.RecordId(),
 	}
-	for _, commissioner := range season.Commissioners {
-		editors = append(editors, commissioner.RecordId())
+
+	commissioners, err := season.GetCommissioners(db)
+	if err == nil {
+		for _, commissioner := range commissioners {
+			editors = append(editors, commissioner.RecordId())
+		}
 	}
 	return editors
 }

@@ -1,6 +1,7 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -77,20 +78,38 @@ type ApiRequest[T Validatable] struct {
 	// This can be validated using the Validatable functions defined for the type
 	Body T
 
-	// Token is the AuthToken passed into the request, if one was passed in.
+	// Token is the AuthToken passed into the request if one was passed in.
 	// This can be used to enforce access control on get requests and auto-assign
-	// values such as record owners on create requests
+	// values such as record owners on creation requests
 	Token *AuthToken
 
 	// DatabaseProvider is a DatabaseProvider interface passed to the
 	// ApiRoute if it needs to do something in the database. This will not be
 	// used unless the route is manually using the RouteFamily struct
 	DatabaseProvider DatabaseProvider
+
+	request *http.Request
+}
+
+// ParseQuery parses the query parameters from the request into the given struct.
+// This allows you to create a structured format for query parameters for a
+// given ApiRequest type rather than parsing out key/value pairs manually in a
+// route handler function.
+func (a ApiRequest[T]) ParseQuery(v any) error {
+	m := make(map[string]any)
+	for key, value := range a.request.URL.Query() {
+		m[key] = value
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, v)
 }
 
 // RouteFamily is a typed helper struct to implement a common interface for
 // API endpoints. Most API routes should use common helpers such as CrudCommon,
-// but this helper can be used for e.g. special one-off routes or routes
+// but this helper can be used for, e.g., special one-off routes or routes
 // which don't conform to the normal constraints around CRUD access/edit rights
 type RouteFamily[T Validatable] struct {
 	// UseAuth requires all requests to this RouteFamily to be sent with a valid JWT (if true)
@@ -150,7 +169,7 @@ func (r *RouteFamily[T]) addToEngine(e *gin.RouterGroup) {
 	}
 }
 
-// routeWrapper is an internal struct which wraps an ApiRoute with a DatabaseProvider
+// routeWrapper is an internal struct that wraps an ApiRoute with a DatabaseProvider
 // and stores whether the given ApiRoute will need authentication. This is used inside
 // the RouteFamily helper functions and applies common DB and auth logic to an ApiRoute
 type routeWrapper[T Validatable] struct {
@@ -166,7 +185,7 @@ func (r *routeWrapper[T]) Handle(c *gin.Context) {
 	var token *AuthToken
 	var err error
 
-	// get token from request if configured for this route
+	// get the token from request if configured for this route
 	if r.UseAuth {
 		token, err = GetToken(c)
 		if err != nil {
@@ -187,6 +206,7 @@ func (r *routeWrapper[T]) Handle(c *gin.Context) {
 		PathId:           pathId,
 		Token:            token,
 		DatabaseProvider: r.Database,
+		request:          c.Request,
 	}
 
 	// parse out the body of the request if this route uses a request body

@@ -3,6 +3,7 @@ package common
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -61,6 +62,23 @@ func RecordIdFromString(s string) (RecordId, error) {
 		return InvalidRecordId, fmt.Errorf("short read on hex.Decode")
 	}
 	return RecordId(binary.BigEndian.Uint64(b)), nil
+}
+
+func UnmarshalStringIdList(bytes []byte) ([]RecordId, error) {
+	l := make([]string, 0)
+	err := json.Unmarshal(bytes, &l)
+	if err != nil {
+		return nil, err
+	}
+	l2 := make([]RecordId, 0, len(l))
+	for _, id := range l {
+		recordId, err := RecordIdFromString(id)
+		if err != nil {
+			return nil, err
+		}
+		l2 = append(l2, recordId)
+	}
+	return l2, nil
 }
 
 // InvalidRecordId is a special record ID that indicates a value hasn't been set

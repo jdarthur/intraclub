@@ -2,8 +2,9 @@ package model
 
 import (
 	"fmt"
-	"intraclub/common"
 	"testing"
+
+	"intraclub/common"
 )
 
 func newStoredSchedule(t *testing.T, db common.DatabaseProvider, season *Season) *Schedule {
@@ -19,7 +20,7 @@ func newStoredSchedule(t *testing.T, db common.DatabaseProvider, season *Season)
 
 func TestSeasonUpdatedOnScheduleCreate(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season := newDefaultSeason(t, db)
+	season, _ := newDefaultSeason(t, db)
 
 	schedule := newStoredSchedule(t, db, season)
 
@@ -35,7 +36,7 @@ func TestSeasonUpdatedOnScheduleCreate(t *testing.T) {
 
 func TestOneSchedulePerSeason(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season := newDefaultSeason(t, db)
+	season, _ := newDefaultSeason(t, db)
 	schedule := newStoredSchedule(t, db, season)
 
 	schedule2 := NewSchedule()

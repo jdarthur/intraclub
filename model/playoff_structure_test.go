@@ -2,8 +2,9 @@ package model
 
 import (
 	"fmt"
-	"intraclub/common"
 	"testing"
+
+	"intraclub/common"
 )
 
 func newStoredPlayoffStructure(t *testing.T, db common.DatabaseProvider) *PlayoffStructure {
@@ -107,7 +108,7 @@ func TestTwoWildCards(t *testing.T) {
 func TestPlayoffStructureCannotBeDeletedAfterUsage(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	s := newStoredPlayoffStructure(t, db)
-	season := newDefaultSeason(t, db)
+	season, _ := newDefaultSeason(t, db)
 	season.PlayoffStructure = s.ID
 	err := common.UpdateOne(db, season)
 	if err != nil {
@@ -124,7 +125,7 @@ func TestPlayoffStructureCannotBeDeletedAfterUsage(t *testing.T) {
 func TestPlayoffStructureCannotBeEditedAfterUsage(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	s := newStoredPlayoffStructure(t, db)
-	season := newDefaultSeason(t, db)
+	season, _ := newDefaultSeason(t, db)
 	season.PlayoffStructure = s.ID
 	err := common.UpdateOne(db, season)
 	if err != nil {

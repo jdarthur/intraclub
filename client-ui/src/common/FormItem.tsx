@@ -27,7 +27,8 @@ export function FormItem({name, label, children, inputType, disabled, placeholde
         if (inputType == INPUT) {
             content = <Input disabled={disabled} placeholder={placeholder}/>
         } else if (inputType == NUMBER_INPUT) {
-            content = <InputNumber disabled={disabled} placeholder={placeholder} min={min} max={max} suffix={suffix} style={{width:'100%'}}/>
+            content = <InputNumber disabled={disabled} placeholder={placeholder} min={min} max={max} suffix={suffix}
+                                   style={{width: '100%'}}/>
         } else if (inputType == TEXT_AREA) {
             content = <Input.TextArea disabled={disabled} placeholder={placeholder}/>
         } else if (inputType == SUGGESTION_INPUT) {
@@ -35,12 +36,22 @@ export function FormItem({name, label, children, inputType, disabled, placeholde
         }
     }
 
+    let labelCol = undefined
+    if (label) {
+        labelCol = {span: 10}
+    }
+
+    let wrapperCol = undefined
+    if (label) {
+        wrapperCol = {span: 14}
+    }
+
     return <Form.Item
         name={name}
         label={label}
         labelAlign={'left'}
-        labelCol={{span: 10}}
-        wrapperCol={{span: 14}}
+        labelCol={labelCol}
+        wrapperCol={wrapperCol}
         colon={false}
     >
         {content}
@@ -86,6 +97,28 @@ export function SelectFormItem({name, label, options, disabled, multiple}: Selec
 
     return <FormItem name={name} label={label}>
         <Select options={options} disabled={disabled} mode={mode}/>
+    </FormItem>
+}
+
+type DoubleSelectProps = {
+    dualLabel: string,
+    name1: any
+    name2: any
+    options1: { label: string, value: any }[]
+    options2: { label: string, value: any }[]
+}
+
+export function DoubleSelectFormItem({name1, name2, dualLabel, options1, options2}: DoubleSelectProps) {
+    return <FormItem name={""} label={dualLabel}>
+        <span style={{display: "flex", width: "100%", justifyContent: "space-evenly"}} >
+            <span style={{width:'100%'}}>
+                <SelectFormItem name={name1} label={""} options={options1}/>
+            </span>
+            <span style={{width: "1em"}}/>
+            <span style={{width:'100%'}}>
+                <SelectFormItem name={name2} label={""} options={options2}/>
+            </span>
+        </span>
     </FormItem>
 }
 

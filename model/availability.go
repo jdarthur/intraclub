@@ -122,15 +122,17 @@ func (a *Availability) getTeam(db common.DatabaseProvider) (*Team, error) {
 		return nil, fmt.Errorf("user %s is not a participant in season %s", a.UserId.String(), season.ID)
 	}
 
-	for _, teamId := range season.Teams {
-		team, exists, err := common.GetOneById(db, &Team{}, teamId.RecordId())
+	teams, err := season.GetTeams(db)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, team := range teams {
+		isMember, err := team.IsTeamMember(db, a.UserId)
 		if err != nil {
 			return nil, err
 		}
-		if !exists {
-			return nil, fmt.Errorf("team with ID %s does not exist", teamId.RecordId())
-		}
-		if team.IsTeamMember(a.UserId) {
+		if isMember {
 			return team, nil
 		}
 	}
@@ -144,7 +146,12 @@ func (a *Availability) AccessibleTo(db common.DatabaseProvider) []common.RecordI
 		fmt.Println(err)
 		return nil
 	}
-	return UserIdListToRecordIdList(team.Members)
+	members, err := team.GetMembers(db)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	return UserIdListToRecordIdList(members)
 }
 
 func GetAvailabilityForUser(db common.DatabaseProvider, userId UserId, draftId DraftId) ([]*Availability, error) {
@@ -178,7 +185,11 @@ func GetAvailabilityForTeam(db common.DatabaseProvider, teamId TeamId, draftId D
 	if err != nil {
 		return nil, err
 	}
-	for _, member := range team.Members {
+	members, err := team.GetMembers(db)
+	if err != nil {
+		return nil, err
+	}
+	for _, member := range members {
 		availability, err := GetAvailabilityForUser(db, member, draftId)
 		if err != nil {
 			return nil, err

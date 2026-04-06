@@ -50,6 +50,7 @@ function UserAction({id, first_name, last_name, email, skill_info}: User) {
 
     const deleteSelf = () => {
         console.log(`Delete user ${id}`)
+        return "" // empty string / no error
     }
 
     const edit = () => {

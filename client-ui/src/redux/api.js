@@ -15,8 +15,7 @@ export const baseQuery = fetchBaseQuery({
 
 const baseQueryWithLogout = async (args, api, extraOptions) => {
     let result = await baseQuery(args, api, extraOptions)
-    if (result?.error && result?.error?.status === 401)
-    {
+    if (result?.error && result?.error?.status === 401) {
         api.dispatch(logoutUser());
     }
     return result
@@ -208,13 +207,38 @@ export const mainApi = createApi({
             invalidatesTags: ["format"]
         }),
         updateFormat: builder.mutation({
-            query: (req) => ({url: `format/${req.id}`, body: req.body, method: 'put'}),
+            query: (req) => ({url: `format/${req.id}`, body: req.body, method: 'PUT'}),
             invalidatesTags: ["format"]
         }),
         deleteFormat: builder.mutation({
             query: (id) => ({url: `format/${id}`, method: 'DELETE'}),
             invalidatesTags: ["format"]
         }),
+        getDraftOrderPatterns: builder.query({
+            query: () => ({url: `draft_order_patterns`}),
+            providesTags: ["draft_order_patterns"]
+        }),
+        getSeasonsComposite: builder.query({
+            query: (params) => ({url: `seasons_composite?as_player=${params.as_player}&as_commissioner=${params.as_commissioner}`}),
+            providesTags: ["seasons_composite"]
+        }),
+        createDraft: builder.mutation({
+            query: (body) => ({url: `draft`, body: body, method: 'POST'}),
+            invalidatesTags: ["draft"]
+        }),
+        updateDraft: builder.mutation({
+            query: (req) => ({url: `draft/${req.id}`, body: req.body, method: 'PUT'}),
+            invalidatesTags: ["draft"]
+        }),
+        deleteDraft: builder.mutation({
+            query: (id) => ({url: `draft/${id}`, method: 'DELETE'}),
+            invalidatesTags: ["draft"]
+        }),
+        getDraft: builder.query({
+            query: () => ({url: `draft`}),
+            providesTags: ["draft"]
+        }),
+
     })
 });
 
@@ -263,4 +287,10 @@ export const {
     useCreateFormatMutation,
     useUpdateFormatMutation,
     useDeleteFormatMutation,
+    useGetDraftOrderPatternsQuery,
+    useGetSeasonsCompositeQuery,
+    useCreateDraftMutation,
+    useUpdateDraftMutation,
+    useDeleteDraftMutation,
+    useGetDraftQuery,
 } = mainApi
