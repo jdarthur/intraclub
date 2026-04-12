@@ -153,14 +153,41 @@ func TestRandomDraft(t *testing.T) {
 
 func TestCaptainIsNotInDraftList(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	draft := newRandomDraft(t, db, 0, 4)
+	draft := newRandomDraft(t, db, 10, 4)
 
-	// Add commissioner to available list
-	availablePlayer := &DraftAvailablePlayer{
-		DraftId:  draft.ID,
-		PlayerId: draft.Owner,
+	captains, err := draft.GetCaptains(db)
+	if err != nil {
+		t.Fatal(err)
 	}
-	_, err := common.CreateOne(db, availablePlayer)
+
+	if len(captains) == 0 {
+		t.Fatal("Expected at least one captain")
+	}
+
+	availablePlayers, err := draft.GetAvailablePlayers(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	captainToRemove := captains[0].CaptainId
+	found := false
+	for _, ap := range availablePlayers {
+		if ap == captainToRemove {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("Expected captain to exist in available players list")
+	}
+
+	dap, _ := common.GetAllWhere[*DraftAvailablePlayer](db, &DraftAvailablePlayer{}, func(dap *DraftAvailablePlayer) bool {
+		return dap.DraftId == draft.ID && dap.PlayerId == captainToRemove
+	})
+	if len(dap) == 0 {
+		t.Fatal("Expected to find DraftAvailablePlayer for captain")
+	}
+	err = db.Delete(dap[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,13 +204,16 @@ func TestCaptainsCanOnlyBeSelfDrafted(t *testing.T) {
 	draft := newRandomDraft(t, db, 100, 4)
 
 	captains, _ := draft.GetCaptains(db)
-	err := draft.SelectByCaptain(captains[1].CaptainId, captains[0].CaptainId, db)
+	captainOnTheClock := captains[0].CaptainId
+	otherCaptain := captains[1].CaptainId
+
+	err := draft.SelectByCaptain(otherCaptain, captainOnTheClock, db)
 	if err == nil {
 		t.Fatal("Expected draft of captain by another captain to be invalid")
 	}
 	fmt.Println(err)
 
-	err = draft.SelectByCaptain(captains[0].CaptainId, captains[0].CaptainId, db)
+	err = draft.SelectByCaptain(captainOnTheClock, captainOnTheClock, db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,6 +257,8 @@ func TestLastPickDoubleSelection(t *testing.T) {
 	captain1 := captains[0].CaptainId
 	captain2 := captains[1].CaptainId
 	captain3 := captains[2].CaptainId
+
+	t.Log("1:", captain1, "2:", captain2, "3:", captain3)
 
 	selectRandomAvailableByCaptain(t, draft, captain1, db)
 	selectRandomAvailableByCaptain(t, draft, captain2, db)
@@ -380,15 +412,21 @@ func TestTeamCaptainAssignmentHasIncorrectCaptainId(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	draft := newRandomDraft(t, db, 100, 4)
 
-	captains, _ := draft.GetCaptains(db)
-	captains[0].CaptainId = captains[1].CaptainId
-	captains[1].CaptainId = captains[0].CaptainId
-
-	_, err := draft.GetCaptains(db)
+	captains, err := draft.GetCaptains(db)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// set the team ID for the first captain to the ID of the second
+	// captain's team. This should fail the dynamically-valid check
+	// when we look at the captain ID on Team2.
+	teamId2 := captains[1].TeamId
+	captains[0].TeamId = teamId2
+
+	err = captains[0].DynamicallyValid(db)
+	if err == nil {
+		t.Fatal("Expected captain record to be invalid")
+	}
 	err = draft.DynamicallyValid(db)
 	if err == nil {
 		t.Fatal("Expected draft to be invalid")

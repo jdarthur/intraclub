@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"intraclub/common"
@@ -125,6 +126,34 @@ func (d *Draft) DynamicallyValid(db common.DatabaseProvider) error {
 		}
 	}
 
+	captains, err := d.GetCaptains(db)
+	if err != nil {
+		return err
+	}
+
+	for _, captain := range captains {
+		err = captain.DynamicallyValid(db)
+		if err != nil {
+			return err
+		}
+	}
+
+	availablePlayers, err := d.GetAvailablePlayers(db)
+	if err != nil {
+		return err
+	}
+
+	availablePlayerMap := make(map[UserId]bool)
+	for _, ap := range availablePlayers {
+		availablePlayerMap[ap] = true
+	}
+
+	for _, captain := range captains {
+		if !availablePlayerMap[captain.CaptainId] {
+			return fmt.Errorf("captain %s is not in the available players list", captain.CaptainId)
+		}
+	}
+
 	return nil
 }
 
@@ -193,9 +222,18 @@ func (d *Draft) GetPicks(db common.DatabaseProvider) ([]*DraftPick, error) {
 
 // GetCaptains retrieves all team captain assignments for this draft from the DraftCaptain join table.
 func (d *Draft) GetCaptains(db common.DatabaseProvider) ([]*DraftCaptain, error) {
-	return common.GetAllWhere[*DraftCaptain](db, &DraftCaptain{}, func(dc *DraftCaptain) bool {
+	captains, err := common.GetAllWhere[*DraftCaptain](db, &DraftCaptain{}, func(dc *DraftCaptain) bool {
 		return dc.DraftId == d.ID
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	sort.Slice(captains, func(i, j int) bool {
+		return captains[i].DraftOrder < captains[j].DraftOrder
+	})
+
+	return captains, nil
 }
 
 // GetAllAvailableToSelect returns a list of all UserId values which the provided captain
@@ -229,6 +267,7 @@ func (d *Draft) GetCaptainOnTheClock(db common.DatabaseProvider) (UserId, error)
 
 	// get the round and pick of the next selection
 	round, pick := d.GetRoundAndPick(db)
+	// fmt.Printf("%d.%02d\n", round, pick)
 
 	// get the captain index based on our draft order
 	captainIndex := d.DraftOrderPattern.GetCaptainOnTheClock(round, pick, len(captains))
@@ -267,7 +306,7 @@ func (d *Draft) SelectByCaptain(player, captain UserId, db common.DatabaseProvid
 
 	// if this captain is not the one currently on the clock, return an error
 	if onTheClock != captain {
-		return fmt.Errorf("captain with id %s is not on-the-clock", player)
+		return fmt.Errorf("captain with id %s is not on-the-clock (expected %s)", captain, onTheClock)
 	}
 
 	// return an error if the selected user ID belongs to a different captain
@@ -299,13 +338,11 @@ func (d *Draft) Select(player UserId, db common.DatabaseProvider) error {
 	// Find the team for this pick
 	captains, _ := d.GetCaptains(db)
 	var teamId TeamId
-	// Simple logic: round-robin assignment
+	// Use the captain's draft order to determine the team for this pick
 	if round%2 != 0 {
-		pickIndex := (pick - 1) % len(captains)
-		teamId = captains[pickIndex].TeamId
+		teamId = captains[pick-1].TeamId
 	} else {
-		pickIndex := (len(captains) - pick) % len(captains)
-		teamId = captains[pickIndex].TeamId
+		teamId = captains[len(captains)-pick].TeamId
 	}
 
 	// Get the rating for this pick
@@ -439,27 +476,21 @@ func (d *Draft) getDraftSelectionsByTeamIndex(db common.DatabaseProvider, teamIn
 		return nil, err
 	}
 
-	for i, pick := range picks {
-		round, pickNum := d.GetRoundAndPickFromPicks(db, i)
+	captains, err := d.GetCaptains(db)
+	if err != nil {
+		return nil, err
+	}
 
-		// this userId belongs to this team if it matches the team's
-		// selection index for the given round
-		appliesToTeam := false
-		if round%2 != 0 {
-			if pickNum == (teamIndex + 1) {
-				appliesToTeam = true
-			}
-		}
+	targetTeamId := captains[teamIndex].TeamId
 
-		// if this player applies to the team, retrieve the user for
-		// this particular selection and add it to the list
-		if appliesToTeam {
+	for _, pick := range picks {
+		if pick.TeamId == targetTeamId {
 			user, err := common.GetExistingRecordById(db, &User{}, pick.UserId.RecordId())
 			if err != nil {
 				return nil, err
 			}
 
-			selections = append(selections, DraftSelection{Round: round, Pick: pickNum, User: user, Rating: pick.Rating})
+			selections = append(selections, DraftSelection{Round: pick.Round, Pick: pick.Pick, User: user, Rating: pick.Rating})
 		}
 	}
 	return selections, nil
@@ -498,9 +529,10 @@ func (d *Draft) Initialize(db common.DatabaseProvider, captains []UserId) error 
 
 		// Create a draft captain record
 		draftCaptain := &DraftCaptain{
-			DraftId:   d.ID,
-			TeamId:    team.ID,
-			CaptainId: captain,
+			DraftId:    d.ID,
+			TeamId:     team.ID,
+			CaptainId:  captain,
+			DraftOrder: i,
 		}
 		_, err = common.CreateOne(db, draftCaptain)
 		if err != nil {

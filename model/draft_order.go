@@ -2,9 +2,11 @@ package model
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"intraclub/common"
 	"net/http"
+
+	"intraclub/common"
+
+	"github.com/gin-gonic/gin"
 )
 
 type DraftOrderPattern interface {
@@ -106,7 +108,6 @@ func (d DraftOrderPatternLastPickDouble) GetCaptainOnTheClock(round, pick, numbe
 }
 
 func (d DraftOrderPatternLastPickDouble) GetCaptainBefore(currentRound, currentPick, numberOfCaptains, distance int) (captainIndex int) {
-
 	newRound := currentRound
 	newPick := currentPick
 

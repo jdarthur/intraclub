@@ -26,7 +26,7 @@ var TennisSetScoringStructure = ScoringStructure{
 }
 
 var TennisTiebreakThirdSet = ScoringStructure{
-	WinConditionCountingType: Point,
+	WinConditionCountingType: Game,
 	WinCondition: WinCondition{
 		WinThreshold:        10,
 		MustWinBy:           2,
@@ -39,6 +39,7 @@ func newDefaultStoredScoringStructure(t *testing.T, db common.DatabaseProvider) 
 	s := newDefaultStoredSetScoringStructure(t, db)
 	matchScoringStructure := &TennisMatchScoringStructure
 	matchScoringStructure.Owner = s.Owner
+	matchScoringStructure.Name = "test-match-scoring"
 	matchScoringStructure.SecondaryScoringStructures = []ScoringStructureId{
 		s.ID,
 		s.ID,
@@ -59,6 +60,7 @@ func newThirdSetTiebreakScoringStructure(t *testing.T, db common.DatabaseProvide
 
 	matchScoringStructure := &TennisMatchScoringStructure
 	matchScoringStructure.Owner = s.Owner
+	matchScoringStructure.Name = "test-tiebreak-match-scoring"
 	matchScoringStructure.SecondaryScoringStructures = []ScoringStructureId{
 		s.ID,
 		s.ID,
@@ -77,6 +79,7 @@ func newDefaultStoredSetScoringStructure(t *testing.T, db common.DatabaseProvide
 
 	setScoringStructure := &TennisSetScoringStructure
 	setScoringStructure.Owner = owner.ID
+	setScoringStructure.Name = "test-set-scoring"
 	s, err := common.CreateOne(db, setScoringStructure)
 	if err != nil {
 		t.Fatal(err)
@@ -89,6 +92,7 @@ func newTenPointTiebreakSetScoringStructure(t *testing.T, db common.DatabaseProv
 
 	setScoringStructure := &TennisTiebreakThirdSet
 	setScoringStructure.Owner = owner.ID
+	setScoringStructure.Name = "test-tiebreak-set-scoring"
 	s, err := common.CreateOne(db, setScoringStructure)
 	if err != nil {
 		t.Fatal(err)

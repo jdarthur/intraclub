@@ -1,19 +1,22 @@
 package model
 
 import (
-	"intraclub/common"
+	"fmt"
 	"time"
+
+	"intraclub/common"
 )
 
 // DraftCaptain is a join table record that links a Draft to its team captains.
 // Each record represents a Team-Captain assignment for a specific Draft.
 type DraftCaptain struct {
-	ID        common.RecordId `json:"id"`
-	DraftId   DraftId         `json:"draft_id"`
-	TeamId    TeamId          `json:"team_id"`
-	CaptainId UserId          `json:"captain_id"`
-	CreatedAt time.Time       `json:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at"`
+	ID         common.RecordId `json:"id"`
+	DraftId    DraftId         `json:"draft_id"`
+	TeamId     TeamId          `json:"team_id"`
+	CaptainId  UserId          `json:"captain_id"`
+	DraftOrder int             `json:"draft_order"`
+	CreatedAt  time.Time       `json:"created_at"`
+	UpdatedAt  time.Time       `json:"updated_at"`
 }
 
 // GetOwner returns InvalidRecordId as DraftCaptain has no specific owner.
@@ -46,14 +49,31 @@ func (d *DraftCaptain) StaticallyValid() error {
 
 // DynamicallyValid verifies that the referenced Draft, Team, and User records all exist.
 func (d *DraftCaptain) DynamicallyValid(db common.DatabaseProvider) error {
-	if err := common.ExistsById(db, &Draft{}, d.DraftId.RecordId()); err != nil {
+
+	// ensure tha the user ID exists
+	err := common.ExistsById(db, &User{}, d.CaptainId.RecordId())
+	if err != nil {
 		return err
 	}
-	if err := common.ExistsById(db, &Team{}, d.TeamId.RecordId()); err != nil {
+
+	// ensure that the draft exists
+	_, err = common.GetExistingRecordById(db, &Draft{}, d.DraftId.RecordId())
+	if err != nil {
 		return err
 	}
-	if err := common.ExistsById(db, &User{}, d.CaptainId.RecordId()); err != nil {
+
+	// ensure that the team exists
+	team, err := common.GetExistingRecordById(db, &Team{}, d.TeamId.RecordId())
+	if err != nil {
 		return err
+	}
+
+	// ensure that this user is the actual captain of the referenced team
+	captain, err := team.GetCaptain(db)
+	if err != nil {
+		return err
+	} else if captain != d.CaptainId {
+		return fmt.Errorf("user %s is not the captain of team %s (expected %s)", d.CaptainId, d.TeamId.RecordId(), captain)
 	}
 	return nil
 }

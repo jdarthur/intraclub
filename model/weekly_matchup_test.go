@@ -172,17 +172,32 @@ func TestWeeklyMatchupTeamDoesNotHaveAnyMatchups(t *testing.T) {
 
 func TestWeeklyMatchupTeamHasBye(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
-	season, w := newStoredWeeklyMatchup(t, db)
+	season, _ := newDefaultSeasonWithTeams(t, db, 4)
+	week := newStoredWeek(t, db, season)
 
 	teams, err := season.GetTeams(db)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	w.Matchups[1].Bye = true
-	w.Matchups[1].AwayTeam = TeamId(common.InvalidRecordId)
-	anotherBye := TeamMatchup{HomeTeam: teams[3].ID, Bye: true}
-	w.Matchups = append(w.Matchups, &anotherBye)
+	w := NewWeeklyMatchup()
+	w.WeekId = week.ID
+	w.SeasonId = season.ID
+
+	matchup := TeamMatchup{
+		HomeTeam: teams[0].ID,
+		AwayTeam: teams[1].ID,
+	}
+	bye1 := TeamMatchup{
+		HomeTeam: teams[2].ID,
+		Bye:      true,
+	}
+	bye2 := TeamMatchup{
+		HomeTeam: teams[3].ID,
+		Bye:      true,
+	}
+
+	w.Matchups = []*TeamMatchup{&matchup, &bye1, &bye2}
 
 	err = common.Validate(db, w)
 	if err != nil {
