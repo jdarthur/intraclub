@@ -52,6 +52,10 @@ func (t *testUnique) DynamicallyValid(db DatabaseProvider) error {
 	return nil
 }
 
+func (t *testUnique) BlankRecord() CrudRecord {
+	return new(testUnique)
+}
+
 func TestValidateUniqueConstraintOnCreate(t *testing.T) {
 	db := NewUnitTestDBProvider()
 	record1 := testUnique{

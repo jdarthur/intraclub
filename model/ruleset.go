@@ -12,7 +12,8 @@ import (
 type RulesetId common.RecordId
 
 func (id RulesetId) UnmarshalJSON(bytes []byte) error {
-	return id.RecordId().UnmarshalJSON(bytes)
+	rid := id.RecordId()
+	return (*common.RecordId)(&rid).UnmarshalJSON(bytes)
 }
 
 func (id RulesetId) MarshalJSON() ([]byte, error) {
@@ -154,7 +155,7 @@ func (r *Ruleset) GetSections(db common.DatabaseProvider) ([]RuleSectionId, erro
 // GetSectionRelations returns all RulesetSection join table records for this ruleset.
 // The results include the SectionIndex which determines the ordering of sections.
 func (r *Ruleset) GetSectionRelations(db common.DatabaseProvider) ([]*RulesetSection, error) {
-	return common.GetAllWhere[*RulesetSection](db, &RulesetSection{}, func(rs *RulesetSection) bool {
+	return common.GetAllWhere[*RulesetSection](db, func(rs *RulesetSection) bool {
 		return rs.RulesetId == r.ID
 	})
 }
@@ -220,7 +221,7 @@ func (r *Ruleset) AddSection(db common.DatabaseProvider, sectionId RuleSectionId
 
 // RemoveSection removes the RulesetSection join table records for a specific section from this ruleset.
 func (r *Ruleset) RemoveSection(db common.DatabaseProvider, sectionId RuleSectionId) error {
-	relations, err := common.GetAllWhere[*RulesetSection](db, &RulesetSection{}, func(rs *RulesetSection) bool {
+	relations, err := common.GetAllWhere[*RulesetSection](db, func(rs *RulesetSection) bool {
 		return rs.RulesetId == r.ID && rs.SectionId == sectionId
 	})
 	if err != nil {
@@ -238,6 +239,10 @@ func (r *Ruleset) RemoveSection(db common.DatabaseProvider, sectionId RuleSectio
 // Fork creates a new Ruleset that is a copy of this one, with a new owner.
 // The new ruleset gets an incremented revision number and copies all sections
 // from the original ruleset. Returns an error if the ruleset has no sections.
+func (r *Ruleset) BlankRecord() common.CrudRecord {
+	return new(Ruleset)
+}
+
 func (r *Ruleset) Fork(db common.DatabaseProvider, newUserId UserId) (*Ruleset, error) {
 	sectionRelations, err := r.GetSectionRelations(db)
 	if err != nil {
@@ -279,7 +284,8 @@ func (r *Ruleset) Fork(db common.DatabaseProvider, newUserId UserId) (*Ruleset, 
 type RuleSectionId common.RecordId
 
 func (id RuleSectionId) UnmarshalJSON(bytes []byte) error {
-	return id.RecordId().UnmarshalJSON(bytes)
+	rid := id.RecordId()
+	return (*common.RecordId)(&rid).UnmarshalJSON(bytes)
 }
 
 func (id RuleSectionId) MarshalJSON() ([]byte, error) {
@@ -383,4 +389,8 @@ func (section *RuleSection) Equals(other *RuleSection) bool {
 		return false
 	}
 	return true
+}
+
+func (section *RuleSection) BlankRecord() common.CrudRecord {
+	return new(RuleSection)
 }

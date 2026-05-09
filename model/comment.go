@@ -155,3 +155,7 @@ func (c *Comment) DynamicallyValid(db common.DatabaseProvider) error {
 
 	return c.Reactions.DynamicallyValid(db)
 }
+
+func (c *Comment) BlankRecord() common.CrudRecord {
+	return new(Comment)
+}

@@ -80,6 +80,10 @@ func (t *testRecord) SetUpdateTimestamp(time time.Time) time.Time {
 	return oldValue
 }
 
+func (t *testRecord) BlankRecord() CrudRecord {
+	return new(testRecord)
+}
+
 func TestCreateDataIsSetOnCreate(t *testing.T) {
 	db := NewUnitTestDBProvider()
 	v := newTestRecord()

@@ -224,7 +224,7 @@ func (s *Season) IsUserIdACommissionerViaDB(db common.DatabaseProvider, u UserId
 // GetCommissioners retrieves all commissioner User IDs for this season by querying
 // the SeasonCommissioner join table.
 func (s *Season) GetCommissioners(db common.DatabaseProvider) ([]UserId, error) {
-	commissioners, err := common.GetAllWhere[*SeasonCommissioner](db, &SeasonCommissioner{}, func(c *SeasonCommissioner) bool {
+	commissioners, err := common.GetAllWhere[*SeasonCommissioner](db, func(c *SeasonCommissioner) bool {
 		return c.SeasonId == s.ID
 	})
 	if err != nil {
@@ -240,7 +240,7 @@ func (s *Season) GetCommissioners(db common.DatabaseProvider) ([]UserId, error) 
 // GetTeams retrieves all Team records for this season by querying the SeasonTeam join table
 // and fetching each team from the database.
 func (s *Season) GetTeams(db common.DatabaseProvider) ([]*Team, error) {
-	seasonTeams, err := common.GetAllWhere[*SeasonTeam](db, &SeasonTeam{}, func(st *SeasonTeam) bool {
+	seasonTeams, err := common.GetAllWhere[*SeasonTeam](db, func(st *SeasonTeam) bool {
 		return st.SeasonId == s.ID
 	})
 	if err != nil {
@@ -260,7 +260,7 @@ func (s *Season) GetTeams(db common.DatabaseProvider) ([]*Team, error) {
 // GetLateAdditions retrieves all late addition User IDs for this season by querying
 // the SeasonLateAddition join table.
 func (s *Season) GetLateAdditions(db common.DatabaseProvider) ([]UserId, error) {
-	lateAdditions, err := common.GetAllWhere[*SeasonLateAddition](db, &SeasonLateAddition{}, func(sla *SeasonLateAddition) bool {
+	lateAdditions, err := common.GetAllWhere[*SeasonLateAddition](db, func(sla *SeasonLateAddition) bool {
 		return sla.SeasonId == s.ID
 	})
 	if err != nil {
@@ -285,7 +285,7 @@ func (s *Season) AddCommissioner(db common.DatabaseProvider, userId UserId) erro
 
 // RemoveCommissioner removes all SeasonCommissioner records for a given user from this season.
 func (s *Season) RemoveCommissioner(db common.DatabaseProvider, userId UserId) error {
-	commissioners, err := common.GetAllWhere[*SeasonCommissioner](db, &SeasonCommissioner{}, func(c *SeasonCommissioner) bool {
+	commissioners, err := common.GetAllWhere[*SeasonCommissioner](db, func(c *SeasonCommissioner) bool {
 		return c.SeasonId == s.ID && c.UserId == userId
 	})
 	if err != nil {
@@ -312,7 +312,7 @@ func (s *Season) AddTeam(db common.DatabaseProvider, teamId TeamId) error {
 
 // RemoveTeam removes all SeasonTeam records for a given team from this season.
 func (s *Season) RemoveTeam(db common.DatabaseProvider, teamId TeamId) error {
-	seasonTeams, err := common.GetAllWhere[*SeasonTeam](db, &SeasonTeam{}, func(st *SeasonTeam) bool {
+	seasonTeams, err := common.GetAllWhere[*SeasonTeam](db, func(st *SeasonTeam) bool {
 		return st.SeasonId == s.ID && st.TeamId == teamId
 	})
 	if err != nil {
@@ -339,7 +339,7 @@ func (s *Season) AddLateAddition(db common.DatabaseProvider, userId UserId) erro
 
 // RemoveLateAddition removes all SeasonLateAddition records for a given user from this season.
 func (s *Season) RemoveLateAddition(db common.DatabaseProvider, userId UserId) error {
-	lateAdditions, err := common.GetAllWhere[*SeasonLateAddition](db, &SeasonLateAddition{}, func(sla *SeasonLateAddition) bool {
+	lateAdditions, err := common.GetAllWhere[*SeasonLateAddition](db, func(sla *SeasonLateAddition) bool {
 		return sla.SeasonId == s.ID && sla.UserId == userId
 	})
 	if err != nil {
@@ -431,4 +431,8 @@ func (s *Season) IsTeamAssignedToSeason(db common.DatabaseProvider, teamId TeamI
 		}
 	}
 	return false
+}
+
+func (s *Season) BlankRecord() common.CrudRecord {
+	return new(Season)
 }

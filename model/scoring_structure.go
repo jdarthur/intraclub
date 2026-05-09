@@ -84,7 +84,8 @@ func GetScoreCountingTypes(c *gin.Context) {
 type ScoringStructureId common.RecordId
 
 func (id ScoringStructureId) UnmarshalJSON(bytes []byte) error {
-	return id.RecordId().UnmarshalJSON(bytes)
+	rid := id.RecordId()
+	return (*common.RecordId)(&rid).UnmarshalJSON(bytes)
 }
 
 func (id ScoringStructureId) MarshalJSON() ([]byte, error) {
@@ -343,4 +344,8 @@ func (c *ScoringStructure) WinningScore(myScore, yourScore int) bool {
 	}
 
 	return false
+}
+
+func (c *ScoringStructure) BlankRecord() common.CrudRecord {
+	return new(ScoringStructure)
 }

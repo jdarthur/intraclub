@@ -200,7 +200,7 @@ func (d *Draft) IsSelected(db common.DatabaseProvider, userId UserId) bool {
 
 // GetAvailablePlayers returns all userIds who are available to be drafted
 func (d *Draft) GetAvailablePlayers(db common.DatabaseProvider) ([]UserId, error) {
-	availablePlayers, err := common.GetAllWhere[*DraftAvailablePlayer](db, &DraftAvailablePlayer{}, func(dap *DraftAvailablePlayer) bool {
+	availablePlayers, err := common.GetAllWhere[*DraftAvailablePlayer](db, func(dap *DraftAvailablePlayer) bool {
 		return dap.DraftId == d.ID
 	})
 	if err != nil {
@@ -215,14 +215,14 @@ func (d *Draft) GetAvailablePlayers(db common.DatabaseProvider) ([]UserId, error
 
 // GetPicks returns all draft picks ordered by their creation
 func (d *Draft) GetPicks(db common.DatabaseProvider) ([]*DraftPick, error) {
-	return common.GetAllWhere[*DraftPick](db, &DraftPick{}, func(dp *DraftPick) bool {
+	return common.GetAllWhere[*DraftPick](db, func(dp *DraftPick) bool {
 		return dp.DraftId == d.ID
 	})
 }
 
 // GetCaptains retrieves all team captain assignments for this draft from the DraftCaptain join table.
 func (d *Draft) GetCaptains(db common.DatabaseProvider) ([]*DraftCaptain, error) {
-	captains, err := common.GetAllWhere[*DraftCaptain](db, &DraftCaptain{}, func(dc *DraftCaptain) bool {
+	captains, err := common.GetAllWhere[*DraftCaptain](db, func(dc *DraftCaptain) bool {
 		return dc.DraftId == d.ID
 	})
 	if err != nil {
@@ -693,7 +693,7 @@ func (d *Draft) IsDraftCompleted(db common.DatabaseProvider) bool {
 }
 
 func (d *Draft) GetSeason(db common.DatabaseProvider) (*Season, error) {
-	seasons, err := common.GetAllWhere(db, &Season{}, func(c *Season) bool {
+	seasons, err := common.GetAllWhere[*Season](db, func(c *Season) bool {
 		return c.DraftId == d.ID
 	})
 	if err != nil {
@@ -703,4 +703,8 @@ func (d *Draft) GetSeason(db common.DatabaseProvider) (*Season, error) {
 		return nil, nil
 	}
 	return seasons[0], nil
+}
+
+func (d *Draft) BlankRecord() common.CrudRecord {
+	return new(Draft)
 }

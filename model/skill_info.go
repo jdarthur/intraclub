@@ -74,6 +74,10 @@ func (s *SkillInfo) DynamicallyValid(db common.DatabaseProvider) error {
 	panic("implement me")
 }
 
+func (s *SkillInfo) BlankRecord() common.CrudRecord {
+	return new(SkillInfo)
+}
+
 func IsValidLeagueType(leagueType LeagueType) bool {
 	switch leagueType {
 	case LeagueTypeALTA:
@@ -88,7 +92,7 @@ func IsValidLeagueType(leagueType LeagueType) bool {
 }
 
 func GetAllCaptains(db common.DatabaseProvider) ([]string, error) {
-	v, err := common.GetAll(db, &SkillInfo{})
+	v, err := common.GetAll[*SkillInfo](db)
 	if err != nil {
 		return nil, err
 	}

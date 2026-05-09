@@ -100,10 +100,11 @@ func fromListOfCrudRecord[T CrudRecord](list []CrudRecord) ([]T, error) {
 	return output, nil
 }
 
-// GetAll is a typed version of DatabaseProvider.GetAll that gets all by record type,
-// then converts the resulting []CrudRecord into a []T
-func GetAll[T CrudRecord](db DatabaseProvider, recordType T) ([]T, error) {
-	v, err := db.GetAll(recordType)
+// GetAll is a typed version of DatabaseProvider.GetAll that gets all records
+// of type T, then converts the resulting []CrudRecord into a []T
+func GetAll[T CrudRecord](db DatabaseProvider) ([]T, error) {
+	var zero T
+	v, err := db.GetAll(zero)
 	if err != nil {
 		return nil, err
 	}
@@ -112,13 +113,13 @@ func GetAll[T CrudRecord](db DatabaseProvider, recordType T) ([]T, error) {
 
 // GetAllWhere is a type-safe wrapper around DatabaseProvider.GetAllWhere,
 // returning a []T instead of a []CrudRecord
-func GetAllWhere[T CrudRecord](db DatabaseProvider, recordType T, where WhereFuncT[T]) ([]T, error) {
-	// convert
+func GetAllWhere[T CrudRecord](db DatabaseProvider, where WhereFuncT[T]) ([]T, error) {
+	var zero T
 	w := func(c CrudRecord) bool {
 		return where(c.(T))
 	}
 
-	v, err := db.GetAllWhere(recordType, w)
+	v, err := db.GetAllWhere(zero, w)
 	if err != nil {
 		return nil, err
 	}
@@ -152,9 +153,18 @@ func DeleteOneById[T CrudRecord](db DatabaseProvider, record T, id RecordId) (t 
 	}
 
 	// delete the record from the DatabaseProvider if it does exist currently
-	err = db.Delete(record)
+	err = db.Delete(r)
 	if err != nil {
 		return t, false, err
+	}
+
+	// run post-delete logic if the record type implements it
+	pd, ok := r.(PostDelete)
+	if ok {
+		err = pd.PostDelete(db)
+		if err != nil {
+			return t, false, err
+		}
 	}
 
 	// return the now-deleted record back to the caller
@@ -209,13 +219,13 @@ func CreateOne[T CrudRecord](db DatabaseProvider, record T) (t T, err error) {
 // given DatabaseProvider and runs any post-create logic that the
 // type implements, returning any errors encountered along the way
 func UpdateOne[T CrudRecord](db DatabaseProvider, record T) (err error) {
-	// validate that the original record exists
+	// fetch existing record for timestamp preservation and PreUpdate hook
 	v, exists, err := GetOneById(db, record, record.GetId())
 	if err != nil {
 		return err
 	}
 	if !exists {
-		return fmt.Errorf("%s record with ID %d does not exist", record.Type(), record.GetId())
+		return fmt.Errorf("%s record with ID %s does not exist", record.Type(), record.GetId())
 	}
 
 	// set update timestamp before validating (in case validation checks for timestamp values)
@@ -269,15 +279,11 @@ func setCreateTimeStampIfApplicable[T CrudRecord](record T) {
 // created timestamp remains immutable during an update operation
 func setUpdateTimeStampIfApplicable[T CrudRecord](updatedRecord, existingRecord T) {
 	ts, ok := any(updatedRecord).(TimestampedRecord)
-	if ok {
-		originalCreatedAt, _ := any(existingRecord).(TimestampedRecord).GetTimeStamps()
-
-		oldValue := ts.SetCreateTimestamp(originalCreatedAt) // disallow any updates to create timestamp during update
-		if oldValue != originalCreatedAt {
-			fmt.Printf("Warning: update for %s with ID %s had new created-at timestamp: %s\n", updatedRecord.Type(), updatedRecord.GetId(), oldValue)
-			fmt.Printf("Overwriting back to original: %s\n", originalCreatedAt)
-		}
-		ts.SetUpdateTimestamp(time.Now())
+	if !ok {
+		return
 	}
 
+	existingCreated, _ := any(existingRecord).(TimestampedRecord).GetTimeStamps()
+	ts.SetCreateTimestamp(existingCreated)
+	ts.SetUpdateTimestamp(time.Now())
 }

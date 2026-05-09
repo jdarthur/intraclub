@@ -86,3 +86,7 @@ func (d *DraftPick) SetCreatedAt(createdAt time.Time) {
 func (d *DraftPick) SetUpdatedAt(updatedAt time.Time) {
 	d.UpdatedAt = updatedAt
 }
+
+func (d *DraftPick) BlankRecord() common.CrudRecord {
+	return new(DraftPick)
+}

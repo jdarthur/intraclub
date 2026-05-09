@@ -160,19 +160,23 @@ func (p *PreDraftGrade) NumericRating(format *Format) float64 {
 }
 
 func GetPreDraftGradesByGraderId(db common.DatabaseProvider, graderId UserId) ([]*PreDraftGrade, error) {
-	return common.GetAllWhere(db, &PreDraftGrade{}, func(c *PreDraftGrade) bool {
+	return common.GetAllWhere[*PreDraftGrade](db, func(c *PreDraftGrade) bool {
 		return c.GraderId == graderId
 	})
 }
 
 func GetPreDraftGradesByPlayerId(db common.DatabaseProvider, playerId UserId) ([]*PreDraftGrade, error) {
-	return common.GetAllWhere(db, &PreDraftGrade{}, func(c *PreDraftGrade) bool {
+	return common.GetAllWhere[*PreDraftGrade](db, func(c *PreDraftGrade) bool {
 		return c.PlayerId == playerId
 	})
 }
 
+func (p *PreDraftGrade) BlankRecord() common.CrudRecord {
+	return new(PreDraftGrade)
+}
+
 func GetPreDraftGradesByDraftId(db common.DatabaseProvider, draftId DraftId) ([]*PreDraftGrade, error) {
-	return common.GetAllWhere(db, &PreDraftGrade{}, func(c *PreDraftGrade) bool {
+	return common.GetAllWhere[*PreDraftGrade](db, func(c *PreDraftGrade) bool {
 		return c.DraftId == draftId
 	})
 }

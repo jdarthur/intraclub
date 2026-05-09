@@ -55,6 +55,10 @@ func (p *PrivateTestRecord) DynamicallyValid(db DatabaseProvider) error {
 	return nil
 }
 
+func (p *PrivateTestRecord) BlankRecord() CrudRecord {
+	return new(PrivateTestRecord)
+}
+
 func (p *PrivateTestRecord) ShareTo(db DatabaseProvider, shareToUserId, updateUserId RecordId) error {
 	for _, s := range p.SharedTo {
 		if shareToUserId == s {

@@ -160,9 +160,13 @@ func (f *Facility) IsFacilityInUse(db common.DatabaseProvider) (bool, error) {
 func (f *Facility) GetSeasonsForFacility(db common.DatabaseProvider) ([]*Season, error) {
 	// get all Seasons where Season.Facility == this FacilityId
 	filter := func(c *Season) bool { return c.Facility == f.ID }
-	seasons, err := common.GetAllWhere(db, &Season{}, filter)
+	seasons, err := common.GetAllWhere[*Season](db, filter)
 	if err != nil {
 		return nil, err
 	}
 	return seasons, nil
+}
+
+func (f *Facility) BlankRecord() common.CrudRecord {
+	return new(Facility)
 }

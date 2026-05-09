@@ -184,7 +184,7 @@ func TestPartiallyImportCsvToDatabase(t *testing.T) {
 	fmt.Printf("newUsers count: %d\n", len(newUsers))
 	fmt.Printf("existingUsers count: %d\n", len(existingUsers))
 
-	allUsers, err := common.GetAll(db, &User{})
+	allUsers, err := common.GetAll[*User](db)
 	if err != nil {
 		t.Fatal(err)
 	}

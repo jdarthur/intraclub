@@ -10,7 +10,7 @@ type UniquenessConstraint[T CrudRecord] interface {
 func ValidateUniqueConstraint[T CrudRecord](db DatabaseProvider, c T) error {
 	u, ok := any(c).(UniquenessConstraint[T])
 	if ok {
-		otherRecords, err := GetAllWhere(db, c, func(c2 T) bool {
+		otherRecords, err := GetAllWhere[T](db, func(c2 T) bool {
 			return c.GetId() != c2.GetId()
 		})
 

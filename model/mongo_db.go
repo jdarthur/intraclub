@@ -7,6 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"intraclub/common"
+	"reflect"
 	"time"
 )
 
@@ -30,14 +31,21 @@ func (m *MongoDb) GetAllWhere(recordType common.CrudRecord, where common.WhereFu
 		return nil, err
 	}
 
-	records := ListOfCrudRecords(recordType)
-	err = res.All(ctx, records)
+	blank := recordType.BlankRecord()
+	sliceType := reflect.SliceOf(reflect.TypeOf(blank))
+	slice := reflect.MakeSlice(sliceType, 0, 0)
+	ptr := reflect.New(sliceType)
+	ptr.Elem().Set(slice)
+
+	err = res.All(ctx, ptr.Interface())
 	if err != nil {
 		return nil, err
 	}
 
-	output := make([]common.CrudRecord, 0)
-	for _, record := range records {
+	output := make([]common.CrudRecord, 0, ptr.Elem().Len())
+	sliceVal := ptr.Elem()
+	for i := 0; i < sliceVal.Len(); i++ {
+		record := sliceVal.Index(i).Elem().Interface().(common.CrudRecord)
 		if where == nil || where(record) {
 			output = append(output, record)
 		}
@@ -53,6 +61,8 @@ func (m *MongoDb) GetOne(record common.CrudRecord) (object common.CrudRecord, ex
 	ctx, cancel := defaultTimeout()
 	defer cancel()
 
+	blank := record.BlankRecord()
+
 	res := m.Connection.Collection(record.Type()).FindOne(ctx, byId(record.GetId()))
 	if res.Err() != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
@@ -61,11 +71,11 @@ func (m *MongoDb) GetOne(record common.CrudRecord) (object common.CrudRecord, ex
 		return nil, false, err
 	}
 
-	err = res.Decode(record)
+	err = res.Decode(blank)
 	if err != nil {
 		return nil, false, err
 	}
-	return record, true, nil
+	return blank, true, nil
 
 }
 
@@ -152,8 +162,4 @@ func NewMongoDbProvider(url, username, password string) common.DatabaseProvider 
 		Username: username,
 		Password: password,
 	}
-}
-
-func ListOfCrudRecords[T common.CrudRecord](record T) []T {
-	return make([]T, 0)
 }

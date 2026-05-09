@@ -129,6 +129,10 @@ func (a *TeamAssignment) SetDeletedAt(deletedAt *time.Time) {
 	a.DeletedAt = deletedAt
 }
 
+func (a *TeamAssignment) BlankRecord() common.CrudRecord {
+	return new(TeamAssignment)
+}
+
 type Team struct {
 	ID          TeamId              `json:"id"`
 	Name        string              `json:"name"`
@@ -172,7 +176,7 @@ func (t *Team) getAssignments(db common.DatabaseProvider) ([]*TeamAssignment, er
 	filter := func(a *TeamAssignment) bool {
 		return a.TeamId == t.ID
 	}
-	return common.GetAllWhere[*TeamAssignment](db, &TeamAssignment{}, filter)
+	return common.GetAllWhere[*TeamAssignment](db, filter)
 }
 
 func (t *Team) GetCaptain(db common.DatabaseProvider) (UserId, error) {
@@ -376,6 +380,10 @@ func (t *Team) SetUpdatedAt(updatedAt time.Time) {
 
 func (t *Team) SetDeletedAt(deletedAt *time.Time) {
 	t.DeletedAt = deletedAt
+}
+
+func (t *Team) BlankRecord() common.CrudRecord {
+	return new(Team)
 }
 
 func AccessibleByTeamMembers(db common.DatabaseProvider, t TeamId) []common.RecordId {

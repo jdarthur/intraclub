@@ -128,7 +128,11 @@ func (p *PlayoffStructure) DynamicallyValid(db common.DatabaseProvider) error {
 }
 
 func (p *PlayoffStructure) GetAssignedSeasons(db common.DatabaseProvider) ([]*Season, error) {
-	return common.GetAllWhere(db, &Season{}, func(c *Season) bool {
+	return common.GetAllWhere[*Season](db, func(c *Season) bool {
 		return c.PlayoffStructure == p.ID
 	})
+}
+
+func (p *PlayoffStructure) BlankRecord() common.CrudRecord {
+	return new(PlayoffStructure)
 }

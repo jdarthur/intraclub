@@ -51,7 +51,7 @@ func (w *Week) PreDelete(db common.DatabaseProvider) error {
 
 func (w *Week) DeleteAssignedAvailabilities(db common.DatabaseProvider) error {
 	// get all availability records assigned to this Week
-	availabilities, err := common.GetAllWhere(db, &Availability{}, func(c *Availability) bool {
+	availabilities, err := common.GetAllWhere[*Availability](db, func(c *Availability) bool {
 		return c.WeekId == w.ID
 	})
 	if err != nil {
@@ -159,7 +159,7 @@ func (w *Week) GetNextWeek(allWeeks []*Week) (*Week, error) {
 // sorted in ascending order by Week.Date
 func GetWeeksForDraft(db common.DatabaseProvider, id DraftId) ([]*Week, error) {
 	// get all weeks with matching draft ID
-	allWeeks, err := common.GetAllWhere(db, &Week{}, func(c *Week) bool {
+	allWeeks, err := common.GetAllWhere[*Week](db, func(c *Week) bool {
 		return c.DraftId == id
 	})
 	if err != nil {
@@ -235,7 +235,7 @@ func (w *Week) MoveAvailabilities(db common.DatabaseProvider, pushedTo *Week) er
 		return err
 	}
 
-	nextWeekAvailabilities, err := common.GetAllWhere(db, &Availability{}, func(c *Availability) bool {
+	nextWeekAvailabilities, err := common.GetAllWhere[*Availability](db, func(c *Availability) bool {
 		return c.WeekId == pushedTo.ID
 	})
 	if err != nil {
@@ -262,4 +262,8 @@ func (w *Week) PushBackTo(newDate time.Time) {
 	// change all availabilities corresponding to this week to the availability
 	// of the week that this was pushed back into
 
+}
+
+func (w *Week) BlankRecord() common.CrudRecord {
+	return new(Week)
 }

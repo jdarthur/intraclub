@@ -308,3 +308,7 @@ func (s *IndividualMatch) GetSecondaryPointTotal() int {
 	}
 	return output
 }
+
+func (s *IndividualMatch) BlankRecord() common.CrudRecord {
+	return new(IndividualMatch)
+}

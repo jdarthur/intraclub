@@ -181,7 +181,7 @@ func TestCaptainIsNotInDraftList(t *testing.T) {
 		t.Fatal("Expected captain to exist in available players list")
 	}
 
-	dap, _ := common.GetAllWhere[*DraftAvailablePlayer](db, &DraftAvailablePlayer{}, func(dap *DraftAvailablePlayer) bool {
+	dap, _ := common.GetAllWhere[*DraftAvailablePlayer](db, func(dap *DraftAvailablePlayer) bool {
 		return dap.DraftId == draft.ID && dap.PlayerId == captainToRemove
 	})
 	if len(dap) == 0 {

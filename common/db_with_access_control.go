@@ -78,9 +78,9 @@ func (w *WithAccessControl[T]) CanUserEdit(record T) bool {
 	return false
 }
 
-func (w *WithAccessControl[T]) GetAll(recordType T) ([]T, error) {
+func (w *WithAccessControl[T]) GetAll() ([]T, error) {
 	filter := func(c T) bool { return w.CanUserAccess(c) }
-	return GetAllWhere[T](w.Database, recordType, filter)
+	return GetAllWhere[T](w.Database, filter)
 }
 
 // GetOneById retrieves a CrudRecord by RecordId

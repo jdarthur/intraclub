@@ -78,3 +78,7 @@ func (s *SeasonLateAddition) SetCreatedAt(createdAt time.Time) {
 func (s *SeasonLateAddition) SetUpdatedAt(updatedAt time.Time) {
 	s.UpdatedAt = updatedAt
 }
+
+func (s *SeasonLateAddition) BlankRecord() common.CrudRecord {
+	return new(SeasonLateAddition)
+}

@@ -12,14 +12,13 @@ import (
 
 type RecordId uint64
 
-func (r RecordId) UnmarshalJSON(bytes []byte) error {
+func (r *RecordId) UnmarshalJSON(bytes []byte) error {
 	v, err := RecordIdFromString(strings.Trim(string(bytes), "\""))
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(err)
-	r = v
+	*r = v
 	return nil
 }
 
@@ -105,15 +104,20 @@ var unavailableRecordIds = []RecordId{
 	InvalidRecordId, EveryoneRecordId, SysAdminRecordId,
 }
 
-type CrudRecord interface {
-	Type() string
-	GetId() RecordId
-	SetId(RecordId)
+type Authorizable interface {
 	EditableBy(db DatabaseProvider) []RecordId
 	AccessibleTo(db DatabaseProvider) []RecordId
 	SetOwner(recordId RecordId)
 	GetOwner() RecordId
+}
+
+type CrudRecord interface {
+	Type() string
+	GetId() RecordId
+	SetId(RecordId)
+	Authorizable
 	DatabaseValidatable
+	BlankRecord() CrudRecord
 }
 
 type PostCreate interface {

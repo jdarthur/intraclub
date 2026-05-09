@@ -139,10 +139,8 @@ func (c *CrudCommon[T]) getCrudRecordById(route ApiRoute[T], req ApiRequest[T]) 
 // getAllCrudRecordsById gets all CrudRecord of the type T that this CrudCommon is configured to use,
 // which are accessible to the user who made the ApiRequest.
 func (c *CrudCommon[T]) getAllCrudRecords(route ApiRoute[T], req ApiRequest[T]) (t any, status int, err error) {
-	body, _ := route.RequestBody()
-
 	wac := WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(req)}
-	v, err := wac.GetAll(body)
+	v, err := wac.GetAll()
 	if err != nil {
 		return t, http.StatusInternalServerError, err
 	}

@@ -184,7 +184,7 @@ type RequestForLoginToken struct {
 // RequestToken requests that a
 func (m *StartLoginTokenManager) RequestToken(db common.DatabaseProvider, req *RequestForLoginToken) (token *LoginToken, doesNotExist bool, err error) {
 
-	user, err := common.GetAllWhere(db, &User{}, func(c *User) bool {
+	user, err := common.GetAllWhere[*User](db, func(c *User) bool {
 		return c.Email == req.Email
 	})
 
