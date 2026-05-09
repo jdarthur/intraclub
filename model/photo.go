@@ -53,7 +53,8 @@ func (id PhotoId) MarshalJSON() ([]byte, error) {
 }
 
 func (id PhotoId) UnmarshalJSON(data []byte) error {
-	return id.RecordId().UnmarshalJSON(data)
+	rid := id.RecordId()
+	return (*common.RecordId)(&rid).UnmarshalJSON(data)
 }
 
 type Photo struct {
@@ -113,4 +114,8 @@ func (p *Photo) GetId() common.RecordId {
 
 func (p *Photo) SetId(id common.RecordId) {
 	p.ID = PhotoId(id)
+}
+
+func (p *Photo) BlankRecord() common.CrudRecord {
+	return new(Photo)
 }

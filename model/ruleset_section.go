@@ -79,3 +79,7 @@ func (r *RulesetSection) SetCreatedAt(createdAt time.Time) {
 func (r *RulesetSection) SetUpdatedAt(updatedAt time.Time) {
 	r.UpdatedAt = updatedAt
 }
+
+func (r *RulesetSection) BlankRecord() common.CrudRecord {
+	return new(RulesetSection)
+}

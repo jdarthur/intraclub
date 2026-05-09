@@ -181,3 +181,7 @@ func (c *CommissionerProposal) Status(db common.DatabaseProvider) (accepted, rej
 	// the proposal, then return that information back
 	return false, false, nil
 }
+
+func (c *CommissionerProposal) BlankRecord() common.CrudRecord {
+	return new(CommissionerProposal)
+}

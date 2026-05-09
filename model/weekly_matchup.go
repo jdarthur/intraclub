@@ -172,3 +172,7 @@ func (w *WeeklyMatchup) ValidateThatEachTeamHasOneMatchup(db common.DatabaseProv
 	}
 	return nil
 }
+
+func (w *WeeklyMatchup) BlankRecord() common.CrudRecord {
+	return new(WeeklyMatchup)
+}

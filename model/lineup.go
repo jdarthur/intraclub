@@ -84,3 +84,7 @@ func (l *Lineup) GetFormat(db common.DatabaseProvider) (*Format, error) {
 	}
 	return common.GetExistingRecordById(db, &Format{}, draft.Format.RecordId())
 }
+
+func (l *Lineup) BlankRecord() common.CrudRecord {
+	return new(Lineup)
+}

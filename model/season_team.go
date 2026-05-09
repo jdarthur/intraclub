@@ -78,3 +78,7 @@ func (s *SeasonTeam) SetCreatedAt(createdAt time.Time) {
 func (s *SeasonTeam) SetUpdatedAt(updatedAt time.Time) {
 	s.UpdatedAt = updatedAt
 }
+
+func (s *SeasonTeam) BlankRecord() common.CrudRecord {
+	return new(SeasonTeam)
+}

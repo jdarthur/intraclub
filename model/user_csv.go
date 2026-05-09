@@ -121,7 +121,7 @@ func ParseCsvLine(line, headers []string) (*User, error) {
 }
 
 func ParseUserList(db common.DatabaseProvider, input []*User) (newUsers, alreadyExistingUsers []*User, err error) {
-	existingUsersInDatabase, err := common.GetAll(db, &User{})
+	existingUsersInDatabase, err := common.GetAll[*User](db)
 	if err != nil {
 		return nil, nil, err
 	}

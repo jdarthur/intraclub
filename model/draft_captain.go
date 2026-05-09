@@ -102,3 +102,7 @@ func (d *DraftCaptain) SetCreatedAt(createdAt time.Time) {
 func (d *DraftCaptain) SetUpdatedAt(updatedAt time.Time) {
 	d.UpdatedAt = updatedAt
 }
+
+func (d *DraftCaptain) BlankRecord() common.CrudRecord {
+	return new(DraftCaptain)
+}

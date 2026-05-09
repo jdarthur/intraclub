@@ -178,7 +178,7 @@ func (b *Blurb) CanUserCommentOrReact(db common.DatabaseProvider, u UserId) erro
 }
 
 func (b *Blurb) GetComments(db common.DatabaseProvider) ([]*Comment, error) {
-	v, err := common.GetAllWhere(db, &Comment{}, func(c *Comment) bool {
+	v, err := common.GetAllWhere[*Comment](db, func(c *Comment) bool {
 		return c.Blurb == b.ID
 	})
 	if err != nil {
@@ -190,4 +190,8 @@ func (b *Blurb) GetComments(db common.DatabaseProvider) ([]*Comment, error) {
 		return v[i].CreatedAt.Before(v[j].CreatedAt)
 	})
 	return v, nil
+}
+
+func (b *Blurb) BlankRecord() common.CrudRecord {
+	return new(Blurb)
 }

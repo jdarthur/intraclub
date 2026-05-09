@@ -14,7 +14,8 @@ var RatingThree = "Lower-skilled player who might be prone to mistakes or beatab
 type RatingId common.RecordId
 
 func (id RatingId) UnmarshalJSON(bytes []byte) error {
-	return id.RecordId().UnmarshalJSON(bytes)
+	rid := id.RecordId()
+	return (*common.RecordId)(&rid).UnmarshalJSON(bytes)
 }
 
 func (id RatingId) MarshalJSON() ([]byte, error) {
@@ -62,7 +63,7 @@ func (r *Rating) GetOwner() common.RecordId {
 }
 
 func (r *Rating) PreDelete(db common.DatabaseProvider) error {
-	formats, err := common.GetAllWhere(db, &Format{}, func(c *Format) bool {
+	formats, err := common.GetAllWhere[*Format](db, func(c *Format) bool {
 		return c.IsRatingInOptionsList(r.ID)
 	})
 	if err != nil {
@@ -117,4 +118,8 @@ func (r *Rating) StaticallyValid() error {
 
 func (r *Rating) DynamicallyValid(db common.DatabaseProvider) error {
 	return common.ExistsById(db, &User{}, r.UserId.RecordId())
+}
+
+func (r *Rating) BlankRecord() common.CrudRecord {
+	return new(Rating)
 }

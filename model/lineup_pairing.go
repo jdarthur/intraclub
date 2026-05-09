@@ -36,6 +36,10 @@ func (l *LineupPairing) UniquenessEquivalent(other *LineupPairing) error {
 	return nil
 }
 
+func (l *LineupPairing) GetOwner() common.RecordId {
+	return common.InvalidRecordId
+}
+
 func (l *LineupPairing) Type() string {
 	return "lineup_pairing"
 }
@@ -141,4 +145,8 @@ func (l *LineupPairing) _validatePlayerRatings(format *Format, team *Team) error
 		return fmt.Errorf("player 2 has rating %s, expected %s for line index %d for format", line.Player2Rating, rating2, l.FormatLineIndex)
 	}
 	return nil
+}
+
+func (l *LineupPairing) BlankRecord() common.CrudRecord {
+	return new(LineupPairing)
 }

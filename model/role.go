@@ -115,6 +115,10 @@ func (u *UserRoleAssignment) DynamicallyValid(db common.DatabaseProvider) error 
 	return nil
 }
 
+func (u *UserRoleAssignment) BlankRecord() common.CrudRecord {
+	return new(UserRoleAssignment)
+}
+
 func IsUserAssignedToTeam(db common.DatabaseProvider, userId UserId, teamId TeamId) (bool, error) {
 	err := common.ExistsById(db, &User{}, userId.RecordId())
 	if err != nil {
@@ -166,7 +170,7 @@ func (u *User) HasRole(db common.DatabaseProvider, role Role) (bool, error) {
 		return c.UserId == u.ID
 	}
 
-	roles, err := common.GetAllWhere(db, &UserRoleAssignment{}, filter)
+	roles, err := common.GetAllWhere[*UserRoleAssignment](db, filter)
 
 	if err != nil {
 		return false, err

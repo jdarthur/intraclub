@@ -96,7 +96,7 @@ func seedDevRatings(u UserId) {
 }
 
 func seedDevFormat(u UserId) {
-	ratings, err := common.GetAll(common.GlobalDatabaseProvider, &Rating{})
+	ratings, err := common.GetAll[*Rating](common.GlobalDatabaseProvider)
 	if err != nil {
 		panic(err)
 	}

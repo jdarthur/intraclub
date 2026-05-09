@@ -101,7 +101,7 @@ func (s *Schedule) GetWeeks(db common.DatabaseProvider) ([]*Week, error) {
 		return nil, err
 	}
 
-	return common.GetAllWhere(db, &Week{}, func(c *Week) bool {
+	return common.GetAllWhere[*Week](db, func(c *Week) bool {
 		return c.DraftId == season.DraftId
 	})
 }
@@ -112,4 +112,8 @@ func (s *Schedule) IsScheduleComplete(db common.DatabaseProvider) (bool, error) 
 		return false, err
 	}
 	return len(weeks) == len(s.Matchups), nil
+}
+
+func (s *Schedule) BlankRecord() common.CrudRecord {
+	return new(Schedule)
 }

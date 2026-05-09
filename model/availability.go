@@ -155,7 +155,7 @@ func (a *Availability) AccessibleTo(db common.DatabaseProvider) []common.RecordI
 }
 
 func GetAvailabilityForUser(db common.DatabaseProvider, userId UserId, draftId DraftId) ([]*Availability, error) {
-	weeks, err := common.GetAllWhere(db, &Week{}, func(c *Week) bool {
+	weeks, err := common.GetAllWhere[*Week](db, func(c *Week) bool {
 		return c.DraftId == draftId
 	})
 
@@ -163,7 +163,7 @@ func GetAvailabilityForUser(db common.DatabaseProvider, userId UserId, draftId D
 		return nil, err
 	}
 
-	return common.GetAllWhere(db, &Availability{}, func(c *Availability) bool {
+	return common.GetAllWhere[*Availability](db, func(c *Availability) bool {
 		// only return Availability associated with this User
 		if c.UserId != userId {
 			return false
@@ -177,6 +177,10 @@ func GetAvailabilityForUser(db common.DatabaseProvider, userId UserId, draftId D
 		}
 		return false
 	})
+}
+
+func (a *Availability) BlankRecord() common.CrudRecord {
+	return new(Availability)
 }
 
 func GetAvailabilityForTeam(db common.DatabaseProvider, teamId TeamId, draftId DraftId) (map[UserId][]*Availability, error) {

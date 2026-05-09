@@ -78,3 +78,7 @@ func (s *SeasonCommissioner) SetCreatedAt(createdAt time.Time) {
 func (s *SeasonCommissioner) SetUpdatedAt(updatedAt time.Time) {
 	s.UpdatedAt = updatedAt
 }
+
+func (s *SeasonCommissioner) BlankRecord() common.CrudRecord {
+	return new(SeasonCommissioner)
+}

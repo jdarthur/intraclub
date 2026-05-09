@@ -78,3 +78,7 @@ func (d *DraftAvailablePlayer) SetCreatedAt(createdAt time.Time) {
 func (d *DraftAvailablePlayer) SetUpdatedAt(updatedAt time.Time) {
 	d.UpdatedAt = updatedAt
 }
+
+func (d *DraftAvailablePlayer) BlankRecord() common.CrudRecord {
+	return new(DraftAvailablePlayer)
+}

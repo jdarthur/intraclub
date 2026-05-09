@@ -69,7 +69,8 @@ func (l *FormatLine) String() string {
 type FormatId common.RecordId
 
 func (id FormatId) UnmarshalJSON(bytes []byte) error {
-	return id.RecordId().UnmarshalJSON(bytes)
+	rid := id.RecordId()
+	return (*common.RecordId)(&rid).UnmarshalJSON(bytes)
 }
 
 func (id FormatId) MarshalJSON() ([]byte, error) {
@@ -219,7 +220,7 @@ func (f *Format) IsRatingValidForFormat(r RatingId) bool {
 }
 
 func (f *Format) GetAssignedDrafts(db common.DatabaseProvider) ([]*Draft, error) {
-	return common.GetAllWhere(db, &Draft{}, func(c *Draft) bool {
+	return common.GetAllWhere[*Draft](db, func(c *Draft) bool {
 		return c.Format == f.ID
 	})
 }
@@ -239,4 +240,8 @@ func (f *Format) CheckHasAssignedDrafts(db common.DatabaseProvider, isUpdate boo
 		return fmt.Errorf("cannot %s format with %d assigned drafts", verb, len(drafts))
 	}
 	return nil
+}
+
+func (f *Format) BlankRecord() common.CrudRecord {
+	return new(Format)
 }

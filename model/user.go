@@ -132,3 +132,7 @@ func (u *User) StaticallyValid() error {
 func (u *User) DynamicallyValid(db common.DatabaseProvider) error {
 	return nil
 }
+
+func (u *User) BlankRecord() common.CrudRecord {
+	return new(User)
+}

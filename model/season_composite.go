@@ -28,21 +28,21 @@ func GetMySeasons(db common.DatabaseProvider, token *common.AuthToken, asPlayer,
 }
 
 func GetMySeasonsAsCommissioner(db common.DatabaseProvider, token *common.AuthToken) ([]*SeasonComposite, error) {
-	drafts, err := common.GetAllWhere(db, &Draft{}, func(c *Draft) bool {
+	drafts, err := common.GetAllWhere[*Draft](db, func(c *Draft) bool {
 		return isUserCommissioner(c, token.UserId)
 	})
 	return getSeasonComposites(db, drafts, err)
 }
 
 func GetMySeasonsAsPlayer(db common.DatabaseProvider, token *common.AuthToken) ([]*SeasonComposite, error) {
-	drafts, err := common.GetAllWhere(db, &Draft{}, func(c *Draft) bool {
+	drafts, err := common.GetAllWhere[*Draft](db, func(c *Draft) bool {
 		return isUserPlayer(c, token.UserId, db)
 	})
 	return getSeasonComposites(db, drafts, err)
 }
 
 func GetMySeasonsAsPlayerOrCommissioner(db common.DatabaseProvider, token *common.AuthToken) ([]*SeasonComposite, error) {
-	drafts, err := common.GetAllWhere(db, &Draft{}, func(c *Draft) bool {
+	drafts, err := common.GetAllWhere[*Draft](db, func(c *Draft) bool {
 		return isUserPlayerOrCommissioner(c, token.UserId, db)
 	})
 	return getSeasonComposites(db, drafts, err)
