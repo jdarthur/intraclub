@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"intraclub/common"
 	"strings"
@@ -19,7 +20,7 @@ func assertRuleAmendmentIsStaticallyInvalid(t *testing.T, r *RuleAmendment, cont
 }
 
 func assertDynamicallyInvalid(t *testing.T, db common.DatabaseProvider, r *RuleAmendment, containsText string) {
-	err := r.DynamicallyValid(db)
+	err := r.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Expected DynamicallyValid to return error")
 	}
@@ -30,7 +31,7 @@ func assertDynamicallyInvalid(t *testing.T, db common.DatabaseProvider, r *RuleA
 }
 
 func assertAmendmentIsInvalidForRuleset(t *testing.T, db common.DatabaseProvider, r *Ruleset, a *RuleAmendment, containsText string) {
-	_, err := r.Amend(db, a)
+	_, err := r.Amend(context.Background(), db, a)
 	if err == nil {
 		t.Fatal("Expected Amend to return error")
 	}
@@ -73,7 +74,7 @@ func TestRuleAmendmentTargetSectionIdIsNotInRuleset(t *testing.T) {
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 	ruleset2 := newValidStoredRulesetWithOneSection(t, db)
 
-	sections, err := ruleset2.GetSections(db)
+	sections, err := ruleset2.GetSections(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,12 +138,12 @@ func TestNewContentsIsNotModifiedOnModifySection(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 
-	sections, err := ruleset.GetSections(db)
+	sections, err := ruleset.GetSections(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	existing, err := common.GetExistingRecordById(db, &RuleSection{}, sections[0].RecordId())
+	existing, err := common.GetExistingRecordById(context.Background(), db, &RuleSection{}, sections[0].RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,11 +188,11 @@ func TestAfterSectionIdIsNotInRulesetOnReorderSection(t *testing.T) {
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 	ruleset2 := newValidStoredRulesetWithOneSection(t, db)
 
-	sections, err := ruleset.GetSections(db)
+	sections, err := ruleset.GetSections(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
-	sections2, err := ruleset2.GetSections(db)
+	sections2, err := ruleset2.GetSections(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +210,7 @@ func TestAfterSectionIdIsNotInRulesetOnAddSection(t *testing.T) {
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 	ruleset2 := newValidStoredRulesetWithOneSection(t, db)
 
-	sections2, err := ruleset2.GetSections(db)
+	sections2, err := ruleset2.GetSections(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -226,7 +227,7 @@ func TestAfterSectionIdDoesNotExistOnReorderSection(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 
-	sections, err := ruleset.GetSections(db)
+	sections, err := ruleset.GetSections(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +244,7 @@ func TestAfterSectionIdIsSameAsTargetSectionId(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 
-	sections, err := ruleset.GetSections(db)
+	sections, err := ruleset.GetSections(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +261,7 @@ func TestAfterSectionIdIsSetOnRemoveSection(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 
-	sections, err := ruleset.GetSections(db)
+	sections, err := ruleset.GetSections(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -277,7 +278,7 @@ func TestAfterSectionIdIsSetOnModifySection(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 
-	sections, err := ruleset.GetSections(db)
+	sections, err := ruleset.GetSections(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -295,7 +296,7 @@ func TestAfterSectionIdIsUnchangedOnReorderSection(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithXSections(t, db, 2)
 
-	sections, err := ruleset.GetSections(db)
+	sections, err := ruleset.GetSections(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -307,4 +308,3 @@ func TestAfterSectionIdIsUnchangedOnReorderSection(t *testing.T) {
 	}
 	assertAmendmentIsInvalidForRuleset(t, db, ruleset, a, "does not reorder")
 }
-

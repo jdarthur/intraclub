@@ -1,5 +1,6 @@
 package common
 
+import "context"
 import "fmt"
 
 type WithAccessControl[T CrudRecord] struct {
@@ -7,17 +8,17 @@ type WithAccessControl[T CrudRecord] struct {
 	AccessControlUser RecordId
 }
 
-func NewWithAccessControl[T CrudRecord](db DatabaseProvider, accessControlUser RecordId) *WithAccessControl[T] {
+func NewWithAccessControl[T CrudRecord](ctx context.Context, db DatabaseProvider, accessControlUser RecordId) *WithAccessControl[T] {
 	return &WithAccessControl[T]{
 		Database:          db,
 		AccessControlUser: accessControlUser,
 	}
 }
 
-var SysAdminCheck func(db DatabaseProvider, c RecordId) (bool, error)
+var SysAdminCheck func(ctx context.Context, db DatabaseProvider, c RecordId) (bool, error)
 
 func (w *WithAccessControl[T]) CanUserAccess(record T) bool {
-	list := record.AccessibleTo(w.Database)
+	list := record.AccessibleTo(context.Background(), w.Database)
 	if len(list) == 0 {
 		fmt.Println("Access list is empty")
 		return false
@@ -33,7 +34,7 @@ func (w *WithAccessControl[T]) CanUserAccess(record T) bool {
 }
 
 func (w *WithAccessControl[T]) CanUserEdit(record T) bool {
-	list := record.EditableBy(w.Database)
+	list := record.EditableBy(context.Background(), w.Database)
 	if len(list) == 0 {
 		fmt.Println("Editable-by list is empty")
 		return false
@@ -48,7 +49,7 @@ func (w *WithAccessControl[T]) CanUserEdit(record T) bool {
 				// if EditableBy has no "user X can only delete" constraint, we can edit
 				return true
 			} else {
-				if !cod.CanOnlyDelete(w.Database, w.AccessControlUser) {
+				if !cod.CanOnlyDelete(context.Background(), w.Database, w.AccessControlUser) {
 					// if EditableBy has a "user X can only delete" constraint, but this
 					// user doesn't have that constraint, we can edit.
 					return true
@@ -62,10 +63,10 @@ func (w *WithAccessControl[T]) CanUserEdit(record T) bool {
 	}
 
 	if isSysAdminEditable && SysAdminCheck != nil {
-		if editIsConstrained && cod.CanOnlyDelete(w.Database, SysAdminRecordId) {
+		if editIsConstrained && cod.CanOnlyDelete(context.Background(), w.Database, SysAdminRecordId) {
 			return false
 		}
-		isSysAdmin, err := SysAdminCheck(w.Database, w.AccessControlUser)
+		isSysAdmin, err := SysAdminCheck(context.Background(), w.Database, w.AccessControlUser)
 		if err != nil {
 			fmt.Println("error checking for sys admin", err)
 			return false
@@ -78,14 +79,14 @@ func (w *WithAccessControl[T]) CanUserEdit(record T) bool {
 	return false
 }
 
-func (w *WithAccessControl[T]) GetAll() ([]T, error) {
-	filter := func(c T) bool { return w.CanUserAccess(c) }
-	return GetAllWhere[T](w.Database, filter)
+func (w *WithAccessControl[T]) GetAll(ctx context.Context) ([]T, error) {
+	filter := func(_ context.Context, c T) bool { return w.CanUserAccess(c) }
+	return GetAllWhere[T](ctx, w.Database, filter)
 }
 
 // GetOneById retrieves a CrudRecord by RecordId
-func (w *WithAccessControl[T]) GetOneById(record T, id RecordId) (t T, exists bool, err error) {
-	t, exists, err = GetOneById(w.Database, record, id)
+func (w *WithAccessControl[T]) GetOneById(ctx context.Context, record T, id RecordId) (t T, exists bool, err error) {
+	t, exists, err = GetOneById(ctx, w.Database, record, id)
 	if err != nil {
 		return t, false, err
 	}
@@ -97,8 +98,8 @@ func (w *WithAccessControl[T]) GetOneById(record T, id RecordId) (t T, exists bo
 	return t, true, nil
 }
 
-func (w *WithAccessControl[T]) DeleteOneById(record T, id RecordId) (t T, exists bool, err error) {
-	t, exists, err = GetOneById(w.Database, record, id)
+func (w *WithAccessControl[T]) DeleteOneById(ctx context.Context, record T, id RecordId) (t T, exists bool, err error) {
+	t, exists, err = GetOneById(ctx, w.Database, record, id)
 	if err != nil {
 		return t, false, err
 	}
@@ -109,14 +110,14 @@ func (w *WithAccessControl[T]) DeleteOneById(record T, id RecordId) (t T, exists
 	}
 
 	fmt.Println("deleting record", id)
-	return DeleteOneById(w.Database, record, id)
+	return DeleteOneById(ctx, w.Database, record, id)
 }
 
-func (w *WithAccessControl[T]) UpdateOneById(record T) (err error) {
+func (w *WithAccessControl[T]) UpdateOneById(ctx context.Context, record T) (err error) {
 	// check that a record exists with this ID. we will do this again in
 	// the call to UpdateOne function below, but we need the common validate
 	// and post-update logic that that function provides here.
-	t, exists, err := GetOneById(w.Database, record, record.GetId())
+	t, exists, err := GetOneById(ctx, w.Database, record, record.GetId())
 	if err != nil {
 		return err
 	}
@@ -133,5 +134,5 @@ func (w *WithAccessControl[T]) UpdateOneById(record T) (err error) {
 	}
 
 	// update it, validating the type while doing so
-	return UpdateOne(w.Database, record)
+	return UpdateOne(ctx, w.Database, record)
 }

@@ -1,8 +1,8 @@
 package model
 
 import (
+	"context"
 	"fmt"
-	"math/rand"
 	"testing"
 
 	"intraclub/common"
@@ -20,9 +20,9 @@ func newStoredRating(t *testing.T, db common.DatabaseProvider) *Rating {
 	user := newStoredUser(t, db)
 	r := NewRating()
 	r.UserId = user.ID
-	r.Name = fmt.Sprintf("Rating %d", rand.Intn(10_000))
+	r.Name = fmt.Sprintf("Rating %s", common.NewRecordId())
 	r.Description = "test description"
-	v, err := common.CreateOne(db, r)
+	v, err := common.CreateOne(context.Background(), db, r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +83,7 @@ func TestRatingUserIdNotValid(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	r := newValidRating(UserId(common.InvalidRecordId))
 
-	err := r.DynamicallyValid(db)
+	err := r.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("expected error for invalid user ID")
 	}
@@ -100,12 +100,12 @@ func TestRatingUpdateBySysAdmin(t *testing.T) {
 	copied := copyRating(r)
 	copied.Name = "new name"
 
-	err := wac.UpdateOneById(copied)
+	err := wac.UpdateOneById(context.Background(), copied)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	v, err := common.GetExistingRecordById(db, &Rating{}, r.ID.RecordId())
+	v, err := common.GetExistingRecordById(context.Background(), db, &Rating{}, r.ID.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,19 +119,19 @@ func TestRatingCannotBeDeletedWhenInUse(t *testing.T) {
 	format := newDefaultStoredFormat(t, db)
 
 	ratingId := format.PossibleRatings[0].RecordId()
-	rating, err := common.GetExistingRecordById(db, &Rating{}, ratingId)
+	rating, err := common.GetExistingRecordById(context.Background(), db, &Rating{}, ratingId)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	wac := common.WithAccessControl[*Rating]{Database: db, AccessControlUser: rating.UserId.RecordId()}
-	_, _, err = wac.DeleteOneById(&Rating{}, ratingId)
+	_, _, err = wac.DeleteOneById(context.Background(), &Rating{}, ratingId)
 	if err == nil {
 		t.Fatal("Expected error on delete of in-use rating")
 	}
 	fmt.Println(err)
 
-	_, exists, err := common.GetOneById(db, &Rating{}, ratingId)
+	_, exists, err := common.GetOneById(context.Background(), db, &Rating{}, ratingId)
 	if err != nil {
 		t.Fatal(err)
 	}

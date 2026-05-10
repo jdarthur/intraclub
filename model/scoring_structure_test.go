@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"intraclub/common"
 	"testing"
@@ -46,7 +47,7 @@ func newDefaultStoredScoringStructure(t *testing.T, db common.DatabaseProvider) 
 		s.ID,
 	}
 
-	m, err := common.CreateOne(db, matchScoringStructure)
+	m, err := common.CreateOne(context.Background(), db, matchScoringStructure)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +68,7 @@ func newThirdSetTiebreakScoringStructure(t *testing.T, db common.DatabaseProvide
 		s2.ID,
 	}
 
-	m, err := common.CreateOne(db, matchScoringStructure)
+	m, err := common.CreateOne(context.Background(), db, matchScoringStructure)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +81,7 @@ func newDefaultStoredSetScoringStructure(t *testing.T, db common.DatabaseProvide
 	setScoringStructure := &TennisSetScoringStructure
 	setScoringStructure.Owner = owner.ID
 	setScoringStructure.Name = "test-set-scoring"
-	s, err := common.CreateOne(db, setScoringStructure)
+	s, err := common.CreateOne(context.Background(), db, setScoringStructure)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +94,7 @@ func newTenPointTiebreakSetScoringStructure(t *testing.T, db common.DatabaseProv
 	setScoringStructure := &TennisTiebreakThirdSet
 	setScoringStructure.Owner = owner.ID
 	setScoringStructure.Name = "test-tiebreak-set-scoring"
-	s, err := common.CreateOne(db, setScoringStructure)
+	s, err := common.CreateOne(context.Background(), db, setScoringStructure)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +220,7 @@ func TestInvalidSecondaryScoreReference(t *testing.T) {
 	}
 	s.SecondaryScoringStructures = []ScoringStructureId{ScoringStructureId(common.InvalidRecordId)}
 
-	err := s.DynamicallyValid(db)
+	err := s.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -235,7 +236,7 @@ func TestInvalidOwnerId(t *testing.T) {
 		MustWinBy:    2,
 	}
 
-	err := s.DynamicallyValid(db)
+	err := s.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("expected error")
 	}

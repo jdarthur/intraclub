@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"intraclub/common"
 	"time"
 )
@@ -45,23 +46,21 @@ func (r *RulesetSection) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that both the referenced Ruleset and RuleSection records exist.
-func (r *RulesetSection) DynamicallyValid(db common.DatabaseProvider) error {
-	if err := common.ExistsById(db, &Ruleset{}, r.RulesetId.RecordId()); err != nil {
+func (r *RulesetSection) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	if err := common.ExistsById(ctx, db, &Ruleset{}, r.RulesetId.RecordId()); err != nil {
 		return err
 	}
-	if err := common.ExistsById(db, &RuleSection{}, r.SectionId.RecordId()); err != nil {
+	if err := common.ExistsById(ctx, db, &RuleSection{}, r.SectionId.RecordId()); err != nil {
 		return err
 	}
 	return nil
 }
 
-// AccessibleTo returns everyone as RulesetSection records are public.
-func (r *RulesetSection) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (r *RulesetSection) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
-// EditableBy returns only sysadmins as only they can modify RulesetSection records.
-func (r *RulesetSection) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (r *RulesetSection) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return []common.RecordId{common.SysAdminRecordId}
 }
 

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"intraclub/common"
 )
@@ -79,20 +80,20 @@ func (a *Availability) StaticallyValid() error {
 	return nil
 }
 
-func (a *Availability) DynamicallyValid(db common.DatabaseProvider) error {
-	err := common.ExistsById(db, &User{}, a.UserId.RecordId())
+func (a *Availability) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	err := common.ExistsById(ctx, db, &User{}, a.UserId.RecordId())
 	if err != nil {
 		return err
 	}
-	return common.ExistsById(db, &Week{}, a.WeekId.RecordId())
+	return common.ExistsById(ctx, db, &Week{}, a.WeekId.RecordId())
 }
 
-func (a *Availability) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (a *Availability) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return []common.RecordId{a.UserId.RecordId()}
 }
 
-func (a *Availability) getTeam(db common.DatabaseProvider) (*Team, error) {
-	week, exists, err := common.GetOneById(db, &Week{}, a.WeekId.RecordId())
+func (a *Availability) getTeam(ctx context.Context, db common.DatabaseProvider) (*Team, error) {
+	week, exists, err := common.GetOneById(ctx, db, &Week{}, a.WeekId.RecordId())
 	if err != nil {
 		return nil, err
 	}
@@ -100,12 +101,12 @@ func (a *Availability) getTeam(db common.DatabaseProvider) (*Team, error) {
 		return nil, fmt.Errorf("week with ID %s does not exist", a.WeekId.RecordId())
 	}
 
-	draft, err := common.GetExistingRecordById(db, &Draft{}, week.DraftId.RecordId())
+	draft, err := common.GetExistingRecordById(ctx, db, &Draft{}, week.DraftId.RecordId())
 	if err != nil {
 		return nil, err
 	}
 
-	season, err := draft.GetSeason(db)
+	season, err := draft.GetSeason(ctx, db)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +115,7 @@ func (a *Availability) getTeam(db common.DatabaseProvider) (*Team, error) {
 		return nil, fmt.Errorf("draft %s (from week %s) does not have an assigned season", draft.ID, a.WeekId)
 	}
 
-	seasonMember, err := season.IsUserIdASeasonParticipant(db, a.UserId)
+	seasonMember, err := season.IsUserIdASeasonParticipant(ctx, db, a.UserId)
 	if err != nil {
 		return nil, err
 	}
@@ -122,13 +123,13 @@ func (a *Availability) getTeam(db common.DatabaseProvider) (*Team, error) {
 		return nil, fmt.Errorf("user %s is not a participant in season %s", a.UserId.String(), season.ID)
 	}
 
-	teams, err := season.GetTeams(db)
+	teams, err := season.GetTeams(ctx, db)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, team := range teams {
-		isMember, err := team.IsTeamMember(db, a.UserId)
+		isMember, err := team.IsTeamMember(ctx, db, a.UserId)
 		if err != nil {
 			return nil, err
 		}
@@ -140,13 +141,13 @@ func (a *Availability) getTeam(db common.DatabaseProvider) (*Team, error) {
 	return nil, fmt.Errorf("user %s was not found on any teams in season %s", a.UserId, season.ID)
 }
 
-func (a *Availability) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
-	team, err := a.getTeam(db)
+func (a *Availability) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+	team, err := a.getTeam(ctx, db)
 	if err != nil {
 		fmt.Println(err)
 		return nil
 	}
-	members, err := team.GetMembers(db)
+	members, err := team.GetMembers(ctx, db)
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -154,8 +155,8 @@ func (a *Availability) AccessibleTo(db common.DatabaseProvider) []common.RecordI
 	return UserIdListToRecordIdList(members)
 }
 
-func GetAvailabilityForUser(db common.DatabaseProvider, userId UserId, draftId DraftId) ([]*Availability, error) {
-	weeks, err := common.GetAllWhere[*Week](db, func(c *Week) bool {
+func GetAvailabilityForUser(ctx context.Context, db common.DatabaseProvider, userId UserId, draftId DraftId) ([]*Availability, error) {
+	weeks, err := common.GetAllWhere[*Week](ctx, db, func(_ context.Context, c *Week) bool {
 		return c.DraftId == draftId
 	})
 
@@ -163,7 +164,7 @@ func GetAvailabilityForUser(db common.DatabaseProvider, userId UserId, draftId D
 		return nil, err
 	}
 
-	return common.GetAllWhere[*Availability](db, func(c *Availability) bool {
+	return common.GetAllWhere[*Availability](ctx, db, func(_ context.Context, c *Availability) bool {
 		// only return Availability associated with this User
 		if c.UserId != userId {
 			return false
@@ -183,18 +184,18 @@ func (a *Availability) BlankRecord() common.CrudRecord {
 	return new(Availability)
 }
 
-func GetAvailabilityForTeam(db common.DatabaseProvider, teamId TeamId, draftId DraftId) (map[UserId][]*Availability, error) {
+func GetAvailabilityForTeam(ctx context.Context, db common.DatabaseProvider, teamId TeamId, draftId DraftId) (map[UserId][]*Availability, error) {
 	output := make(map[UserId][]*Availability)
-	team, err := common.GetExistingRecordById(db, &Team{}, teamId.RecordId())
+	team, err := common.GetExistingRecordById(ctx, db, &Team{}, teamId.RecordId())
 	if err != nil {
 		return nil, err
 	}
-	members, err := team.GetMembers(db)
+	members, err := team.GetMembers(ctx, db)
 	if err != nil {
 		return nil, err
 	}
 	for _, member := range members {
-		availability, err := GetAvailabilityForUser(db, member, draftId)
+		availability, err := GetAvailabilityForUser(ctx, db, member, draftId)
 		if err != nil {
 			return nil, err
 		}

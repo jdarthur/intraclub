@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -13,7 +14,7 @@ func newStoredCommissionerProposalForSeason(t *testing.T, db common.DatabaseProv
 	proposal.SeasonId = season.ID
 	proposal.MustBeUnanimous = mustBeUnanimous
 
-	v, err := common.CreateOne(db, proposal)
+	v, err := common.CreateOne(context.Background(), db, proposal)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +28,7 @@ func newStoredCommissionerProposal(t *testing.T, db common.DatabaseProvider, mus
 }
 
 func assertProposalStatus(t *testing.T, proposal *CommissionerProposal, db common.DatabaseProvider, expectAccepted, expectRejected bool) {
-	accepted, rejected, err := proposal.Status(db)
+	accepted, rejected, err := proposal.Status(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,30 +47,30 @@ func TestCommissionerProposalUnanimousConsent(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	season, prop := newStoredCommissionerProposal(t, db, true)
 
-	commissioners, err := season.GetCommissioners(db)
+	commissioners, err := season.GetCommissioners(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, commissioner := range commissioners {
-		err := prop.Vote(db, commissioner, true)
+		err := prop.Vote(context.Background(), db, commissioner, true)
 		if err != nil {
 			t.Fatal(err)
 		}
 		assertProposalStatus(t, prop, db, false, false)
 	}
 
-	teams, err := season.GetTeams(db)
+	teams, err := season.GetTeams(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for i, team := range teams {
-		captain, err := team.GetCaptain(db)
+		captain, err := team.GetCaptain(context.Background(), db)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = prop.Vote(db, captain, true)
+		err = prop.Vote(context.Background(), db, captain, true)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -87,8 +88,8 @@ func TestCommissionerProposalUnanimousConsentOneNoRejects(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	season, prop := newStoredCommissionerProposal(t, db, true)
 
-	commissioners, _ := season.GetCommissioners(db)
-	err := prop.Vote(db, commissioners[0], false)
+	commissioners, _ := season.GetCommissioners(context.Background(), db)
+	err := prop.Vote(context.Background(), db, commissioners[0], false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,25 +100,25 @@ func TestCommissionerProposalFiftyPercentPlusOneAccepted(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	season, prop := newStoredCommissionerProposal(t, db, false)
 
-	teams, err := season.GetTeams(db)
+	teams, err := season.GetTeams(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, team := range teams[:2] {
-		captain, err := team.GetCaptain(db)
+		captain, err := team.GetCaptain(context.Background(), db)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = prop.Vote(db, captain, true)
+		err = prop.Vote(context.Background(), db, captain, true)
 		if err != nil {
 			t.Fatal(err)
 		}
 		assertProposalStatus(t, prop, db, false, false)
 	}
 
-	commissioners, _ := season.GetCommissioners(db)
-	err = prop.Vote(db, commissioners[0], true)
+	commissioners, _ := season.GetCommissioners(context.Background(), db)
+	err = prop.Vote(context.Background(), db, commissioners[0], true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,25 +129,25 @@ func TestCommissionerProposalFiftyPercentPlusOneRejected(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	season, prop := newStoredCommissionerProposal(t, db, false)
 
-	teams, err := season.GetTeams(db)
+	teams, err := season.GetTeams(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, team := range teams[:2] {
-		captain, err := team.GetCaptain(db)
+		captain, err := team.GetCaptain(context.Background(), db)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = prop.Vote(db, captain, false)
+		err = prop.Vote(context.Background(), db, captain, false)
 		if err != nil {
 			t.Fatal(err)
 		}
 		assertProposalStatus(t, prop, db, false, false)
 	}
 
-	commissioners, _ := season.GetCommissioners(db)
-	err = prop.Vote(db, commissioners[0], false)
+	commissioners, _ := season.GetCommissioners(context.Background(), db)
+	err = prop.Vote(context.Background(), db, commissioners[0], false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,25 +159,25 @@ func TestCommissionerProposalTieIsRejected(t *testing.T) {
 	season, _ := newDefaultSeasonWithTeams(t, db, 5)
 	prop := newStoredCommissionerProposalForSeason(t, db, season, false)
 
-	teams, err := season.GetTeams(db)
+	teams, err := season.GetTeams(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, team := range teams[:2] {
-		captain, err := team.GetCaptain(db)
+		captain, err := team.GetCaptain(context.Background(), db)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = prop.Vote(db, captain, false)
+		err = prop.Vote(context.Background(), db, captain, false)
 		if err != nil {
 			t.Fatal(err)
 		}
 		assertProposalStatus(t, prop, db, false, false)
 	}
 
-	commissioners, _ := season.GetCommissioners(db)
-	err = prop.Vote(db, commissioners[0], false)
+	commissioners, _ := season.GetCommissioners(context.Background(), db)
+	err = prop.Vote(context.Background(), db, commissioners[0], false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -187,7 +188,7 @@ func TestCommissionerProposalInvalidVoterId(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	_, prop := newStoredCommissionerProposal(t, db, true)
 	otherUser := newStoredUser(t, db)
-	err := prop.Vote(db, otherUser.ID, false)
+	err := prop.Vote(context.Background(), db, otherUser.ID, false)
 	if err == nil {
 		t.Fatal("expected error on invalid voter")
 	}
@@ -209,7 +210,7 @@ func TestCommissionerProposalUnanimousConstraintCannotBeUpdated(t *testing.T) {
 	_, prop := newStoredCommissionerProposal(t, db, true)
 	copied := copyProposal(prop)
 	copied.MustBeUnanimous = false
-	err := common.UpdateOne(db, copied)
+	err := common.UpdateOne(context.Background(), db, copied)
 	if err == nil {
 		t.Fatal("expected error when updating unanimous constraint")
 	}

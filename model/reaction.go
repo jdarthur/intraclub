@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"intraclub/common"
 )
@@ -93,8 +94,8 @@ func (r *Reaction) StaticallyValid() error {
 	return r.Type.StaticallyValid()
 }
 
-func (r *Reaction) DynamicallyValid(db common.DatabaseProvider) error {
-	return common.ExistsById(db, &User{}, r.UserId.RecordId())
+func (r *Reaction) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	return common.ExistsById(ctx, db, &User{}, r.UserId.RecordId())
 }
 
 func (r *Reaction) Equals(other *Reaction) bool {
@@ -121,9 +122,9 @@ func (r ReactionList) StaticallyValid() error {
 	return nil
 }
 
-func (r ReactionList) DynamicallyValid(db common.DatabaseProvider) error {
+func (r ReactionList) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
 	for _, reaction := range r {
-		err := reaction.DynamicallyValid(db)
+		err := reaction.DynamicallyValid(ctx, db)
 		if err != nil {
 			return err
 		}
@@ -131,8 +132,8 @@ func (r ReactionList) DynamicallyValid(db common.DatabaseProvider) error {
 	return nil
 }
 
-func (r ReactionList) CanAddReaction(db common.DatabaseProvider, new *Reaction) error {
-	err := common.Validate(db, new)
+func (r ReactionList) CanAddReaction(ctx context.Context, db common.DatabaseProvider, new *Reaction) error {
+	err := common.Validate(ctx, db, new)
 	if err != nil {
 		return err
 	}

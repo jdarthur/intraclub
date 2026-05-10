@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"intraclub/common"
 	"testing"
@@ -16,26 +17,26 @@ func newStoredMatchPair(t *testing.T, db common.DatabaseProvider, s *ScoringStru
 	match1.Editors = []UserId{s.Owner}
 	match2.Editors = []UserId{s.Owner}
 
-	created1, err := common.CreateOne(db, match1)
+	created1, err := common.CreateOne(context.Background(), db, match1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	match2.Opponent = created1.ID
-	created2, err := common.CreateOne(db, match2)
+	created2, err := common.CreateOne(context.Background(), db, match2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	created1.Opponent = created2.ID
-	err = common.UpdateOne(db, created1)
+	err = common.UpdateOne(context.Background(), db, created1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = created1.Initialize(db)
+	err = created1.Initialize(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = created2.Initialize(db)
+	err = created2.Initialize(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,12 +52,12 @@ var sixZeroDustedFlow = []bool{
 func runMatchFlow(t *testing.T, db common.DatabaseProvider, match1, match2 *IndividualMatch, flow []bool) {
 	for _, won := range flow {
 		if won {
-			err := match1.IncrementSecondary(db)
+			err := match1.IncrementSecondary(context.Background(), db)
 			if err != nil {
 				t.Fatal(err)
 			}
 		} else {
-			err := match2.IncrementSecondary(db)
+			err := match2.IncrementSecondary(context.Background(), db)
 			if err != nil {
 				t.Fatal(err)
 			}

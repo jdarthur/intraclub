@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"intraclub/common"
@@ -24,7 +25,7 @@ func (c *CommissionerProposal) GetOwner() common.RecordId {
 	return common.InvalidRecordId
 }
 
-func (c *CommissionerProposal) PreUpdate(db common.DatabaseProvider, existingValues common.CrudRecord) error {
+func (c *CommissionerProposal) PreUpdate(ctx context.Context, db common.DatabaseProvider, existingValues common.CrudRecord) error {
 	old := existingValues.(*CommissionerProposal)
 	if c.MustBeUnanimous != old.MustBeUnanimous {
 		return fmt.Errorf("'must be unanimous' constraint can not be updated after creation")
@@ -50,15 +51,15 @@ func (c *CommissionerProposal) SetId(id common.RecordId) {
 	c.ID = id
 }
 
-func (c *CommissionerProposal) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (c *CommissionerProposal) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	// proposal is editable only by the
-	return EditableBySeason(db, c.SeasonId)
+	return EditableBySeason(ctx, db, c.SeasonId)
 }
 
-func (c *CommissionerProposal) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (c *CommissionerProposal) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	// a commissioner proposal is only accessible to the other commissioners and the
 	// team captains involved in the given Season.
-	voters, err := c.GetAllVoterIds(db)
+	voters, err := c.GetAllVoterIds(ctx, db)
 	if err != nil {
 		fmt.Printf("Failed to get voters for commissioner proposal: %s\n", err.Error())
 	}
@@ -79,10 +80,10 @@ func (c *CommissionerProposal) StaticallyValid() error {
 	return nil
 }
 
-func (c *CommissionerProposal) DynamicallyValid(db common.DatabaseProvider) error {
+func (c *CommissionerProposal) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
 	// this will return an error if the SeasonId on this proposal is not valid,
 	// so we don't need to check for that scenario again in this function
-	possibleVoters, err := c.GetAllVoterIds(db)
+	possibleVoters, err := c.GetAllVoterIds(ctx, db)
 	if err != nil {
 		return err
 	}
@@ -103,33 +104,33 @@ func (c *CommissionerProposal) DynamicallyValid(db common.DatabaseProvider) erro
 	return nil
 }
 
-func (c *CommissionerProposal) GetAllVoterIds(db common.DatabaseProvider) ([]UserId, error) {
+func (c *CommissionerProposal) GetAllVoterIds(ctx context.Context, db common.DatabaseProvider) ([]UserId, error) {
 	// get underlying season
-	season, err := common.GetExistingRecordById(db, &Season{}, c.SeasonId.RecordId())
+	season, err := common.GetExistingRecordById(ctx, db, &Season{}, c.SeasonId.RecordId())
 	if err != nil {
 		return nil, err
 	}
 	// add all commissioners as valid voters
 	output := make([]UserId, 0)
-	commissioners, err := season.GetCommissioners(db)
+	commissioners, err := season.GetCommissioners(ctx, db)
 	if err == nil {
 		output = append(output, commissioners...)
 	}
 
 	// get all team captains as the other voters
-	teamCaptains, err := season.GetTeamCaptains(db)
+	teamCaptains, err := season.GetTeamCaptains(ctx, db)
 	if err != nil {
 		return nil, err
 	}
 	return append(output, teamCaptains...), nil
 }
 
-func (c *CommissionerProposal) Vote(db common.DatabaseProvider, voterId UserId, vote bool) error {
+func (c *CommissionerProposal) Vote(ctx context.Context, db common.DatabaseProvider, voterId UserId, vote bool) error {
 	// add vote to the map
 	c.Votes[voterId] = vote
 
 	// update the record, returning an error if e.g. this UserId is not entitled to a vote here
-	return common.UpdateOne(db, c)
+	return common.UpdateOne(ctx, db, c)
 }
 
 func (c *CommissionerProposal) VotesToPassOrFail(voterIds []UserId) (votesToPass, votesToFail int) {
@@ -148,8 +149,8 @@ func (c *CommissionerProposal) VotesToPassOrFail(voterIds []UserId) (votesToPass
 	}
 }
 
-func (c *CommissionerProposal) Status(db common.DatabaseProvider) (accepted, rejected bool, err error) {
-	voterIds, err := c.GetAllVoterIds(db)
+func (c *CommissionerProposal) Status(ctx context.Context, db common.DatabaseProvider) (accepted, rejected bool, err error) {
+	voterIds, err := c.GetAllVoterIds(ctx, db)
 	if err != nil {
 		return false, false, err
 	}

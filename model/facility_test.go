@@ -1,8 +1,8 @@
 package model
 
 import (
+	"context"
 	"fmt"
-	"math/rand"
 	"testing"
 
 	"intraclub/common"
@@ -11,10 +11,10 @@ import (
 func newStoredFacility(t *testing.T, db common.DatabaseProvider, owner UserId) *Facility {
 	facility := NewFacility()
 	facility.UserId = owner
-	facility.Name = fmt.Sprintf("Test facility %d", rand.Intn(1_000_000))
-	facility.Address = fmt.Sprintf("%d Test Rd.", rand.Intn(1_000_000))
+	facility.Name = fmt.Sprintf("Test facility %s", common.NewRecordId())
+	facility.Address = fmt.Sprintf("%s Test Rd.", common.NewRecordId())
 	facility.NumberOfCourts = 5
-	v, err := common.CreateOne(db, facility)
+	v, err := common.CreateOne(context.Background(), db, facility)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,13 +44,13 @@ func TestFacilityCrud(t *testing.T) {
 	// copy facility to a new record and update in the database
 	f2 := copyFacility(facility)
 	f2.Name = "New name"
-	err := wac.UpdateOneById(f2)
+	err := wac.UpdateOneById(context.Background(), f2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// verify that facility was updated
-	v, exists, err := wac.GetOneById(facility, facility.GetId())
+	v, exists, err := wac.GetOneById(context.Background(), facility, facility.GetId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestFacilityCrud(t *testing.T) {
 	}
 
 	// delete facility
-	_, exists, err = wac.DeleteOneById(facility, facility.GetId())
+	_, exists, err = wac.DeleteOneById(context.Background(), facility, facility.GetId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestNameAlreadyExists(t *testing.T) {
 
 	copied := copyFacility(facility)
 	copied.ID = FacilityId(common.InvalidRecordId) // generate new record ID to force a name conflict with old record
-	_, err := common.CreateOne(db, copied)
+	_, err := common.CreateOne(context.Background(), db, copied)
 	if err == nil {
 		t.Fatal("expected error on duplicate name")
 	}
@@ -106,7 +106,7 @@ func TestAddressAlreadyExists(t *testing.T) {
 	copied := copyFacility(facility)
 	copied.Name = "New name"
 	copied.ID = FacilityId(common.InvalidRecordId) // generate new record ID to force a name conflict with old record
-	_, err := common.CreateOne(db, copied)
+	_, err := common.CreateOne(context.Background(), db, copied)
 	if err == nil {
 		t.Fatal("expected error on duplicate address")
 	}
@@ -119,8 +119,8 @@ func TestFacilityAppliedToSeasonCannotBeDeleted(t *testing.T) {
 
 	facilityId := season.Facility.RecordId()
 
-	wac := common.NewWithAccessControl[*Facility](db, commish.ID.RecordId())
-	_, _, err := wac.DeleteOneById(&Facility{}, facilityId)
+	wac := common.NewWithAccessControl[*Facility](context.Background(), db, commish.ID.RecordId())
+	_, _, err := wac.DeleteOneById(context.Background(), &Facility{}, facilityId)
 	if err == nil {
 		t.Fatal("expected error on delete")
 	}

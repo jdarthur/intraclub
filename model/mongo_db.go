@@ -18,13 +18,11 @@ type MongoDb struct {
 	Connection *mongo.Database
 }
 
-func (m *MongoDb) GetAll(recordType common.CrudRecord) ([]common.CrudRecord, error) {
-	return m.GetAllWhere(recordType, nil)
+func (m *MongoDb) GetAll(ctx context.Context, recordType common.CrudRecord) ([]common.CrudRecord, error) {
+	return m.GetAllWhere(ctx, recordType, nil)
 }
 
-func (m *MongoDb) GetAllWhere(recordType common.CrudRecord, where common.WhereFunc) ([]common.CrudRecord, error) {
-	ctx, cancel := defaultTimeout()
-	defer cancel()
+func (m *MongoDb) GetAllWhere(ctx context.Context, recordType common.CrudRecord, where common.WhereFunc) ([]common.CrudRecord, error) {
 
 	res, err := m.Connection.Collection(recordType.Type()).Find(ctx, nil)
 	if err != nil {
@@ -46,7 +44,7 @@ func (m *MongoDb) GetAllWhere(recordType common.CrudRecord, where common.WhereFu
 	sliceVal := ptr.Elem()
 	for i := 0; i < sliceVal.Len(); i++ {
 		record := sliceVal.Index(i).Elem().Interface().(common.CrudRecord)
-		if where == nil || where(record) {
+		if where == nil || where(ctx, record) {
 			output = append(output, record)
 		}
 	}
@@ -56,10 +54,7 @@ func (m *MongoDb) GetAllWhere(recordType common.CrudRecord, where common.WhereFu
 
 var IntraclubMongoDatabase = "intraclub"
 
-func (m *MongoDb) GetOne(record common.CrudRecord) (object common.CrudRecord, exists bool, err error) {
-
-	ctx, cancel := defaultTimeout()
-	defer cancel()
+func (m *MongoDb) GetOne(ctx context.Context, record common.CrudRecord) (object common.CrudRecord, exists bool, err error) {
 
 	blank := record.BlankRecord()
 
@@ -79,10 +74,7 @@ func (m *MongoDb) GetOne(record common.CrudRecord) (object common.CrudRecord, ex
 
 }
 
-func (m *MongoDb) Create(object common.CrudRecord) (common.CrudRecord, error) {
-
-	ctx, cancel := defaultTimeout()
-	defer cancel()
+func (m *MongoDb) Create(ctx context.Context, object common.CrudRecord) (common.CrudRecord, error) {
 
 	object.SetId(common.NewRecordId())
 
@@ -95,9 +87,7 @@ func (m *MongoDb) Create(object common.CrudRecord) (common.CrudRecord, error) {
 
 }
 
-func (m *MongoDb) Update(object common.CrudRecord) error {
-	ctx, cancel := defaultTimeout()
-	defer cancel()
+func (m *MongoDb) Update(ctx context.Context, object common.CrudRecord) error {
 
 	v, err := m.Connection.Collection(object.Type()).UpdateOne(ctx, byId(object.GetId()), bson.M{"$set": object})
 	if err != nil {
@@ -111,10 +101,7 @@ func (m *MongoDb) Update(object common.CrudRecord) error {
 	return nil
 }
 
-func (m *MongoDb) Delete(record common.CrudRecord) error {
-
-	ctx, cancel := defaultTimeout()
-	defer cancel()
+func (m *MongoDb) Delete(ctx context.Context, record common.CrudRecord) error {
 
 	deleted, err := m.Connection.Collection(record.Type()).DeleteOne(ctx, byId(record.GetId()))
 	if err != nil {

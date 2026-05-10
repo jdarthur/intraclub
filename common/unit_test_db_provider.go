@@ -1,5 +1,6 @@
 package common
 
+import "context"
 import "fmt"
 
 type RecordCache map[RecordId]CrudRecord // Map from a RecordId to the CrudRecord with that ID
@@ -22,22 +23,22 @@ func (u *UnitTestDBProvider) getOrCreateRecordCache(recordType CrudRecord) Recor
 	return u.Caches[recordType.Type()]
 }
 
-func (u *UnitTestDBProvider) GetOne(record CrudRecord) (CrudRecord, bool, error) {
+func (u *UnitTestDBProvider) GetOne(ctx context.Context, record CrudRecord) (CrudRecord, bool, error) {
 	cache := u.getOrCreateRecordCache(record)
 	v, ok := cache[record.GetId()]
 	return v, ok, nil
 }
 
-func (u *UnitTestDBProvider) GetAll(recordType CrudRecord) ([]CrudRecord, error) {
-	return u.GetAllWhere(recordType, nil)
+func (u *UnitTestDBProvider) GetAll(ctx context.Context, recordType CrudRecord) ([]CrudRecord, error) {
+	return u.GetAllWhere(ctx, recordType, nil)
 }
 
-func (u *UnitTestDBProvider) GetAllWhere(recordType CrudRecord, where WhereFunc) ([]CrudRecord, error) {
+func (u *UnitTestDBProvider) GetAllWhere(ctx context.Context, recordType CrudRecord, where WhereFunc) ([]CrudRecord, error) {
 
 	output := make([]CrudRecord, 0)
 	cache := u.getOrCreateRecordCache(recordType)
 	for _, record := range cache {
-		if where == nil || where(record) {
+		if where == nil || where(ctx, record) {
 			output = append(output, record)
 		}
 	}
@@ -45,7 +46,7 @@ func (u *UnitTestDBProvider) GetAllWhere(recordType CrudRecord, where WhereFunc)
 	return output, nil
 }
 
-func (u *UnitTestDBProvider) Create(record CrudRecord) (CrudRecord, error) {
+func (u *UnitTestDBProvider) Create(ctx context.Context, record CrudRecord) (CrudRecord, error) {
 	// get the RecordCache for this type, creating it if necessary
 	cache := u.getOrCreateRecordCache(record)
 
@@ -65,8 +66,8 @@ func (u *UnitTestDBProvider) Create(record CrudRecord) (CrudRecord, error) {
 	return record, nil
 }
 
-func (u *UnitTestDBProvider) Update(record CrudRecord) error {
-	_, exists, _ := u.GetOne(record)
+func (u *UnitTestDBProvider) Update(ctx context.Context, record CrudRecord) error {
+	_, exists, _ := u.GetOne(ctx, record)
 	if !exists {
 		return fmt.Errorf("%s with ID  %s does not exist", record.Type(), record.GetId())
 	}
@@ -75,8 +76,8 @@ func (u *UnitTestDBProvider) Update(record CrudRecord) error {
 	return nil
 }
 
-func (u *UnitTestDBProvider) Delete(record CrudRecord) error {
-	_, exists, _ := u.GetOne(record)
+func (u *UnitTestDBProvider) Delete(ctx context.Context, record CrudRecord) error {
+	_, exists, _ := u.GetOne(ctx, record)
 	if !exists {
 		return nil
 	}

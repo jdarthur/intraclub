@@ -45,7 +45,7 @@ func (c GetMySeasons) Handler(req common.ApiRequest[*model.SeasonComposite]) (an
 		asCommissioner = true
 	}
 
-	v, err := model.GetMySeasons(req.DatabaseProvider, req.Token, asPlayer, asCommissioner)
+	v, err := model.GetMySeasons(req.Context, req.DatabaseProvider, req.Token, asPlayer, asCommissioner)
 	if err != nil {
 		return nil, http.StatusInternalServerError, err
 	}

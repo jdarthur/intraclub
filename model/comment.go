@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"intraclub/common"
@@ -33,7 +34,7 @@ func (c *Comment) GetOwner() common.RecordId {
 	return c.Owner.RecordId()
 }
 
-func (c *Comment) CanOnlyDelete(db common.DatabaseProvider, userId common.RecordId) bool {
+func (c *Comment) CanOnlyDelete(ctx context.Context, db common.DatabaseProvider, userId common.RecordId) bool {
 	return UserId(userId) != c.Owner
 }
 
@@ -69,12 +70,12 @@ func (c *Comment) SetId(id common.RecordId) {
 	c.ID = CommentId(id)
 }
 
-func (c *Comment) EditableBy(db common.DatabaseProvider) []common.RecordId {
-	blurb, err := common.GetExistingRecordById(db, &Blurb{}, c.Blurb.RecordId())
+func (c *Comment) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+	blurb, err := common.GetExistingRecordById(ctx, db, &Blurb{}, c.Blurb.RecordId())
 	if err != nil {
 		return []common.RecordId{}
 	}
-	season, err := common.GetExistingRecordById(db, &Season{}, blurb.Season.RecordId())
+	season, err := common.GetExistingRecordById(ctx, db, &Season{}, blurb.Season.RecordId())
 	if err != nil {
 		return []common.RecordId{}
 	}
@@ -85,7 +86,7 @@ func (c *Comment) EditableBy(db common.DatabaseProvider) []common.RecordId {
 		blurb.Owner.RecordId(),
 	}
 
-	commissioners, err := season.GetCommissioners(db)
+	commissioners, err := season.GetCommissioners(ctx, db)
 	if err == nil {
 		for _, commissioner := range commissioners {
 			editors = append(editors, commissioner.RecordId())
@@ -94,7 +95,7 @@ func (c *Comment) EditableBy(db common.DatabaseProvider) []common.RecordId {
 	return editors
 }
 
-func (c *Comment) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (c *Comment) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
@@ -119,22 +120,22 @@ func (c *Comment) StaticallyValid() error {
 	return c.Reactions.StaticallyValid()
 }
 
-func (c *Comment) DynamicallyValid(db common.DatabaseProvider) error {
-	err := common.ExistsById(db, &User{}, c.Owner.RecordId())
+func (c *Comment) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	err := common.ExistsById(ctx, db, &User{}, c.Owner.RecordId())
 	if err != nil {
 		return err
 	}
-	blurb, err := common.GetExistingRecordById(db, &Blurb{}, c.Blurb.RecordId())
-	if err != nil {
-		return err
-	}
-
-	season, err := common.GetExistingRecordById(db, &Season{}, blurb.Season.RecordId())
+	blurb, err := common.GetExistingRecordById(ctx, db, &Blurb{}, c.Blurb.RecordId())
 	if err != nil {
 		return err
 	}
 
-	isParticipant, err := season.IsUserIdASeasonParticipant(db, c.Owner)
+	season, err := common.GetExistingRecordById(ctx, db, &Season{}, blurb.Season.RecordId())
+	if err != nil {
+		return err
+	}
+
+	isParticipant, err := season.IsUserIdASeasonParticipant(ctx, db, c.Owner)
 	if err != nil {
 		return err
 	}
@@ -143,7 +144,7 @@ func (c *Comment) DynamicallyValid(db common.DatabaseProvider) error {
 	}
 
 	if c.ReplyTo != CommentId(common.InvalidRecordId) {
-		v, err := common.GetExistingRecordById(db, &Comment{}, c.ReplyTo.RecordId())
+		v, err := common.GetExistingRecordById(ctx, db, &Comment{}, c.ReplyTo.RecordId())
 		if err != nil {
 			return err
 		}
@@ -153,7 +154,7 @@ func (c *Comment) DynamicallyValid(db common.DatabaseProvider) error {
 		}
 	}
 
-	return c.Reactions.DynamicallyValid(db)
+	return c.Reactions.DynamicallyValid(ctx, db)
 }
 
 func (c *Comment) BlankRecord() common.CrudRecord {

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -13,7 +14,7 @@ func newStoredPlayoffStructure(t *testing.T, db common.DatabaseProvider) *Playof
 	s.UserId = user.ID
 	s.Byes = 1
 	s.NumberOfTeams = 3
-	v, err := common.CreateOne(db, s)
+	v, err := common.CreateOne(context.Background(), db, s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,7 +33,7 @@ func copyPlayoffStructure(p *PlayoffStructure) *PlayoffStructure {
 func TestUserIdIsValid(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	s := NewPlayoffStructure()
-	err := s.DynamicallyValid(db)
+	err := s.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Expected error on invalid user id")
 	}
@@ -110,12 +111,12 @@ func TestPlayoffStructureCannotBeDeletedAfterUsage(t *testing.T) {
 	s := newStoredPlayoffStructure(t, db)
 	season, _ := newDefaultSeason(t, db)
 	season.PlayoffStructure = s.ID
-	err := common.UpdateOne(db, season)
+	err := common.UpdateOne(context.Background(), db, season)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, _, err = common.DeleteOneById(db, &PlayoffStructure{}, s.ID.RecordId())
+	_, _, err = common.DeleteOneById(context.Background(), db, &PlayoffStructure{}, s.ID.RecordId())
 	if err == nil {
 		t.Fatal(err)
 	}
@@ -127,14 +128,14 @@ func TestPlayoffStructureCannotBeEditedAfterUsage(t *testing.T) {
 	s := newStoredPlayoffStructure(t, db)
 	season, _ := newDefaultSeason(t, db)
 	season.PlayoffStructure = s.ID
-	err := common.UpdateOne(db, season)
+	err := common.UpdateOne(context.Background(), db, season)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	copied := copyPlayoffStructure(s)
 
-	err = common.UpdateOne(db, copied)
+	err = common.UpdateOne(context.Background(), db, copied)
 	if err == nil {
 		t.Fatal("expected error when updating in-use playoff structure")
 	}

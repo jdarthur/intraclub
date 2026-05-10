@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -239,11 +240,11 @@ func (c *ScoringStructure) SetId(id common.RecordId) {
 	c.ID = ScoringStructureId(id)
 }
 
-func (c *ScoringStructure) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (c *ScoringStructure) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.SysAdminAndUsers(c.Owner.RecordId())
 }
 
-func (c *ScoringStructure) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (c *ScoringStructure) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
@@ -314,9 +315,9 @@ func (c *ScoringStructure) StaticallyValid() error {
 	return nil
 }
 
-func (c *ScoringStructure) DynamicallyValid(db common.DatabaseProvider) error {
+func (c *ScoringStructure) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
 	for _, id := range c.SecondaryScoringStructures {
-		secondary, err := common.GetExistingRecordById(db, &ScoringStructure{}, id.RecordId())
+		secondary, err := common.GetExistingRecordById(ctx, db, &ScoringStructure{}, id.RecordId())
 		if err != nil {
 			return err
 		}
@@ -326,7 +327,7 @@ func (c *ScoringStructure) DynamicallyValid(db common.DatabaseProvider) error {
 		}
 
 	}
-	return common.ExistsById(db, &User{}, c.Owner.RecordId())
+	return common.ExistsById(ctx, db, &User{}, c.Owner.RecordId())
 }
 
 func (c *ScoringStructure) WinningScore(myScore, yourScore int) bool {

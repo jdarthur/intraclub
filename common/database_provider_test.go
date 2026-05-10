@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -44,11 +45,11 @@ func (t *testRecord) SetId(id RecordId) {
 	t.ID = id
 }
 
-func (t *testRecord) EditableBy(db DatabaseProvider) []RecordId {
+func (t *testRecord) EditableBy(_ context.Context, db DatabaseProvider) []RecordId {
 	return []RecordId{t.Owner}
 }
 
-func (t *testRecord) AccessibleTo(db DatabaseProvider) []RecordId {
+func (t *testRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []RecordId {
 	return AccessibleToEveryone
 }
 
@@ -60,7 +61,7 @@ func (t *testRecord) StaticallyValid() error {
 	return nil
 }
 
-func (t *testRecord) DynamicallyValid(db DatabaseProvider) error {
+func (t *testRecord) DynamicallyValid(_ context.Context, db DatabaseProvider) error {
 	return nil
 }
 
@@ -87,7 +88,7 @@ func (t *testRecord) BlankRecord() CrudRecord {
 func TestCreateDataIsSetOnCreate(t *testing.T) {
 	db := NewUnitTestDBProvider()
 	v := newTestRecord()
-	created, err := CreateOne(db, v)
+	created, err := CreateOne(context.Background(), db, v)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,14 +102,14 @@ func TestCreateDataIsSetOnCreate(t *testing.T) {
 func TestCreateDateIsImmutable(t *testing.T) {
 	db := NewUnitTestDBProvider()
 	v := newTestRecord()
-	created, err := CreateOne(db, v)
+	created, err := CreateOne(context.Background(), db, v)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	copied := created.Copy()
 	copied.CreatedAt = time.Now()
-	err = UpdateOne(db, copied)
+	err = UpdateOne(context.Background(), db, copied)
 	if err != nil {
 		t.Fatal(err)
 	}

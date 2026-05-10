@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"intraclub/common"
@@ -133,7 +134,7 @@ func TestImportCsvToUserList(t *testing.T) {
 func TestImportCsvToFreshDatabase(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	users := generateCsvAndParse(t)
-	newUsers, existingUsers, err := ParseAndCreateCsvUsers(db, users)
+	newUsers, existingUsers, err := ParseAndCreateCsvUsers(context.Background(), db, users)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,13 +152,13 @@ func TestParseNewAndExistingUsers(t *testing.T) {
 
 	db := common.NewUnitTestDBProvider()
 	users := generateCsvAndParse(t)
-	_, _, err := ParseAndCreateCsvUsers(db, users)
+	_, _, err := ParseAndCreateCsvUsers(context.Background(), db, users)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	users2 := generateCsvAndParse(t)
-	newUsers, existing, err := ParseUserList(db, users2)
+	newUsers, existing, err := ParseUserList(context.Background(), db, users2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,13 +171,13 @@ func TestPartiallyImportCsvToDatabase(t *testing.T) {
 
 	db := common.NewUnitTestDBProvider()
 	users := generateCsvAndParse(t)
-	_, _, err := ParseAndCreateCsvUsers(db, users)
+	_, _, err := ParseAndCreateCsvUsers(context.Background(), db, users)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	users2 := generateCsvAndParse(t)
-	newUsers, existingUsers, err := ParseAndCreateCsvUsers(db, users2)
+	newUsers, existingUsers, err := ParseAndCreateCsvUsers(context.Background(), db, users2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +185,7 @@ func TestPartiallyImportCsvToDatabase(t *testing.T) {
 	fmt.Printf("newUsers count: %d\n", len(newUsers))
 	fmt.Printf("existingUsers count: %d\n", len(existingUsers))
 
-	allUsers, err := common.GetAll[*User](db)
+	allUsers, err := common.GetAll[*User](context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}

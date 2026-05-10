@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"intraclub/common"
 	"testing"
@@ -21,12 +22,12 @@ func TestReactionAlreadyPresent(t *testing.T) {
 
 	r := make(ReactionList, 0)
 	r = append(r, reaction)
-	err := r.DynamicallyValid(db)
+	err := r.DynamicallyValid(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = r.CanAddReaction(db, reaction)
+	err = r.CanAddReaction(context.Background(), db, reaction)
 	if err == nil {
 		t.Fatal("should get error re-adding an existing reaction")
 	}
@@ -58,7 +59,7 @@ func TestReactionUserIdDoesNotExist(t *testing.T) {
 	r := make(ReactionList, 0)
 	r = append(r, reaction)
 
-	err := r.DynamicallyValid(db)
+	err := r.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("should get error for a nonexistent user ID in reaction")
 	}

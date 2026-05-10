@@ -85,7 +85,7 @@ func GetToken(c *gin.Context) (*AuthToken, error) {
 
 	userId := valid.UserId
 	if UserType != nil {
-		err := ExistsById(GlobalDatabaseProvider, UserType, userId)
+		err := ExistsById(c.Request.Context(), GlobalDatabaseProvider, UserType, userId)
 		if err != nil {
 			return nil, err
 		}

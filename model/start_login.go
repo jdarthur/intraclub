@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -115,8 +116,8 @@ func (l *LoginToken) StaticallyValid() error {
 }
 
 // DynamicallyValid validates that this token corresponds to an existing user
-func (l *LoginToken) DynamicallyValid(db common.DatabaseProvider) error {
-	return common.ExistsById(db, &User{}, l.UserId.RecordId())
+func (l *LoginToken) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	return common.ExistsById(ctx, db, &User{}, l.UserId.RecordId())
 }
 
 type StartLoginTokenManager struct {
@@ -135,14 +136,13 @@ func (m *StartLoginTokenManager) AddToken(token *LoginToken) {
 	m.tokens.Store(token.Token, token)
 }
 
-func (m *StartLoginTokenManager) IsTokenValid(db common.DatabaseProvider, token *LoginToken) error {
-
+func (m *StartLoginTokenManager) IsTokenValid(ctx context.Context, db common.DatabaseProvider, token *LoginToken) error {
 	token, exists := m.GetToken(token.Token)
 	if !exists {
 		return fmt.Errorf("token %s does not exist\n", token.Token)
 	}
 
-	err := common.Validate(db, token)
+	err := common.Validate(ctx, db, token)
 	if err != nil {
 		return err
 	}
@@ -182,9 +182,9 @@ type RequestForLoginToken struct {
 }
 
 // RequestToken requests that a
-func (m *StartLoginTokenManager) RequestToken(db common.DatabaseProvider, req *RequestForLoginToken) (token *LoginToken, doesNotExist bool, err error) {
+func (m *StartLoginTokenManager) RequestToken(ctx context.Context, db common.DatabaseProvider, req *RequestForLoginToken) (token *LoginToken, doesNotExist bool, err error) {
 
-	user, err := common.GetAllWhere[*User](db, func(c *User) bool {
+	user, err := common.GetAllWhere[*User](ctx, db, func(_ context.Context, c *User) bool {
 		return c.Email == req.Email
 	})
 
@@ -200,7 +200,7 @@ func (m *StartLoginTokenManager) RequestToken(db common.DatabaseProvider, req *R
 		return nil, false, err
 	}
 
-	err = common.Validate(db, token)
+	err = common.Validate(ctx, db, token)
 	if err != nil {
 		return nil, false, err
 	}
@@ -212,7 +212,7 @@ func (m *StartLoginTokenManager) RequestToken(db common.DatabaseProvider, req *R
 		return token, false, nil
 	}
 
-	email, err := m.GenerateTokenEmail(db, token)
+	email, err := m.GenerateTokenEmail(ctx, db, token)
 	if err != nil {
 		return nil, false, err
 	}
@@ -220,8 +220,8 @@ func (m *StartLoginTokenManager) RequestToken(db common.DatabaseProvider, req *R
 	return token, false, email.Send()
 }
 
-func (m *StartLoginTokenManager) GenerateTokenEmail(db common.DatabaseProvider, token *LoginToken) (*Email, error) {
-	user, exists, err := common.GetOneById(db, &User{}, token.UserId.RecordId())
+func (m *StartLoginTokenManager) GenerateTokenEmail(ctx context.Context, db common.DatabaseProvider, token *LoginToken) (*Email, error) {
+	user, exists, err := common.GetOneById(ctx, db, &User{}, token.UserId.RecordId())
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +255,7 @@ func (m *StartLoginTokenManager) OneTimePassword(c *gin.Context) {
 
 	fmt.Println(request)
 
-	token, doesNotExist, err := m.RequestToken(db, request)
+	token, doesNotExist, err := m.RequestToken(c.Request.Context(), db, request)
 	if err != nil {
 		code := http.StatusInternalServerError
 		if doesNotExist {

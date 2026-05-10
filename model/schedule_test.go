@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -11,7 +12,7 @@ func newStoredSchedule(t *testing.T, db common.DatabaseProvider, season *Season)
 	schedule := NewSchedule()
 	schedule.SeasonId = season.ID
 
-	v, err := common.CreateOne(db, schedule)
+	v, err := common.CreateOne(context.Background(), db, schedule)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,7 +25,7 @@ func TestSeasonUpdatedOnScheduleCreate(t *testing.T) {
 
 	schedule := newStoredSchedule(t, db, season)
 
-	season, err := common.GetExistingRecordById(db, &Season{}, schedule.SeasonId.RecordId())
+	season, err := common.GetExistingRecordById(context.Background(), db, &Season{}, schedule.SeasonId.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +43,7 @@ func TestOneSchedulePerSeason(t *testing.T) {
 	schedule2 := NewSchedule()
 	schedule2.SeasonId = season.ID
 	schedule2.Matchups = schedule.Matchups
-	_, err := common.CreateOne(db, schedule2)
+	_, err := common.CreateOne(context.Background(), db, schedule2)
 	if err == nil {
 		t.Fatal("Expected error creating a duplicate schedule")
 	}

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -14,7 +15,7 @@ func newStoredAvailability(t *testing.T, db common.DatabaseProvider, u UserId, w
 	availability.Available = AvailabilityAvailable
 	availability.WeekId = week
 
-	v, err := common.CreateOne(db, availability)
+	v, err := common.CreateOne(context.Background(), db, availability)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +37,7 @@ func TestAvailabilityOnlyAccessibleToTeamMembers(t *testing.T) {
 
 	otherUser := newStoredUser(t, db)
 	wac := common.WithAccessControl[*Availability]{Database: db, AccessControlUser: otherUser.ID.RecordId()}
-	v, exists, err := wac.GetOneById(&Availability{}, v.ID)
+	v, exists, err := wac.GetOneById(context.Background(), &Availability{}, v.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +54,7 @@ func TestAvailabilityIsAccessibleToTeamMembers(t *testing.T) {
 	v := newStoredAvailability(t, db, userId, week.ID)
 
 	wac := common.WithAccessControl[*Availability]{Database: db, AccessControlUser: userId.RecordId()}
-	v, exists, err := wac.GetOneById(&Availability{}, v.ID)
+	v, exists, err := wac.GetOneById(context.Background(), &Availability{}, v.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +79,7 @@ func TestAvailabilityUserDoesNotExist(t *testing.T) {
 	v := NewAvailability()
 	v.Available = AvailabilityAvailable
 
-	err := v.DynamicallyValid(db)
+	err := v.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("expected invalid option to fail")
 	}
@@ -91,7 +92,7 @@ func TestAvailabilityWeekDoesNotExist(t *testing.T) {
 	userId := getAnyTeamCaptain(t, db, season)
 	v := NewAvailability()
 	v.UserId = userId
-	err := v.DynamicallyValid(db)
+	err := v.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("expected invalid option to fail")
 	}
@@ -100,7 +101,7 @@ func TestAvailabilityWeekDoesNotExist(t *testing.T) {
 
 func createAvailabilityForAllCaptains(t *testing.T, db common.DatabaseProvider, season *Season, weeks []*Week) []*Availability {
 	// get all teams associated with this season
-	teams, err := season.GetTeams(db)
+	teams, err := season.GetTeams(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +113,7 @@ func createAvailabilityForAllCaptains(t *testing.T, db common.DatabaseProvider, 
 	// for every week in the list, then add the availability
 	// record to the output list
 	for _, team := range teams {
-		captain, err := team.GetCaptain(db)
+		captain, err := team.GetCaptain(context.Background(), db)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -131,7 +132,7 @@ func TestGetAvailabilityForUserOnlyGetsOneUser(t *testing.T) {
 	a := createAvailabilityForAllCaptains(t, db, season, weeks)
 
 	userId := a[0].UserId
-	availability, err := GetAvailabilityForUser(db, userId, season.DraftId)
+	availability, err := GetAvailabilityForUser(context.Background(), db, userId, season.DraftId)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +156,7 @@ func TestGetAvailabilityForUserOnlyGetsOneSeason(t *testing.T) {
 	a := createAvailabilityForAllCaptains(t, db, season, weeks)
 
 	// get the teams for this season so we can make a new Season
-	teams, err := season.GetTeams(db)
+	teams, err := season.GetTeams(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +164,7 @@ func TestGetAvailabilityForUserOnlyGetsOneSeason(t *testing.T) {
 	_ = createAvailabilityForAllCaptains(t, db, otherSeason, otherWeeks)
 
 	userId := a[0].UserId
-	availability, err := GetAvailabilityForUser(db, userId, season.DraftId)
+	availability, err := GetAvailabilityForUser(context.Background(), db, userId, season.DraftId)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +204,7 @@ func TestMultipleAvailabilityForSingleWeekAndUserId(t *testing.T) {
 	availability2.WeekId = availability1.WeekId
 	availability2.Available = AvailabilityAvailable
 
-	_, err := common.CreateOne(db, availability2)
+	_, err := common.CreateOne(context.Background(), db, availability2)
 	if err == nil {
 		t.Fatal("expected duplicate availability to fail")
 	}

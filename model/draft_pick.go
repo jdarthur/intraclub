@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"intraclub/common"
 	"time"
 )
@@ -49,26 +50,24 @@ func (d *DraftPick) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that the referenced Draft, Team, and User records all exist.
-func (d *DraftPick) DynamicallyValid(db common.DatabaseProvider) error {
-	if err := common.ExistsById(db, &Draft{}, d.DraftId.RecordId()); err != nil {
+func (d *DraftPick) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	if err := common.ExistsById(ctx, db, &Draft{}, d.DraftId.RecordId()); err != nil {
 		return err
 	}
-	if err := common.ExistsById(db, &Team{}, d.TeamId.RecordId()); err != nil {
+	if err := common.ExistsById(ctx, db, &Team{}, d.TeamId.RecordId()); err != nil {
 		return err
 	}
-	if err := common.ExistsById(db, &User{}, d.UserId.RecordId()); err != nil {
+	if err := common.ExistsById(ctx, db, &User{}, d.UserId.RecordId()); err != nil {
 		return err
 	}
 	return nil
 }
 
-// AccessibleTo returns everyone as DraftPick records are public.
-func (d *DraftPick) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (d *DraftPick) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
-// EditableBy returns only sysadmins as only they can modify DraftPick records.
-func (d *DraftPick) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (d *DraftPick) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return []common.RecordId{common.SysAdminRecordId}
 }
 

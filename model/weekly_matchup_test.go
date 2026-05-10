@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -11,7 +12,7 @@ func newStoredWeeklyMatchup(t *testing.T, db common.DatabaseProvider) (*Season, 
 	season, _ := newDefaultSeasonWithTeams(t, db, 4)
 	week := newStoredWeek(t, db, season)
 
-	teams, err := season.GetTeams(db)
+	teams, err := season.GetTeams(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +32,7 @@ func newStoredWeeklyMatchup(t *testing.T, db common.DatabaseProvider) (*Season, 
 
 	w.Matchups = []*TeamMatchup{&matchup, &matchup2}
 
-	v, err := common.CreateOne(db, w)
+	v, err := common.CreateOne(context.Background(), db, w)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +51,7 @@ func TestWeeklyMatchupInvalidHomeTeamId(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
 	w.Matchups[0].HomeTeam = TeamId(common.InvalidRecordId)
-	err := w.DynamicallyValid(db)
+	err := w.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("InvalidScoreCountingType home team ID should produce error")
 	}
@@ -61,7 +62,7 @@ func TestWeeklyMatchupInvalidAwayTeamId(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
 	w.Matchups[0].AwayTeam = TeamId(common.InvalidRecordId)
-	err := w.DynamicallyValid(db)
+	err := w.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("InvalidScoreCountingType away team ID should produce error")
 	}
@@ -72,7 +73,7 @@ func TestWeeklyMatchupInvalidSeasonId(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
 	w.SeasonId = SeasonId(common.InvalidRecordId)
-	err := w.DynamicallyValid(db)
+	err := w.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("InvalidScoreCountingType season ID should produce error")
 	}
@@ -83,7 +84,7 @@ func TestWeeklyMatchupInvalidWeekId(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
 	w.WeekId = WeekId(common.InvalidRecordId)
-	err := w.DynamicallyValid(db)
+	err := w.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("InvalidScoreCountingType week ID should produce error")
 	}
@@ -98,7 +99,7 @@ func TestWeeklyMatchupWeekDoesNotBelongToSeason(t *testing.T) {
 	someOtherWeek := newStoredWeek(t, db, otherSeason)
 
 	w.WeekId = someOtherWeek.ID
-	err := w.DynamicallyValid(db)
+	err := w.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("InvalidScoreCountingType week ID should produce error")
 	}
@@ -112,7 +113,7 @@ func TestWeeklyMatchupHomeTeamDoesNotBelongToSeason(t *testing.T) {
 	otherTeam := newStoredTeam(t, db, newStoredUser(t, db).ID)
 	w.Matchups[0].HomeTeam = otherTeam.ID
 
-	err := w.DynamicallyValid(db)
+	err := w.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Team from another season should produce error")
 	}
@@ -126,7 +127,7 @@ func TestWeeklyMatchupAwayTeamDoesNotBelongToSeason(t *testing.T) {
 	otherTeam := newStoredTeam(t, db, newStoredUser(t, db).ID)
 	w.Matchups[0].AwayTeam = otherTeam.ID
 
-	err := w.DynamicallyValid(db)
+	err := w.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Team from another season should produce error")
 	}
@@ -137,7 +138,7 @@ func TestWeeklyMatchupTeamPlayingInMultipleMatchups(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	season, w := newStoredWeeklyMatchup(t, db)
 
-	teams, err := season.GetTeams(db)
+	teams, err := season.GetTeams(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +163,7 @@ func TestWeeklyMatchupTeamDoesNotHaveAnyMatchups(t *testing.T) {
 	w.Matchups[1].Bye = true
 	w.Matchups[1].AwayTeam = TeamId(common.InvalidRecordId)
 
-	err := common.Validate(db, w)
+	err := common.Validate(context.Background(), db, w)
 	if err == nil {
 		t.Fatal("Team 4 without matchup or bye should produce error")
 	}
@@ -175,7 +176,7 @@ func TestWeeklyMatchupTeamHasBye(t *testing.T) {
 	season, _ := newDefaultSeasonWithTeams(t, db, 4)
 	week := newStoredWeek(t, db, season)
 
-	teams, err := season.GetTeams(db)
+	teams, err := season.GetTeams(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,7 +200,7 @@ func TestWeeklyMatchupTeamHasBye(t *testing.T) {
 
 	w.Matchups = []*TeamMatchup{&matchup, &bye1, &bye2}
 
-	err = common.Validate(db, w)
+	err = common.Validate(context.Background(), db, w)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +211,7 @@ func TestWeeklyMatchupHomeTeamByeButAwayTeamIsSet(t *testing.T) {
 	_, w := newStoredWeeklyMatchup(t, db)
 
 	w.Matchups[0].Bye = true
-	err := common.Validate(db, w)
+	err := common.Validate(context.Background(), db, w)
 	if err == nil {
 		t.Fatal("Bye with away team set should produce error")
 	}
@@ -222,7 +223,7 @@ func TestDuplicateWeeklyMatchup(t *testing.T) {
 	_, w := newStoredWeeklyMatchup(t, db)
 
 	w2 := copyWeeklyMatchup(w)
-	_, err := common.CreateOne(db, w2)
+	_, err := common.CreateOne(context.Background(), db, w2)
 	if err == nil {
 		t.Fatal("Expected error on duplicate weekly matchup")
 	}

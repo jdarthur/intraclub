@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"intraclub/common"
@@ -28,8 +29,8 @@ func (p *PlayoffStructure) GetOwner() common.RecordId {
 	return p.UserId.RecordId()
 }
 
-func (p *PlayoffStructure) PreUpdate(db common.DatabaseProvider, existingValues common.CrudRecord) error {
-	s, err := p.GetAssignedSeasons(db)
+func (p *PlayoffStructure) PreUpdate(ctx context.Context, db common.DatabaseProvider, existingValues common.CrudRecord) error {
+	s, err := p.GetAssignedSeasons(ctx, db)
 	if err != nil {
 		return err
 	}
@@ -39,8 +40,8 @@ func (p *PlayoffStructure) PreUpdate(db common.DatabaseProvider, existingValues 
 	return nil
 }
 
-func (p *PlayoffStructure) PreDelete(db common.DatabaseProvider) error {
-	s, err := p.GetAssignedSeasons(db)
+func (p *PlayoffStructure) PreDelete(ctx context.Context, db common.DatabaseProvider) error {
+	s, err := p.GetAssignedSeasons(ctx, db)
 	if err != nil {
 		return err
 	}
@@ -58,11 +59,11 @@ func (p *PlayoffStructure) SetOwner(recordId common.RecordId) {
 	p.UserId = UserId(recordId)
 }
 
-func (p *PlayoffStructure) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (p *PlayoffStructure) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return []common.RecordId{p.UserId.RecordId()}
 }
 
-func (p *PlayoffStructure) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (p *PlayoffStructure) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
@@ -123,12 +124,12 @@ func (p *PlayoffStructure) NumberOfRounds() int {
 	return int(v)
 }
 
-func (p *PlayoffStructure) DynamicallyValid(db common.DatabaseProvider) error {
-	return common.ExistsById(db, &User{}, p.UserId.RecordId())
+func (p *PlayoffStructure) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	return common.ExistsById(ctx, db, &User{}, p.UserId.RecordId())
 }
 
-func (p *PlayoffStructure) GetAssignedSeasons(db common.DatabaseProvider) ([]*Season, error) {
-	return common.GetAllWhere[*Season](db, func(c *Season) bool {
+func (p *PlayoffStructure) GetAssignedSeasons(ctx context.Context, db common.DatabaseProvider) ([]*Season, error) {
+	return common.GetAllWhere[*Season](ctx, db, func(_ context.Context, c *Season) bool {
 		return c.PlayoffStructure == p.ID
 	})
 }

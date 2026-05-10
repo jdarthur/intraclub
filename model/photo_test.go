@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"crypto/rand"
 	"intraclub/common"
 	"testing"
@@ -19,7 +20,7 @@ func newStoredPhoto(t *testing.T, db common.DatabaseProvider, owner UserId) *Pho
 	photo.Owner = owner
 	photo.Contents = b
 	photo.FileType = PhotoTypeJpeg
-	v, err := common.CreateOne(db, photo)
+	v, err := common.CreateOne(context.Background(), db, photo)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -35,19 +36,19 @@ func newStoredSeason(t *testing.T, db common.DatabaseProvider, commissioner User
 	season.Facility = facility.ID
 	season.PlayoffStructure = playoffStructure.ID
 
-	v, err := common.CreateOne(db, season)
+	v, err := common.CreateOne(context.Background(), db, season)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, team := range teams {
-		err := season.AddTeam(db, team.ID)
+		err := season.AddTeam(context.Background(), db, team.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	err = season.AddCommissioner(db, commissioner)
+	err = season.AddCommissioner(context.Background(), db, commissioner)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +60,7 @@ func TestCreateSeasonAfterDraft(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	draft := doRandomDraft(t, db, 100, 4)
 	facility := newStoredFacility(t, db, draft.Owner)
-	season, err := draft.CreateSeason(db, "Test season", facility.ID, NewStartTime(8, 30))
+	season, err := draft.CreateSeason(context.Background(), db, "Test season", facility.ID, NewStartTime(8, 30))
 	if err != nil {
 		t.Fatal(err)
 	}

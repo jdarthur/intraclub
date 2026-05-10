@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"intraclub/common"
 	"time"
 )
@@ -24,12 +25,11 @@ func (s *SeasonTeam) GetOwner() common.RecordId {
 func (s *SeasonTeam) SetOwner(recordId common.RecordId) {}
 
 // AccessibleTo returns everyone as SeasonTeam records are public.
-func (s *SeasonTeam) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (s *SeasonTeam) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
-// EditableBy returns only sysadmins as only they can modify SeasonTeam records.
-func (s *SeasonTeam) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (s *SeasonTeam) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return []common.RecordId{common.SysAdminRecordId}
 }
 
@@ -54,11 +54,11 @@ func (s *SeasonTeam) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that both the referenced Season and Team records exist.
-func (s *SeasonTeam) DynamicallyValid(db common.DatabaseProvider) error {
-	if err := common.ExistsById(db, &Season{}, s.SeasonId.RecordId()); err != nil {
+func (s *SeasonTeam) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	if err := common.ExistsById(ctx, db, &Season{}, s.SeasonId.RecordId()); err != nil {
 		return err
 	}
-	if err := common.ExistsById(db, &Team{}, s.TeamId.RecordId()); err != nil {
+	if err := common.ExistsById(ctx, db, &Team{}, s.TeamId.RecordId()); err != nil {
 		return err
 	}
 	return nil

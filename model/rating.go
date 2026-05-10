@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"intraclub/common"
@@ -62,8 +63,8 @@ func (r *Rating) GetOwner() common.RecordId {
 	return r.UserId.RecordId()
 }
 
-func (r *Rating) PreDelete(db common.DatabaseProvider) error {
-	formats, err := common.GetAllWhere[*Format](db, func(c *Format) bool {
+func (r *Rating) PreDelete(ctx context.Context, db common.DatabaseProvider) error {
+	formats, err := common.GetAllWhere[*Format](ctx, db, func(_ context.Context, c *Format) bool {
 		return c.IsRatingInOptionsList(r.ID)
 	})
 	if err != nil {
@@ -83,11 +84,11 @@ func NewRating() *Rating {
 	return &Rating{}
 }
 
-func (r *Rating) EditableBy(common.DatabaseProvider) []common.RecordId {
+func (r *Rating) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.SysAdminAndUsers(r.UserId.RecordId())
 }
 
-func (r *Rating) AccessibleTo(common.DatabaseProvider) []common.RecordId {
+func (r *Rating) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
@@ -116,8 +117,8 @@ func (r *Rating) StaticallyValid() error {
 	return nil
 }
 
-func (r *Rating) DynamicallyValid(db common.DatabaseProvider) error {
-	return common.ExistsById(db, &User{}, r.UserId.RecordId())
+func (r *Rating) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	return common.ExistsById(ctx, db, &User{}, r.UserId.RecordId())
 }
 
 func (r *Rating) BlankRecord() common.CrudRecord {

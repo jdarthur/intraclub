@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"intraclub/common"
@@ -77,11 +78,11 @@ func (p *Photo) SetOwner(recordId common.RecordId) {
 	p.Owner = UserId(recordId)
 }
 
-func (p *Photo) EditableBy(common.DatabaseProvider) []common.RecordId {
+func (p *Photo) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return []common.RecordId{p.Owner.RecordId(), common.SysAdminRecordId}
 }
 
-func (p *Photo) AccessibleTo(common.DatabaseProvider) []common.RecordId {
+func (p *Photo) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return []common.RecordId{common.EveryoneRecordId}
 }
 
@@ -96,8 +97,8 @@ func (p *Photo) StaticallyValid() error {
 	return nil
 }
 
-func (p *Photo) DynamicallyValid(db common.DatabaseProvider) error {
-	err := common.ExistsById(db, &User{}, p.Owner.RecordId())
+func (p *Photo) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	err := common.ExistsById(ctx, db, &User{}, p.Owner.RecordId())
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"intraclub/common"
 	"testing"
@@ -10,7 +11,7 @@ func newStoredFormat(t *testing.T, db common.DatabaseProvider, lines []FormatLin
 	f := NewFormat()
 	f.Lines = lines
 
-	v, err := common.CreateOne(db, f)
+	v, err := common.CreateOne(context.Background(), db, f)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +47,7 @@ func newDefaultFormat(t *testing.T, db common.DatabaseProvider) *Format {
 
 func newDefaultStoredFormat(t *testing.T, db common.DatabaseProvider) *Format {
 	f := newDefaultFormat(t, db)
-	v, err := common.CreateOne(db, f)
+	v, err := common.CreateOne(context.Background(), db, f)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +119,7 @@ func TestFormatHasInvalidUserId(t *testing.T) {
 	format := newDefaultFormat(t, db)
 
 	format.UserId = UserId(common.InvalidRecordId)
-	err := format.DynamicallyValid(db)
+	err := format.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Expected invalid user id to fail")
 	}
@@ -153,7 +154,7 @@ func TestFormatCannotBeDeletedWhenInUse(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	draft := newDefaultStoredDraft(t, db)
 
-	_, _, err := common.DeleteOneById(db, &Format{}, draft.Format.RecordId())
+	_, _, err := common.DeleteOneById(context.Background(), db, &Format{}, draft.Format.RecordId())
 	if err == nil {
 		t.Fatal("Expected in-use format delete to fail")
 	}
@@ -164,13 +165,13 @@ func TestFormatCannotBeEditedWhenInUse(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	draft := newDefaultStoredDraft(t, db)
 
-	format, err := common.GetExistingRecordById(db, &Format{}, draft.Format.RecordId())
+	format, err := common.GetExistingRecordById(context.Background(), db, &Format{}, draft.Format.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
 	newRating := newStoredRating(t, db)
 	format.PossibleRatings = append(format.PossibleRatings, newRating.ID)
-	err = common.UpdateOne(db, format)
+	err = common.UpdateOne(context.Background(), db, format)
 	if err == nil {
 		t.Fatal("Expected in-use format edit to fail")
 	}
@@ -184,7 +185,7 @@ func TestFormatCanBeEditedWhenNotInUse(t *testing.T) {
 	newRating := newStoredRating(t, db)
 	f.PossibleRatings = append(f.PossibleRatings, newRating.ID)
 
-	err := common.UpdateOne(db, f)
+	err := common.UpdateOne(context.Background(), db, f)
 	if err != nil {
 		t.Fatal(err)
 	}
