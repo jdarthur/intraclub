@@ -14,14 +14,14 @@ func main() {
 	common.UserType = &model.User{}
 
 	// set up the default database provider
-	common.GlobalDatabaseProvider = common.NewUnitTestDBProvider()
+	db := common.NewUnitTestDBProvider()
 
 	// parse command-line flags
 	parseFlags()
 
 	// seed data for development mode
 	if model.UseDevTokenMode {
-		model.SeedDevData()
+		model.SeedDevData(db)
 	}
 
 	// generate or load JWT key pair
@@ -34,43 +34,44 @@ func main() {
 	api := r.Group("/api")
 
 	// noAuth for self-register
-	createUser := common.RouteFamily[*model.User]{}
+	createUser := common.RouteFamily[*model.User]{DatabaseProvider: db}
 	createUser.Handle(api, route.SelfRegister{})
 
-	whoAmI := common.RouteFamily[*model.User]{UseAuth: true}
+	whoAmI := common.RouteFamily[*model.User]{UseAuth: true, DatabaseProvider: db}
 	whoAmI.Handle(api, route.WhoAmI{})
 
-	api.Handle(common.HttpMethodPost.String(), "/import_users_from_csv", route.HandleCsvImport)
+	importHandler := &route.CsvImportHandler{DatabaseProvider: db}
+	api.Handle(common.HttpMethodPost.String(), "/import_users_from_csv", importHandler.HandleCsvImport)
 
-	startTokenMgr := &model.StartLoginTokenManager{}
+	startTokenMgr := &model.StartLoginTokenManager{DatabaseProvider: db}
 	api.POST("/one_time_password", startTokenMgr.OneTimePassword)
 	api.POST("/token", startTokenMgr.CreateJwtFromOneTimePassword)
 
 	// no auth for get user by ID / get all users functions
 
-	getUsers := common.NewCrudCommon(model.NewUser, false)
+	getUsers := common.NewCrudCommon(model.NewUser, false, db)
 	getUsers.HandleRouteTypes(api, common.CrudWrapperFunctionGetOne, common.CrudWrapperFunctionGetMany)
 
 	// use auth for user deletion / update endpoints
-	updateOrDeleteUsers := common.NewCrudCommon(model.NewUser, true)
+	updateOrDeleteUsers := common.NewCrudCommon(model.NewUser, true, db)
 	updateOrDeleteUsers.HandleRouteTypes(api, common.CrudWrapperFunctionDelete, common.CrudWrapperFunctionUpdate)
 
-	facilities := common.NewCrudCommon(model.NewFacility, true)
+	facilities := common.NewCrudCommon(model.NewFacility, true, db)
 	facilities.HandleRouteTypes(api, common.CrudWrapperFunctionAll...)
 
 	api.GET("/score_counting_types", model.GetScoreCountingTypes)
-	scoringStructures := common.NewCrudCommon(model.NewScoringStructure, true)
+	scoringStructures := common.NewCrudCommon(model.NewScoringStructure, true, db)
 	scoringStructures.HandleRouteTypes(api, common.CrudWrapperFunctionAll...)
 
-	ratings := common.NewCrudCommon(model.NewRating, true)
+	ratings := common.NewCrudCommon(model.NewRating, true, db)
 	ratings.HandleRouteTypes(api, common.CrudWrapperFunctionAll...)
 
-	formats := common.NewCrudCommon(model.NewFormat, true)
+	formats := common.NewCrudCommon(model.NewFormat, true, db)
 	formats.HandleRouteTypes(api, common.CrudWrapperFunctionAll...)
 
 	api.GET("/draft_order_patterns", model.GetDraftOrderPatterns)
 
-	seasonComposite := common.RouteFamily[*model.SeasonComposite]{UseAuth: true}
+	seasonComposite := common.RouteFamily[*model.SeasonComposite]{UseAuth: true, DatabaseProvider: db}
 	seasonComposite.Handle(api, route.GetMySeasons{})
 
 	err = r.Run("127.0.0.1:8080")

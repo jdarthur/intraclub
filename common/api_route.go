@@ -133,12 +133,6 @@ type RouteFamily[T Validatable] struct {
 // Handle adds one or more ApiRoutes to this RouteFamily and applies the
 // routes to the provided gin.Engine.
 func (r *RouteFamily[T]) Handle(e *gin.RouterGroup, routes ...ApiRoute[T]) {
-
-	// if DatabaseProvider was not set on the RouteFamily, we will use the global one
-	if r.DatabaseProvider == nil {
-		r.DatabaseProvider = GlobalDatabaseProvider
-	}
-
 	// create a RouteWrapper for each ApiRoute provided
 	for _, route := range routes {
 		wrapper := &routeWrapper[T]{
@@ -191,7 +185,7 @@ func (r *routeWrapper[T]) Handle(c *gin.Context) {
 
 	// get the token from request if configured for this route
 	if r.UseAuth {
-		token, err = GetToken(c)
+		token, err = GetToken(c, r.Database)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
