@@ -28,7 +28,7 @@ func (c SelfRegister) Handler(req common.ApiRequest[*model.User]) (any, int, err
 		return nil, http.StatusBadRequest, errors.New("token must not be passed into create user route")
 	}
 
-	user, err := req.DatabaseProvider.Create(req.Body)
+	user, err := req.DatabaseProvider.Create(req.Context, req.Body)
 	if err != nil {
 		return nil, http.StatusBadRequest, err
 	}
@@ -52,7 +52,7 @@ func (c WhoAmI) Handler(req common.ApiRequest[*model.User]) (any, int, error) {
 		return nil, http.StatusUnauthorized, errors.New("token must be passed into create user route")
 	}
 
-	user, err := common.GetExistingRecordById(req.DatabaseProvider, &model.User{}, req.Token.UserId)
+	user, err := common.GetExistingRecordById(req.Context, req.DatabaseProvider, &model.User{}, req.Token.UserId)
 	if err != nil {
 		return nil, http.StatusUnauthorized, err
 	}

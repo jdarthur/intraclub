@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -82,6 +83,9 @@ type ApiRequest[T Validatable] struct {
 	// This can be used to enforce access control on get requests and auto-assign
 	// values such as record owners on creation requests
 	Token *AuthToken
+
+	// Context is the context.Context from the HTTP request
+	Context context.Context
 
 	// DatabaseProvider is a DatabaseProvider interface passed to the
 	// ApiRoute if it needs to do something in the database. This will not be
@@ -205,6 +209,7 @@ func (r *routeWrapper[T]) Handle(c *gin.Context) {
 	apiRequest := ApiRequest[T]{
 		PathId:           pathId,
 		Token:            token,
+		Context:          c.Request.Context(),
 		DatabaseProvider: r.Database,
 		request:          c.Request,
 	}

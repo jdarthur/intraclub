@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
 	"intraclub/common"
@@ -120,8 +121,8 @@ func ParseCsvLine(line, headers []string) (*User, error) {
 	return user, nil
 }
 
-func ParseUserList(db common.DatabaseProvider, input []*User) (newUsers, alreadyExistingUsers []*User, err error) {
-	existingUsersInDatabase, err := common.GetAll[*User](db)
+func ParseUserList(ctx context.Context, db common.DatabaseProvider, input []*User) (newUsers, alreadyExistingUsers []*User, err error) {
+	existingUsersInDatabase, err := common.GetAll[*User](ctx, db)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -149,16 +150,16 @@ func ParseUserList(db common.DatabaseProvider, input []*User) (newUsers, already
 	return newUsers, alreadyExistingUsers, nil
 }
 
-func ParseAndCreateCsvUsers(db common.DatabaseProvider, csvUserList []*User) (createdUsers, existingUsers []*User, err error) {
+func ParseAndCreateCsvUsers(ctx context.Context, db common.DatabaseProvider, csvUserList []*User) (createdUsers, existingUsers []*User, err error) {
 
-	newUsers, alreadyExistingUsers, err := ParseUserList(db, csvUserList)
+	newUsers, alreadyExistingUsers, err := ParseUserList(ctx, db, csvUserList)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	created := make([]*User, 0)
 	for _, user := range newUsers {
-		v, err := common.CreateOne(db, user)
+		v, err := common.CreateOne(ctx, db, user)
 		if err != nil {
 			return nil, nil, err
 		}

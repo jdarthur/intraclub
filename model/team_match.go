@@ -23,18 +23,18 @@ type TeamMatch struct {
 
 //func (t *TeamMatch) ValidateMatchesVsLineup(db common.DatabaseProvider) error {
 //
-//	lineup, err := common.GetExistingRecordById(db, &Lineup{}, t.Lineup.RecordId())
+//	lineup, err := common.GetExistingRecordById(ctx, db, &Lineup{}, t.Lineup.RecordId())
 //	if err != nil {
 //		return err
 //	}
 //
 //	for lineupPairingId, individualMatchId := range t.IndividualMatches {
-//		lineupPairing, err := common.GetExistingRecordById(db, &LineupPairing{}, lineupPairingId.RecordId())
+//		lineupPairing, err := common.GetExistingRecordById(ctx, db, &LineupPairing{}, lineupPairingId.RecordId())
 //		if err != nil {
 //			return err
 //		}
 //
-//		individualMatch, err := common.GetExistingRecordById(db, &IndividualMatch{}, individualMatchId.RecordId())
+//		individualMatch, err := common.GetExistingRecordById(ctx, db, &IndividualMatch{}, individualMatchId.RecordId())
 //		if err != nil {
 //			return err
 //		}

@@ -110,7 +110,7 @@ func (c *CrudCommon[T]) createCrudRecord(route ApiRoute[T], request ApiRequest[T
 	// to enforce accessible-only-to-team constraints or setting a user ID to enforce only
 	// editable by creator constraints
 	// a
-	v, err := CreateOne(c.DatabaseProvider, body)
+	v, err := CreateOne(request.Context, c.DatabaseProvider, body)
 	if err != nil {
 		return nil, http.StatusBadRequest, err
 	}
@@ -126,7 +126,7 @@ func (c *CrudCommon[T]) getCrudRecordById(route ApiRoute[T], req ApiRequest[T]) 
 
 	// helper class to validate that the ApiRequest passed in here is able to access this record
 	wac := WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(req)}
-	v, exists, err := wac.GetOneById(recordType, req.PathId)
+	v, exists, err := wac.GetOneById(req.Context, recordType, req.PathId)
 	if err != nil {
 		return t, http.StatusBadRequest, err
 	}
@@ -140,7 +140,7 @@ func (c *CrudCommon[T]) getCrudRecordById(route ApiRoute[T], req ApiRequest[T]) 
 // which are accessible to the user who made the ApiRequest.
 func (c *CrudCommon[T]) getAllCrudRecords(route ApiRoute[T], req ApiRequest[T]) (t any, status int, err error) {
 	wac := WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(req)}
-	v, err := wac.GetAll()
+	v, err := wac.GetAll(req.Context)
 	if err != nil {
 		return t, http.StatusInternalServerError, err
 	}
@@ -155,7 +155,7 @@ func (c *CrudCommon[T]) deleteCrudRecordById(route ApiRoute[T], req ApiRequest[T
 
 	wac := WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(req)}
 	recordType, _ := route.RequestBody()
-	v, exists, err := wac.DeleteOneById(recordType, req.PathId)
+	v, exists, err := wac.DeleteOneById(req.Context, recordType, req.PathId)
 	if err != nil {
 		return t, http.StatusBadRequest, err
 	}
@@ -176,7 +176,7 @@ func (c *CrudCommon[T]) updateCrudRecord(route ApiRoute[T], request ApiRequest[T
 	request.Body.SetId(request.PathId)
 
 	wac := WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(request)}
-	err = wac.UpdateOneById(request.Body)
+	err = wac.UpdateOneById(request.Context, request.Body)
 	if err != nil {
 		return nil, http.StatusBadRequest, err
 	}

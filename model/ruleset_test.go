@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"intraclub/common"
 	"math/rand/v2"
@@ -21,7 +22,7 @@ func assertRulesetIsStaticallyInvalid(t *testing.T, r *Ruleset, textContains str
 }
 
 func assertRulesetIsDynamicallyInvalid(t *testing.T, db common.DatabaseProvider, r *Ruleset, textContains string) {
-	err := r.DynamicallyValid(db)
+	err := r.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("expected error on DynamicallyValid, but got nil")
 	}
@@ -41,7 +42,7 @@ func newValidRuleset(t *testing.T, owner UserId) *Ruleset {
 func newValidStoredRuleset(t *testing.T, db common.DatabaseProvider) *Ruleset {
 	user := newStoredUser(t, db)
 	x := newValidRuleset(t, user.ID)
-	v, err := common.CreateOne(db, x)
+	v, err := common.CreateOne(context.Background(), db, x)
 	if err != nil {
 		t.Fatalf("Error creating ruleset: %s\n", err)
 	}
@@ -65,7 +66,7 @@ func newValidStoredRulesetWithXSections(t *testing.T, db common.DatabaseProvider
 func addSectionRevisionToEndOfExistingRuleset(t *testing.T, db common.DatabaseProvider, existing *Ruleset) *Ruleset {
 	afterSectionId := RuleSectionId(common.InvalidRecordId)
 
-	sections, err := existing.GetSections(db)
+	sections, err := existing.GetSections(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +83,7 @@ func addSectionRevisionToEndOfExistingRuleset(t *testing.T, db common.DatabasePr
 		After: afterSectionId,
 	}
 
-	v, err := existing.Amend(db, amendment)
+	v, err := existing.Amend(context.Background(), db, amendment)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,7 +116,7 @@ func TestRulesetCannotBeUpdatedWithoutAmendment(t *testing.T) {
 	ruleset := newValidStoredRuleset(t, db)
 
 	ruleset.Name = "new name"
-	err := common.UpdateOne(db, ruleset)
+	err := common.UpdateOne(context.Background(), db, ruleset)
 	if err == nil {
 		t.Fatal("expected error updating existing ruleset")
 	}
@@ -143,7 +144,7 @@ func TestRulesetForkEmpty(t *testing.T) {
 	db := common.NewUnitTestDBProvider()
 	user2 := newStoredUser(t, db)
 	v := newValidStoredRuleset(t, db)
-	_, err := v.Fork(db, user2.ID)
+	_, err := v.Fork(context.Background(), db, user2.ID)
 	if err == nil {
 		t.Fatal("expected error forking ruleset with empty name")
 	}

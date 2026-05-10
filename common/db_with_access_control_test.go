@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"testing"
 )
@@ -36,11 +37,11 @@ func (p *PrivateTestRecord) SetId(id RecordId) {
 	p.ID = id
 }
 
-func (p *PrivateTestRecord) EditableBy(db DatabaseProvider) []RecordId {
+func (p *PrivateTestRecord) EditableBy(_ context.Context, db DatabaseProvider) []RecordId {
 	return []RecordId{p.Owner, SysAdminRecordId}
 }
 
-func (p *PrivateTestRecord) AccessibleTo(db DatabaseProvider) []RecordId {
+func (p *PrivateTestRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []RecordId {
 	v := make([]RecordId, 0, 1+len(p.SharedTo))
 	v = append(v, p.Owner)
 	v = append(v, p.SharedTo...)
@@ -51,7 +52,7 @@ func (p *PrivateTestRecord) StaticallyValid() error {
 	return nil
 }
 
-func (p *PrivateTestRecord) DynamicallyValid(db DatabaseProvider) error {
+func (p *PrivateTestRecord) DynamicallyValid(_ context.Context, db DatabaseProvider) error {
 	return nil
 }
 
@@ -59,7 +60,7 @@ func (p *PrivateTestRecord) BlankRecord() CrudRecord {
 	return new(PrivateTestRecord)
 }
 
-func (p *PrivateTestRecord) ShareTo(db DatabaseProvider, shareToUserId, updateUserId RecordId) error {
+func (p *PrivateTestRecord) ShareTo(ctx context.Context, db DatabaseProvider, shareToUserId, updateUserId RecordId) error {
 	for _, s := range p.SharedTo {
 		if shareToUserId == s {
 			return nil
@@ -68,13 +69,13 @@ func (p *PrivateTestRecord) ShareTo(db DatabaseProvider, shareToUserId, updateUs
 	p.SharedTo = append(p.SharedTo, shareToUserId)
 
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: updateUserId}
-	return wac.UpdateOneById(p)
+	return wac.UpdateOneById(ctx, p)
 }
 
 func newStoredPrivateTestRecord(t *testing.T, db DatabaseProvider, owner RecordId) *PrivateTestRecord {
 	r := NewPrivateTestRecord()
 	r.Owner = owner
-	v, err := CreateOne(db, r)
+	v, err := CreateOne(context.Background(), db, r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +88,7 @@ func TestGetOneViaOwner(t *testing.T) {
 	r := newStoredPrivateTestRecord(t, db, userId)
 
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: userId}
-	v, exists, err := wac.GetOneById(r, r.GetId())
+	v, exists, err := wac.GetOneById(context.Background(), r, r.GetId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,13 +104,13 @@ func TestGetOneViaSharedTo(t *testing.T) {
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
 	sharedToUserId := NewRecordId()
-	err := r.ShareTo(db, sharedToUserId, ownerId)
+	err := r.ShareTo(context.Background(), db, sharedToUserId, ownerId)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: sharedToUserId}
-	v, exists, err := wac.GetOneById(r, r.GetId())
+	v, exists, err := wac.GetOneById(context.Background(), r, r.GetId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +128,7 @@ func TestGetOneUnauthorized(t *testing.T) {
 	// attempt to get the record via another user ID
 	otherUserId := NewRecordId()
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: otherUserId}
-	_, exists, err := wac.GetOneById(r, r.GetId())
+	_, exists, err := wac.GetOneById(context.Background(), r, r.GetId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +143,7 @@ func TestDeleteOneByOwner(t *testing.T) {
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: ownerId}
-	v, exists, err := wac.DeleteOneById(r, r.GetId())
+	v, exists, err := wac.DeleteOneById(context.Background(), r, r.GetId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +160,7 @@ func TestDeleteOneByUnauthorized(t *testing.T) {
 
 	otherUserId := NewRecordId()
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: otherUserId}
-	_, exists, err := wac.DeleteOneById(r, r.GetId())
+	_, exists, err := wac.DeleteOneById(context.Background(), r, r.GetId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,9 +197,9 @@ func updateRecordAndReQuery(t *testing.T, db DatabaseProvider, r *PrivateTestRec
 	copied := updateRecordIntoCopy(r, newValue)
 
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: asUser}
-	err := wac.UpdateOneById(copied)
+	err := wac.UpdateOneById(context.Background(), copied)
 
-	v, exists, err2 := GetOneById(db, r, r.GetId())
+	v, exists, err2 := GetOneById(context.Background(), db, r, r.GetId())
 	if err2 != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +230,7 @@ func TestAccessibleByEveryone(t *testing.T) {
 	db := NewUnitTestDBProvider()
 	ownerId := NewRecordId()
 	r := newStoredPrivateTestRecord(t, db, ownerId)
-	err := r.ShareTo(db, EveryoneRecordId, ownerId)
+	err := r.ShareTo(context.Background(), db, EveryoneRecordId, ownerId)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +238,7 @@ func TestAccessibleByEveryone(t *testing.T) {
 	// attempt to get via another user ID
 	otherUserId := NewRecordId()
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: otherUserId}
-	v, exists, err := wac.GetOneById(r, r.GetId())
+	v, exists, err := wac.GetOneById(context.Background(), r, r.GetId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,11 +254,11 @@ func TestAccessibleBySysAdmin(t *testing.T) {
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
 	sysAdminId := NewRecordId()
-	SysAdminCheck = func(db DatabaseProvider, c RecordId) (bool, error) {
+	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, c RecordId) (bool, error) {
 		return c == sysAdminId, nil
 	}
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: sysAdminId}
-	v, exists, err := wac.GetOneById(r, r.GetId())
+	v, exists, err := wac.GetOneById(context.Background(), r, r.GetId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +275,7 @@ func TestEditableBySysAdmin(t *testing.T) {
 	fmt.Printf("%+v\n", r)
 
 	sysAdminId := NewRecordId()
-	SysAdminCheck = func(db DatabaseProvider, c RecordId) (bool, error) {
+	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, c RecordId) (bool, error) {
 		return c == sysAdminId, nil
 	}
 	v, err := updateRecordAndReQuery(t, db, r, "new value", sysAdminId)

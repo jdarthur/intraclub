@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
@@ -11,11 +12,11 @@ var GlobalDatabaseProvider DatabaseProvider
 // which provides a CrudRecord and allows the caller to define a function
 // to potentially filter the result from the output list. If the WhereFunc
 // returns true, the record will be returned in the output.
-type WhereFunc func(c CrudRecord) bool
+type WhereFunc func(ctx context.Context, c CrudRecord) bool
 
 // WhereFuncT is a typed version of WhereFunc which is used in the typed
 // DatabaseProvider wrapper functions.
-type WhereFuncT[T CrudRecord] func(c T) bool
+type WhereFuncT[T CrudRecord] func(ctx context.Context, c T) bool
 
 // DatabaseProvider is a generic interface to allow CRUD operations
 // on a CrudRecord in a database without depending on database-specific
@@ -27,32 +28,32 @@ type DatabaseProvider interface {
 	// GetOne returns the CrudRecord with a matching RecordId to the
 	// record in the function signature, false if one does not exist,
 	// and an error if we encountered one during the DB query
-	GetOne(record CrudRecord) (CrudRecord, bool, error)
+	GetOne(ctx context.Context, record CrudRecord) (CrudRecord, bool, error)
 
 	// GetAll returns a list of all records of a certain CrudRecord type
-	GetAll(recordType CrudRecord) ([]CrudRecord, error)
+	GetAll(ctx context.Context, recordType CrudRecord) ([]CrudRecord, error)
 
 	// GetAllWhere returns all records of a certain CrudRecord type
 	// which match the filtering logic provided in the given WhereFunc
-	GetAllWhere(recordType CrudRecord, where WhereFunc) ([]CrudRecord, error)
+	GetAllWhere(ctx context.Context, recordType CrudRecord, where WhereFunc) ([]CrudRecord, error)
 
 	// Create creates a new CrudRecord in the database
-	Create(CrudRecord) (CrudRecord, error)
+	Create(ctx context.Context, record CrudRecord) (CrudRecord, error)
 
 	// Update updates an existing CrudRecord by the record's RecordId
-	Update(CrudRecord) error
+	Update(ctx context.Context, record CrudRecord) error
 
 	// Delete deletes a CrudRecord by the record's RecordId (if it exists)
-	Delete(CrudRecord) error
+	Delete(ctx context.Context, record CrudRecord) error
 }
 
 // GetOneById is a typed version of DatabaseProvider.GetOne that takes a RecordId
 // returning the matching record from the DatabaseProvider (if exists), a bool
 // indicating whether the target record exists, and an error if one was encountered
 // during the query on the DatabaseProvider
-func GetOneById[T CrudRecord](db DatabaseProvider, record T, id RecordId) (t T, exists bool, err error) {
+func GetOneById[T CrudRecord](ctx context.Context, db DatabaseProvider, record T, id RecordId) (t T, exists bool, err error) {
 	record.SetId(id)
-	r, exists, err := db.GetOne(record)
+	r, exists, err := db.GetOne(ctx, record)
 	if err != nil {
 		return t, false, err
 	}
@@ -62,9 +63,9 @@ func GetOneById[T CrudRecord](db DatabaseProvider, record T, id RecordId) (t T, 
 	return r.(T), exists, nil
 }
 
-func GetExistingRecordById[T CrudRecord](db DatabaseProvider, record T, id RecordId) (t T, err error) {
+func GetExistingRecordById[T CrudRecord](ctx context.Context, db DatabaseProvider, record T, id RecordId) (t T, err error) {
 	record.SetId(id)
-	r, exists, err := db.GetOne(record)
+	r, exists, err := db.GetOne(ctx, record)
 	if err != nil {
 		return t, err
 	}
@@ -77,9 +78,9 @@ func GetExistingRecordById[T CrudRecord](db DatabaseProvider, record T, id Recor
 
 // ExistsById checks if a CrudRecord exists with a particular RecordId,
 // returning an error if encountered, or if the record does not exist
-func ExistsById[T CrudRecord](db DatabaseProvider, record T, id RecordId) (err error) {
+func ExistsById[T CrudRecord](ctx context.Context, db DatabaseProvider, record T, id RecordId) (err error) {
 	record.SetId(id)
-	_, exists, err := db.GetOne(record)
+	_, exists, err := db.GetOne(ctx, record)
 	if err != nil {
 		return err
 	}
@@ -102,9 +103,9 @@ func fromListOfCrudRecord[T CrudRecord](list []CrudRecord) ([]T, error) {
 
 // GetAll is a typed version of DatabaseProvider.GetAll that gets all records
 // of type T, then converts the resulting []CrudRecord into a []T
-func GetAll[T CrudRecord](db DatabaseProvider) ([]T, error) {
+func GetAll[T CrudRecord](ctx context.Context, db DatabaseProvider) ([]T, error) {
 	var zero T
-	v, err := db.GetAll(zero)
+	v, err := db.GetAll(ctx, zero)
 	if err != nil {
 		return nil, err
 	}
@@ -113,13 +114,13 @@ func GetAll[T CrudRecord](db DatabaseProvider) ([]T, error) {
 
 // GetAllWhere is a type-safe wrapper around DatabaseProvider.GetAllWhere,
 // returning a []T instead of a []CrudRecord
-func GetAllWhere[T CrudRecord](db DatabaseProvider, where WhereFuncT[T]) ([]T, error) {
+func GetAllWhere[T CrudRecord](ctx context.Context, db DatabaseProvider, where WhereFuncT[T]) ([]T, error) {
 	var zero T
-	w := func(c CrudRecord) bool {
-		return where(c.(T))
+	w := func(_ context.Context, c CrudRecord) bool {
+		return where(ctx, c.(T))
 	}
 
-	v, err := db.GetAllWhere(zero, w)
+	v, err := db.GetAllWhere(ctx, zero, w)
 	if err != nil {
 		return nil, err
 	}
@@ -129,11 +130,11 @@ func GetAllWhere[T CrudRecord](db DatabaseProvider, where WhereFuncT[T]) ([]T, e
 // DeleteOneById deletes a CrudRecord from the given DatabaseProvider by the provided RecordId,
 // and returns the record back to the caller (if it existed), or an error if encountered during
 // the query / delete operations on the DatabaseProvider
-func DeleteOneById[T CrudRecord](db DatabaseProvider, record T, id RecordId) (t T, exists bool, err error) {
+func DeleteOneById[T CrudRecord](ctx context.Context, db DatabaseProvider, record T, id RecordId) (t T, exists bool, err error) {
 
 	// check if a record with the given RecordId exists for the CrudRecord type
 	record.SetId(id)
-	r, exists, err := db.GetOne(record)
+	r, exists, err := db.GetOne(ctx, record)
 	if err != nil {
 		return t, false, err
 	}
@@ -146,14 +147,14 @@ func DeleteOneById[T CrudRecord](db DatabaseProvider, record T, id RecordId) (t 
 	// run post-create logic if the record type implements it
 	o, ok := r.(PreDelete)
 	if ok {
-		err = o.PreDelete(db)
+		err = o.PreDelete(ctx, db)
 		if err != nil {
 			return t, false, err
 		}
 	}
 
 	// delete the record from the DatabaseProvider if it does exist currently
-	err = db.Delete(r)
+	err = db.Delete(ctx, r)
 	if err != nil {
 		return t, false, err
 	}
@@ -161,7 +162,7 @@ func DeleteOneById[T CrudRecord](db DatabaseProvider, record T, id RecordId) (t 
 	// run post-delete logic if the record type implements it
 	pd, ok := r.(PostDelete)
 	if ok {
-		err = pd.PostDelete(db)
+		err = pd.PostDelete(ctx, db)
 		if err != nil {
 			return t, false, err
 		}
@@ -176,7 +177,7 @@ func DeleteOneById[T CrudRecord](db DatabaseProvider, record T, id RecordId) (t 
 // saves the record to the given DatabaseProvider. If the record has
 // any post-create logic to run (via implementing the PostCreate interface)
 // this logic is also run, returning any errors encountered along the way
-func CreateOne[T CrudRecord](db DatabaseProvider, record T) (t T, err error) {
+func CreateOne[T CrudRecord](ctx context.Context, db DatabaseProvider, record T) (t T, err error) {
 
 	// create a new record ID
 	recordId := NewRecordId()
@@ -185,17 +186,17 @@ func CreateOne[T CrudRecord](db DatabaseProvider, record T) (t T, err error) {
 	setCreateTimeStampIfApplicable(record)
 
 	// validate that this record meets all the constraints of its type
-	err = Validate(db, record)
+	err = Validate(ctx, db, record)
 	if err != nil {
 		return t, err
 	}
 
-	err = ValidateUniqueConstraint(db, record)
+	err = ValidateUniqueConstraint(ctx, db, record)
 	if err != nil {
 		return t, err
 	}
 
-	v, err := db.Create(record)
+	v, err := db.Create(ctx, record)
 	if err != nil {
 		return t, err
 	}
@@ -203,7 +204,7 @@ func CreateOne[T CrudRecord](db DatabaseProvider, record T) (t T, err error) {
 	// run post-create logic if the record type implements it
 	o, ok := v.(PostCreate)
 	if ok {
-		err = o.PostCreate(db)
+		err = o.PostCreate(ctx, db)
 		if err != nil {
 			return t, err
 		}
@@ -218,9 +219,9 @@ func CreateOne[T CrudRecord](db DatabaseProvider, record T) (t T, err error) {
 // does not violate any type-specific constraints, updates it in the
 // given DatabaseProvider and runs any post-create logic that the
 // type implements, returning any errors encountered along the way
-func UpdateOne[T CrudRecord](db DatabaseProvider, record T) (err error) {
+func UpdateOne[T CrudRecord](ctx context.Context, db DatabaseProvider, record T) (err error) {
 	// fetch existing record for timestamp preservation and PreUpdate hook
-	v, exists, err := GetOneById(db, record, record.GetId())
+	v, exists, err := GetOneById(ctx, db, record, record.GetId())
 	if err != nil {
 		return err
 	}
@@ -232,25 +233,25 @@ func UpdateOne[T CrudRecord](db DatabaseProvider, record T) (err error) {
 	setUpdateTimeStampIfApplicable(record, v)
 
 	// validate that this record meets all the constraints of its type
-	err = Validate(db, record)
+	err = Validate(ctx, db, record)
 	if err != nil {
 		return err
 	}
 
-	err = ValidateUniqueConstraint(db, record)
+	err = ValidateUniqueConstraint(ctx, db, record)
 	if err != nil {
 		return err
 	}
 
 	pu, ok := any(record).(PreUpdate)
 	if ok {
-		err = pu.PreUpdate(db, v)
+		err = pu.PreUpdate(ctx, db, v)
 		if err != nil {
 			return err
 		}
 	}
 	// update the record in the DB
-	err = db.Update(record)
+	err = db.Update(ctx, record)
 	if err != nil {
 		return err
 	}
@@ -258,7 +259,7 @@ func UpdateOne[T CrudRecord](db DatabaseProvider, record T) (err error) {
 	// run post-update logic if implemented by the type
 	o, ok := any(record).(PostUpdate)
 	if ok {
-		err = o.PostUpdate(db)
+		err = o.PostUpdate(ctx, db)
 		if err != nil {
 			return err
 		}

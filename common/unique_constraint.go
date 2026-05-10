@@ -1,5 +1,6 @@
 package common
 
+import "context"
 import "fmt"
 
 type UniquenessConstraint[T CrudRecord] interface {
@@ -7,10 +8,10 @@ type UniquenessConstraint[T CrudRecord] interface {
 	CrudRecord
 }
 
-func ValidateUniqueConstraint[T CrudRecord](db DatabaseProvider, c T) error {
+func ValidateUniqueConstraint[T CrudRecord](ctx context.Context, db DatabaseProvider, c T) error {
 	u, ok := any(c).(UniquenessConstraint[T])
 	if ok {
-		otherRecords, err := GetAllWhere[T](db, func(c2 T) bool {
+		otherRecords, err := GetAllWhere[T](ctx, db, func(_ context.Context, c2 T) bool {
 			return c.GetId() != c2.GetId()
 		})
 

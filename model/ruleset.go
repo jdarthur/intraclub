@@ -1,9 +1,11 @@
 package model
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"intraclub/common"
+	"slices"
 	"strings"
 	"time"
 )
@@ -63,7 +65,7 @@ type Ruleset struct {
 	Owner UserId `json:"owner"`
 }
 
-func (r *Ruleset) PreUpdate(db common.DatabaseProvider, existingValues common.CrudRecord) error {
+func (r *Ruleset) PreUpdate(ctx context.Context, db common.DatabaseProvider, existingValues common.CrudRecord) error {
 	return errors.New("rulesets may not be directly modified (use Ruleset.Amend instead)")
 }
 
@@ -99,11 +101,11 @@ func (r *Ruleset) SetId(id common.RecordId) {
 	r.ID = RulesetId(id)
 }
 
-func (r *Ruleset) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (r *Ruleset) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.SysAdminAndUsers(r.Owner.RecordId())
 }
 
-func (r *Ruleset) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (r *Ruleset) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
@@ -130,8 +132,8 @@ func (r *Ruleset) StaticallyValid() error {
 }
 
 // CountSections returns the number of RuleSection records associated with this ruleset.
-func (r *Ruleset) CountSections(db common.DatabaseProvider) (int, error) {
-	sectionRelations, err := r.GetSectionRelations(db)
+func (r *Ruleset) CountSections(ctx context.Context, db common.DatabaseProvider) (int, error) {
+	sectionRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
 		return 0, err
 	}
@@ -140,8 +142,8 @@ func (r *Ruleset) CountSections(db common.DatabaseProvider) (int, error) {
 
 // GetSections returns all RuleSection IDs for this ruleset in order,
 // based on the SectionIndex stored in the RulesetSection join table.
-func (r *Ruleset) GetSections(db common.DatabaseProvider) ([]RuleSectionId, error) {
-	sectionRelations, err := r.GetSectionRelations(db)
+func (r *Ruleset) GetSections(ctx context.Context, db common.DatabaseProvider) ([]RuleSectionId, error) {
+	sectionRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
 		return nil, err
 	}
@@ -154,27 +156,34 @@ func (r *Ruleset) GetSections(db common.DatabaseProvider) ([]RuleSectionId, erro
 
 // GetSectionRelations returns all RulesetSection join table records for this ruleset.
 // The results include the SectionIndex which determines the ordering of sections.
-func (r *Ruleset) GetSectionRelations(db common.DatabaseProvider) ([]*RulesetSection, error) {
-	return common.GetAllWhere[*RulesetSection](db, func(rs *RulesetSection) bool {
+func (r *Ruleset) GetSectionRelations(ctx context.Context, db common.DatabaseProvider) ([]*RulesetSection, error) {
+	result, err := common.GetAllWhere[*RulesetSection](ctx, db, func(_ context.Context, rs *RulesetSection) bool {
 		return rs.RulesetId == r.ID
 	})
+	if err != nil {
+		return nil, err
+	}
+	slices.SortFunc(result, func(a, b *RulesetSection) int {
+		return a.SectionIndex - b.SectionIndex
+	})
+	return result, nil
 }
 
-func (r *Ruleset) DynamicallyValid(db common.DatabaseProvider) error {
+func (r *Ruleset) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
 	// owner must exist
-	err := common.ExistsById(db, &User{}, r.Owner.RecordId())
+	err := common.ExistsById(ctx, db, &User{}, r.Owner.RecordId())
 	if err != nil {
 		return err
 	}
 
 	// each RuleSection must exist
-	sectionRelations, err := r.GetSectionRelations(db)
+	sectionRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
 		return err
 	}
 
 	for _, sr := range sectionRelations {
-		err = common.ExistsById(db, &RuleSection{}, sr.SectionId.RecordId())
+		err = common.ExistsById(ctx, db, &RuleSection{}, sr.SectionId.RecordId())
 		if err != nil {
 			return err
 		}
@@ -182,7 +191,7 @@ func (r *Ruleset) DynamicallyValid(db common.DatabaseProvider) error {
 
 	// if this Ruleset is superseded by some other RuleSet
 	if !r.SupersededBy.Empty() {
-		other, err := common.GetExistingRecordById(db, &Ruleset{}, r.SupersededBy.RecordId())
+		other, err := common.GetExistingRecordById(ctx, db, &Ruleset{}, r.SupersededBy.RecordId())
 		if err != nil {
 			return err
 		}
@@ -205,8 +214,8 @@ func (r *Ruleset) DynamicallyValid(db common.DatabaseProvider) error {
 
 // AddSection creates a new RulesetSection join table record to add a section to this ruleset
 // at the specified position. The index parameter determines the ordering of sections.
-func (r *Ruleset) AddSection(db common.DatabaseProvider, sectionId RuleSectionId, index int) error {
-	if err := common.ExistsById(db, &RuleSection{}, sectionId.RecordId()); err != nil {
+func (r *Ruleset) AddSection(ctx context.Context, db common.DatabaseProvider, sectionId RuleSectionId, index int) error {
+	if err := common.ExistsById(ctx, db, &RuleSection{}, sectionId.RecordId()); err != nil {
 		return err
 	}
 
@@ -215,20 +224,20 @@ func (r *Ruleset) AddSection(db common.DatabaseProvider, sectionId RuleSectionId
 		SectionId:    sectionId,
 		SectionIndex: index,
 	}
-	_, err := common.CreateOne(db, sectionRelation)
+	_, err := common.CreateOne(ctx, db, sectionRelation)
 	return err
 }
 
 // RemoveSection removes the RulesetSection join table records for a specific section from this ruleset.
-func (r *Ruleset) RemoveSection(db common.DatabaseProvider, sectionId RuleSectionId) error {
-	relations, err := common.GetAllWhere[*RulesetSection](db, func(rs *RulesetSection) bool {
+func (r *Ruleset) RemoveSection(ctx context.Context, db common.DatabaseProvider, sectionId RuleSectionId) error {
+	relations, err := common.GetAllWhere[*RulesetSection](ctx, db, func(_ context.Context, rs *RulesetSection) bool {
 		return rs.RulesetId == r.ID && rs.SectionId == sectionId
 	})
 	if err != nil {
 		return err
 	}
 	for _, rel := range relations {
-		_, _, err = common.DeleteOneById(db, &RulesetSection{}, rel.ID)
+		_, _, err = common.DeleteOneById(ctx, db, &RulesetSection{}, rel.ID)
 		if err != nil {
 			return err
 		}
@@ -243,8 +252,8 @@ func (r *Ruleset) BlankRecord() common.CrudRecord {
 	return new(Ruleset)
 }
 
-func (r *Ruleset) Fork(db common.DatabaseProvider, newUserId UserId) (*Ruleset, error) {
-	sectionRelations, err := r.GetSectionRelations(db)
+func (r *Ruleset) Fork(ctx context.Context, db common.DatabaseProvider, newUserId UserId) (*Ruleset, error) {
+	sectionRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +269,7 @@ func (r *Ruleset) Fork(db common.DatabaseProvider, newUserId UserId) (*Ruleset, 
 	r2.Date = r.Date
 	r2.Owner = newUserId
 
-	newRuleset, err := common.CreateOne(db, r2)
+	newRuleset, err := common.CreateOne(ctx, db, r2)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +281,7 @@ func (r *Ruleset) Fork(db common.DatabaseProvider, newUserId UserId) (*Ruleset, 
 			SectionId:    sr.SectionId,
 			SectionIndex: i,
 		}
-		_, err := common.CreateOne(db, newSectionRelation)
+		_, err := common.CreateOne(ctx, db, newSectionRelation)
 		if err != nil {
 			return nil, err
 		}
@@ -324,11 +333,11 @@ func (section *RuleSection) SetId(id common.RecordId) {
 	section.ID = RuleSectionId(id)
 }
 
-func (section *RuleSection) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (section *RuleSection) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.SysAdminAndUsers(section.Owner.RecordId())
 }
 
-func (section *RuleSection) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (section *RuleSection) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
@@ -357,12 +366,12 @@ func (section *RuleSection) StaticallyValid() error {
 	return nil
 }
 
-func (section *RuleSection) DynamicallyValid(db common.DatabaseProvider) error {
-	err := common.ExistsById(db, &Ruleset{}, section.Parent.RecordId())
+func (section *RuleSection) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	err := common.ExistsById(ctx, db, &Ruleset{}, section.Parent.RecordId())
 	if err != nil {
 		return err
 	}
-	return common.ExistsById(db, &User{}, section.Owner.RecordId())
+	return common.ExistsById(ctx, db, &User{}, section.Owner.RecordId())
 }
 
 func (section *RuleSection) Empty() bool {

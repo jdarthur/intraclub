@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"intraclub/common"
 )
@@ -21,27 +22,27 @@ type TeamMatchup struct {
 	Bye      bool
 }
 
-func (t *TeamMatchup) Validate(db common.DatabaseProvider, season *Season) error {
+func (t *TeamMatchup) Validate(ctx context.Context, db common.DatabaseProvider, season *Season) error {
 	if t.Bye && t.AwayTeam != TeamId(common.InvalidRecordId) {
 		return fmt.Errorf("away team ID must not be set during a bye")
 	}
 
-	err := common.ExistsById(db, &Team{}, t.HomeTeam.RecordId())
+	err := common.ExistsById(ctx, db, &Team{}, t.HomeTeam.RecordId())
 	if err != nil {
 		return fmt.Errorf("home team error: %s", err)
 	}
 
-	if !season.IsTeamAssignedToSeason(db, t.HomeTeam) {
+	if !season.IsTeamAssignedToSeason(ctx, db, t.HomeTeam) {
 		return fmt.Errorf("home team %s is not assigned to season %s", t.HomeTeam, season.ID)
 	}
 
 	if !t.Bye {
-		err = common.ExistsById(db, &Team{}, t.AwayTeam.RecordId())
+		err = common.ExistsById(ctx, db, &Team{}, t.AwayTeam.RecordId())
 		if err != nil {
 			return fmt.Errorf("away team error: %s", err)
 		}
 
-		if !season.IsTeamAssignedToSeason(db, t.AwayTeam) {
+		if !season.IsTeamAssignedToSeason(ctx, db, t.AwayTeam) {
 			return fmt.Errorf("away team %s is not assigned to season %s", t.AwayTeam, season.ID)
 		}
 	}
@@ -84,11 +85,11 @@ func (w *WeeklyMatchup) SetId(id common.RecordId) {
 	w.ID = WeeklyMatchupId(id)
 }
 
-func (w *WeeklyMatchup) EditableBy(db common.DatabaseProvider) []common.RecordId {
-	return EditableBySeason(db, w.SeasonId)
+func (w *WeeklyMatchup) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+	return EditableBySeason(ctx, db, w.SeasonId)
 }
 
-func (w *WeeklyMatchup) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (w *WeeklyMatchup) AccessibleTo(_ context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
@@ -120,14 +121,14 @@ func (w *WeeklyMatchup) StaticallyValid() error {
 	return nil
 }
 
-func (w *WeeklyMatchup) DynamicallyValid(db common.DatabaseProvider) error {
-	week, err := common.GetExistingRecordById(db, &Week{}, w.WeekId.RecordId())
+func (w *WeeklyMatchup) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	week, err := common.GetExistingRecordById(ctx, db, &Week{}, w.WeekId.RecordId())
 	if err != nil {
 		return err
 	}
 
 	// validate that the season in question exists.
-	season, err := common.GetExistingRecordById(db, &Season{}, w.SeasonId.RecordId())
+	season, err := common.GetExistingRecordById(ctx, db, &Season{}, w.SeasonId.RecordId())
 	if err != nil {
 		return err
 	}
@@ -139,16 +140,16 @@ func (w *WeeklyMatchup) DynamicallyValid(db common.DatabaseProvider) error {
 
 	// validate that each individual matchup is
 	for _, matchup := range w.Matchups {
-		err = matchup.Validate(db, season)
+		err = matchup.Validate(ctx, db, season)
 		if err != nil {
 			return err
 		}
 	}
 
-	return w.ValidateThatEachTeamHasOneMatchup(db, season)
+	return w.ValidateThatEachTeamHasOneMatchup(ctx, db, season)
 }
 
-func (w *WeeklyMatchup) ValidateThatEachTeamHasOneMatchup(db common.DatabaseProvider, season *Season) error {
+func (w *WeeklyMatchup) ValidateThatEachTeamHasOneMatchup(ctx context.Context, db common.DatabaseProvider, season *Season) error {
 	m := make(map[TeamId]bool)
 	for _, matchup := range w.Matchups {
 		m[matchup.HomeTeam] = true
@@ -157,7 +158,7 @@ func (w *WeeklyMatchup) ValidateThatEachTeamHasOneMatchup(db common.DatabaseProv
 		}
 	}
 
-	teams, err := season.GetTeams(db)
+	teams, err := season.GetTeams(ctx, db)
 	if err != nil {
 		return err
 	}

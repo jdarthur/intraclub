@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"intraclub/common"
 	"strings"
@@ -28,10 +29,10 @@ func UserIdListToRecordIdList(input []UserId) []common.RecordId {
 	return output
 }
 
-func UserIdSliceToUserSlice(input []UserId, db common.DatabaseProvider) []*User {
+func UserIdSliceToUserSlice(ctx context.Context, input []UserId, db common.DatabaseProvider) []*User {
 	output := make([]*User, 0, len(input))
 	for _, id := range input {
-		user, err := common.GetExistingRecordById(db, &User{}, id.RecordId())
+		user, err := common.GetExistingRecordById(ctx, db, &User{}, id.RecordId())
 		if err == nil {
 			output = append(output, user)
 		}
@@ -69,11 +70,11 @@ func (u *User) SetOwner(recordId common.RecordId) {
 	// don't need to do anything as User records are self-owned
 }
 
-func (u *User) EditableBy(common.DatabaseProvider) []common.RecordId {
+func (u *User) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return []common.RecordId{u.ID.RecordId(), common.SysAdminRecordId}
 }
 
-func (u *User) AccessibleTo(common.DatabaseProvider) []common.RecordId {
+func (u *User) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return []common.RecordId{common.EveryoneRecordId}
 }
 
@@ -129,7 +130,7 @@ func (u *User) StaticallyValid() error {
 	return nil
 }
 
-func (u *User) DynamicallyValid(db common.DatabaseProvider) error {
+func (u *User) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
 	return nil
 }
 

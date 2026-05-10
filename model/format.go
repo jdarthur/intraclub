@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -54,12 +55,12 @@ func (l *FormatLine) StaticallyValid() error {
 	return nil
 }
 
-func (l *FormatLine) DynamicallyValid(db common.DatabaseProvider) error {
-	err := common.ExistsById(db, &Rating{}, l.Player1Rating.RecordId())
+func (l *FormatLine) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	err := common.ExistsById(ctx, db, &Rating{}, l.Player1Rating.RecordId())
 	if err != nil {
 		return err
 	}
-	return common.ExistsById(db, &Rating{}, l.Player2Rating.RecordId())
+	return common.ExistsById(ctx, db, &Rating{}, l.Player2Rating.RecordId())
 }
 
 func (l *FormatLine) String() string {
@@ -117,12 +118,12 @@ func (f *Format) GetOwner() common.RecordId {
 	return f.UserId.RecordId()
 }
 
-func (f *Format) PreUpdate(db common.DatabaseProvider, existingValues common.CrudRecord) error {
-	return f.CheckHasAssignedDrafts(db, true)
+func (f *Format) PreUpdate(ctx context.Context, db common.DatabaseProvider, existingValues common.CrudRecord) error {
+	return f.CheckHasAssignedDrafts(ctx, db, true)
 }
 
-func (f *Format) PreDelete(db common.DatabaseProvider) error {
-	return f.CheckHasAssignedDrafts(db, false)
+func (f *Format) PreDelete(ctx context.Context, db common.DatabaseProvider) error {
+	return f.CheckHasAssignedDrafts(ctx, db, false)
 }
 
 func (f *Format) SetOwner(recordId common.RecordId) {
@@ -133,11 +134,11 @@ func NewFormat() *Format {
 	return &Format{}
 }
 
-func (f *Format) EditableBy(common.DatabaseProvider) []common.RecordId {
+func (f *Format) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return []common.RecordId{f.UserId.RecordId()}
 }
 
-func (f *Format) AccessibleTo(common.DatabaseProvider) []common.RecordId {
+func (f *Format) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
@@ -195,14 +196,14 @@ func (f *Format) IsRatingInOptionsList(r RatingId) bool {
 	return false
 }
 
-func (f *Format) DynamicallyValid(db common.DatabaseProvider) error {
-	err := common.ExistsById(db, &User{}, f.UserId.RecordId())
+func (f *Format) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	err := common.ExistsById(ctx, db, &User{}, f.UserId.RecordId())
 	if err != nil {
 		return err
 	}
 
 	for _, line := range f.Lines {
-		err := line.DynamicallyValid(db)
+		err := line.DynamicallyValid(ctx, db)
 		if err != nil {
 			return err
 		}
@@ -219,14 +220,14 @@ func (f *Format) IsRatingValidForFormat(r RatingId) bool {
 	return false
 }
 
-func (f *Format) GetAssignedDrafts(db common.DatabaseProvider) ([]*Draft, error) {
-	return common.GetAllWhere[*Draft](db, func(c *Draft) bool {
+func (f *Format) GetAssignedDrafts(ctx context.Context, db common.DatabaseProvider) ([]*Draft, error) {
+	return common.GetAllWhere[*Draft](ctx, db, func(_ context.Context, c *Draft) bool {
 		return c.Format == f.ID
 	})
 }
 
-func (f *Format) CheckHasAssignedDrafts(db common.DatabaseProvider, isUpdate bool) error {
-	drafts, err := f.GetAssignedDrafts(db)
+func (f *Format) CheckHasAssignedDrafts(ctx context.Context, db common.DatabaseProvider, isUpdate bool) error {
+	drafts, err := f.GetAssignedDrafts(ctx, db)
 	if err != nil {
 		return err
 	}

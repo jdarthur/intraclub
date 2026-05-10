@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"intraclub/common"
 	"testing"
@@ -27,7 +28,7 @@ func TestInvalidUserId(t *testing.T) {
 		Email: EmailAddress(email),
 	}
 
-	_, _, err := m.RequestToken(db, request)
+	_, _, err := m.RequestToken(context.Background(), db, request)
 	if err == nil {
 		t.Fatalf("InvalidUserId should fail")
 	}
@@ -43,7 +44,7 @@ func TestValidUserId(t *testing.T) {
 		Email: user.Email,
 	}
 
-	token, doesNotExist, err := m.RequestToken(db, request)
+	token, doesNotExist, err := m.RequestToken(context.Background(), db, request)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +63,7 @@ func TestGetLoginResponse(t *testing.T) {
 		Email: user.Email,
 	}
 
-	token, _, err := m.RequestToken(db, request)
+	token, _, err := m.RequestToken(context.Background(), db, request)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,7 +84,7 @@ func TestDoubleLogin(t *testing.T) {
 		Email: user.Email,
 	}
 
-	token, _, err := m.RequestToken(db, request)
+	token, _, err := m.RequestToken(context.Background(), db, request)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +108,7 @@ func TestTokenExpired(t *testing.T) {
 		Email: user.Email,
 	}
 
-	token, _, err := m.RequestToken(db, request)
+	token, _, err := m.RequestToken(context.Background(), db, request)
 	if err != nil {
 		t.Fatal(err)
 	}

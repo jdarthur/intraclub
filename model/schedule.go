@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"intraclub/common"
 )
@@ -43,11 +44,11 @@ func NewSchedule() *Schedule {
 	return &Schedule{}
 }
 
-func (s *Schedule) EditableBy(db common.DatabaseProvider) []common.RecordId {
-	return EditableBySeason(db, s.SeasonId)
+func (s *Schedule) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+	return EditableBySeason(ctx, db, s.SeasonId)
 }
 
-func (s *Schedule) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (s *Schedule) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
@@ -67,18 +68,18 @@ func (s *Schedule) StaticallyValid() error {
 	return nil
 }
 
-func (s *Schedule) DynamicallyValid(db common.DatabaseProvider) error {
-	err := common.ExistsById(db, &Season{}, s.SeasonId.RecordId())
+func (s *Schedule) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	err := common.ExistsById(ctx, db, &Season{}, s.SeasonId.RecordId())
 	if err != nil {
 		return err
 	}
 
 	for _, m := range s.Matchups {
-		weeklyMatchup, err := common.GetExistingRecordById(db, &WeeklyMatchup{}, m.RecordId())
+		weeklyMatchup, err := common.GetExistingRecordById(ctx, db, &WeeklyMatchup{}, m.RecordId())
 		if err != nil {
 			return err
 		}
-		err = weeklyMatchup.DynamicallyValid(db)
+		err = weeklyMatchup.DynamicallyValid(ctx, db)
 		if err != nil {
 			return err
 		}
@@ -86,28 +87,28 @@ func (s *Schedule) DynamicallyValid(db common.DatabaseProvider) error {
 	return nil
 }
 
-func (s *Schedule) PostCreate(db common.DatabaseProvider) error {
-	season, err := common.GetExistingRecordById(db, &Season{}, s.SeasonId.RecordId())
+func (s *Schedule) PostCreate(ctx context.Context, db common.DatabaseProvider) error {
+	season, err := common.GetExistingRecordById(ctx, db, &Season{}, s.SeasonId.RecordId())
 	if err != nil {
 		return err
 	}
 	season.ScheduleID = s.ID
-	return common.UpdateOne(db, season)
+	return common.UpdateOne(ctx, db, season)
 }
 
-func (s *Schedule) GetWeeks(db common.DatabaseProvider) ([]*Week, error) {
-	season, err := common.GetExistingRecordById(db, &Season{}, s.SeasonId.RecordId())
+func (s *Schedule) GetWeeks(ctx context.Context, db common.DatabaseProvider) ([]*Week, error) {
+	season, err := common.GetExistingRecordById(ctx, db, &Season{}, s.SeasonId.RecordId())
 	if err != nil {
 		return nil, err
 	}
 
-	return common.GetAllWhere[*Week](db, func(c *Week) bool {
+	return common.GetAllWhere[*Week](ctx, db, func(_ context.Context, c *Week) bool {
 		return c.DraftId == season.DraftId
 	})
 }
 
-func (s *Schedule) IsScheduleComplete(db common.DatabaseProvider) (bool, error) {
-	weeks, err := s.GetWeeks(db)
+func (s *Schedule) IsScheduleComplete(ctx context.Context, db common.DatabaseProvider) (bool, error) {
+	weeks, err := s.GetWeeks(ctx, db)
 	if err != nil {
 		return false, err
 	}

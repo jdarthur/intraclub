@@ -1,14 +1,26 @@
 package common
 
 import (
+	"context"
+	"crypto/rand"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math/rand"
+	mrand "math/rand"
 	"strings"
 	"time"
 )
+
+func init() {
+	b := make([]byte, 8)
+	_, err := rand.Read(b)
+	if err != nil {
+		mrand.Seed(time.Now().UnixNano())
+	} else {
+		mrand.Seed(int64(binary.BigEndian.Uint64(b)))
+	}
+}
 
 type RecordId uint64
 
@@ -30,7 +42,7 @@ func (r RecordId) MarshalJSON() ([]byte, error) {
 }
 
 func NewRecordId() RecordId {
-	return RecordId(rand.Uint64() + uint64(len(unavailableRecordIds)))
+	return RecordId(mrand.Uint64() + uint64(len(unavailableRecordIds)))
 }
 
 func (r RecordId) Uint64() uint64 {
@@ -105,8 +117,8 @@ var unavailableRecordIds = []RecordId{
 }
 
 type Authorizable interface {
-	EditableBy(db DatabaseProvider) []RecordId
-	AccessibleTo(db DatabaseProvider) []RecordId
+	EditableBy(ctx context.Context, db DatabaseProvider) []RecordId
+	AccessibleTo(ctx context.Context, db DatabaseProvider) []RecordId
 	SetOwner(recordId RecordId)
 	GetOwner() RecordId
 }
@@ -121,28 +133,28 @@ type CrudRecord interface {
 }
 
 type PostCreate interface {
-	PostCreate(db DatabaseProvider) error // function to call post-create
+	PostCreate(ctx context.Context, db DatabaseProvider) error // function to call post-create
 }
 
 type PreUpdate interface {
-	PreUpdate(db DatabaseProvider, existingValues CrudRecord) error // function to call pre-update
+	PreUpdate(ctx context.Context, db DatabaseProvider, existingValues CrudRecord) error // function to call pre-update
 }
 
 type CanOnlyDelete interface {
 	CrudRecord
-	CanOnlyDelete(db DatabaseProvider, userId RecordId) bool
+	CanOnlyDelete(ctx context.Context, db DatabaseProvider, userId RecordId) bool
 }
 
 type PostUpdate interface {
-	PostUpdate(db DatabaseProvider) error // function to call post-update
+	PostUpdate(ctx context.Context, db DatabaseProvider) error // function to call post-update
 }
 
 type PreDelete interface {
-	PreDelete(db DatabaseProvider) error // function to call pre-delete
+	PreDelete(ctx context.Context, db DatabaseProvider) error // function to call pre-delete
 }
 
 type PostDelete interface {
-	PostDelete(db DatabaseProvider) error // function to call post-delete
+	PostDelete(ctx context.Context, db DatabaseProvider) error // function to call post-delete
 }
 
 type TimestampedRecord interface {

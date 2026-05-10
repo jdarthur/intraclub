@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"intraclub/common"
 	"testing"
 )
@@ -8,7 +9,7 @@ import (
 func newStoredTeam(t *testing.T, db common.DatabaseProvider, captain UserId) *Team {
 	team := NewDefaultTeam(captain, "Test Team")
 
-	v, err := common.CreateOne(db, team)
+	v, err := common.CreateOne(context.Background(), db, team)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -19,7 +20,7 @@ func newStoredTeam(t *testing.T, db common.DatabaseProvider, captain UserId) *Te
 		UserId: captain,
 		Role:   TeamRoleCaptain,
 	}
-	_, err = common.CreateOne(db, assignment)
+	_, err = common.CreateOne(context.Background(), db, assignment)
 	if err != nil {
 		t.Fatal(err)
 	}

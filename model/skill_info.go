@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"intraclub/common"
 )
 
@@ -49,12 +50,12 @@ func (s *SkillInfo) SetId(id common.RecordId) {
 	panic("implement me")
 }
 
-func (s *SkillInfo) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (s *SkillInfo) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s *SkillInfo) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (s *SkillInfo) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	//TODO implement me
 	panic("implement me")
 }
@@ -69,7 +70,7 @@ func (s *SkillInfo) StaticallyValid() error {
 	panic("implement me")
 }
 
-func (s *SkillInfo) DynamicallyValid(db common.DatabaseProvider) error {
+func (s *SkillInfo) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
 	//TODO implement me
 	panic("implement me")
 }
@@ -91,8 +92,8 @@ func IsValidLeagueType(leagueType LeagueType) bool {
 	}
 }
 
-func GetAllCaptains(db common.DatabaseProvider) ([]string, error) {
-	v, err := common.GetAll[*SkillInfo](db)
+func GetAllCaptains(ctx context.Context, db common.DatabaseProvider) ([]string, error) {
+	v, err := common.GetAll[*SkillInfo](ctx, db)
 	if err != nil {
 		return nil, err
 	}

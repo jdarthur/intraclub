@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -48,28 +49,28 @@ func (d *DraftCaptain) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that the referenced Draft, Team, and User records all exist.
-func (d *DraftCaptain) DynamicallyValid(db common.DatabaseProvider) error {
+func (d *DraftCaptain) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
 
 	// ensure tha the user ID exists
-	err := common.ExistsById(db, &User{}, d.CaptainId.RecordId())
+	err := common.ExistsById(ctx, db, &User{}, d.CaptainId.RecordId())
 	if err != nil {
 		return err
 	}
 
 	// ensure that the draft exists
-	_, err = common.GetExistingRecordById(db, &Draft{}, d.DraftId.RecordId())
+	_, err = common.GetExistingRecordById(ctx, db, &Draft{}, d.DraftId.RecordId())
 	if err != nil {
 		return err
 	}
 
 	// ensure that the team exists
-	team, err := common.GetExistingRecordById(db, &Team{}, d.TeamId.RecordId())
+	team, err := common.GetExistingRecordById(ctx, db, &Team{}, d.TeamId.RecordId())
 	if err != nil {
 		return err
 	}
 
 	// ensure that this user is the actual captain of the referenced team
-	captain, err := team.GetCaptain(db)
+	captain, err := team.GetCaptain(ctx, db)
 	if err != nil {
 		return err
 	} else if captain != d.CaptainId {
@@ -78,13 +79,11 @@ func (d *DraftCaptain) DynamicallyValid(db common.DatabaseProvider) error {
 	return nil
 }
 
-// AccessibleTo returns everyone as DraftCaptain records are public.
-func (d *DraftCaptain) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
+func (d *DraftCaptain) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return common.AccessibleToEveryone
 }
 
-// EditableBy returns only sysadmins as only they can modify DraftCaptain records.
-func (d *DraftCaptain) EditableBy(db common.DatabaseProvider) []common.RecordId {
+func (d *DraftCaptain) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
 	return []common.RecordId{common.SysAdminRecordId}
 }
 

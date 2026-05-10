@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"fmt"
 	"testing"
 )
@@ -34,11 +35,11 @@ func (t *testUnique) SetId(id RecordId) {
 	t.RecordId = id
 }
 
-func (t *testUnique) EditableBy(db DatabaseProvider) []RecordId {
+func (t *testUnique) EditableBy(_ context.Context, db DatabaseProvider) []RecordId {
 	return nil
 }
 
-func (t *testUnique) AccessibleTo(db DatabaseProvider) []RecordId {
+func (t *testUnique) AccessibleTo(_ context.Context, db DatabaseProvider) []RecordId {
 	return nil
 }
 
@@ -48,7 +49,7 @@ func (t *testUnique) StaticallyValid() error {
 	return nil
 }
 
-func (t *testUnique) DynamicallyValid(db DatabaseProvider) error {
+func (t *testUnique) DynamicallyValid(_ context.Context, db DatabaseProvider) error {
 	return nil
 }
 
@@ -69,11 +70,11 @@ func TestValidateUniqueConstraintOnCreate(t *testing.T) {
 		ReferenceId2: 3,
 	}
 
-	_, err := CreateOne(db, &record1)
+	_, err := CreateOne(context.Background(), db, &record1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = CreateOne(db, &record2)
+	_, err = CreateOne(context.Background(), db, &record2)
 	if err == nil {
 		t.Fatal("Expected error when creating record which violates unique constraint")
 	}
@@ -93,11 +94,11 @@ func TestValidateUniqueConstraintOnUpdate(t *testing.T) {
 		ReferenceId2: 4,
 	}
 
-	_, err := CreateOne(db, &record1)
+	_, err := CreateOne(context.Background(), db, &record1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	v2, err := CreateOne(db, &record2)
+	v2, err := CreateOne(context.Background(), db, &record2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,7 +108,7 @@ func TestValidateUniqueConstraintOnUpdate(t *testing.T) {
 		ReferenceId1: 2,
 		ReferenceId2: 3,
 	}
-	err = UpdateOne(db, &update)
+	err = UpdateOne(context.Background(), db, &update)
 	if err == nil {
 		t.Fatal("Expected error when updating record which violates unique constraint")
 	}
@@ -122,7 +123,7 @@ func TestSelfUpdateWithUniqueConstraint(t *testing.T) {
 		ReferenceId1: 2,
 		ReferenceId2: 3,
 	}
-	v, err := CreateOne(db, &record1)
+	v, err := CreateOne(context.Background(), db, &record1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +133,7 @@ func TestSelfUpdateWithUniqueConstraint(t *testing.T) {
 		ReferenceId1: 3,
 		ReferenceId2: 4,
 	}
-	err = UpdateOne(db, &update)
+	err = UpdateOne(context.Background(), db, &update)
 	if err != nil {
 		t.Fatal(err)
 	}

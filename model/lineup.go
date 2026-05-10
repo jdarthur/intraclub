@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"intraclub/common"
 )
@@ -37,12 +38,12 @@ func (l *Lineup) SetOwner(recordId common.RecordId) {
 	// team captain or co-captain status
 }
 
-func (l *Lineup) EditableBy(db common.DatabaseProvider) []common.RecordId {
-	return EditableByTeamCaptainOrCoCaptains(db, l.TeamId)
+func (l *Lineup) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+	return EditableByTeamCaptainOrCoCaptains(ctx, db, l.TeamId)
 }
 
-func (l *Lineup) AccessibleTo(db common.DatabaseProvider) []common.RecordId {
-	return AccessibleByTeamMembers(db, l.TeamId)
+func (l *Lineup) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+	return AccessibleByTeamMembers(ctx, db, l.TeamId)
 }
 
 func (l *Lineup) Type() string {
@@ -61,28 +62,28 @@ func (l *Lineup) StaticallyValid() error {
 	return nil
 }
 
-func (l *Lineup) DynamicallyValid(db common.DatabaseProvider) error {
-	err := common.ExistsById(db, &Team{}, l.TeamId.RecordId())
+func (l *Lineup) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+	err := common.ExistsById(ctx, db, &Team{}, l.TeamId.RecordId())
 	if err != nil {
 		return err
 	}
-	err = common.ExistsById(db, &Week{}, l.WeekId.RecordId())
+	err = common.ExistsById(ctx, db, &Week{}, l.WeekId.RecordId())
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (l *Lineup) GetFormat(db common.DatabaseProvider) (*Format, error) {
-	week, err := common.GetExistingRecordById(db, &Week{}, l.WeekId.RecordId())
+func (l *Lineup) GetFormat(ctx context.Context, db common.DatabaseProvider) (*Format, error) {
+	week, err := common.GetExistingRecordById(ctx, db, &Week{}, l.WeekId.RecordId())
 	if err != nil {
 		return nil, err
 	}
-	draft, err := common.GetExistingRecordById(db, &Draft{}, week.DraftId.RecordId())
+	draft, err := common.GetExistingRecordById(ctx, db, &Draft{}, week.DraftId.RecordId())
 	if err != nil {
 		return nil, err
 	}
-	return common.GetExistingRecordById(db, &Format{}, draft.Format.RecordId())
+	return common.GetExistingRecordById(ctx, db, &Format{}, draft.Format.RecordId())
 }
 
 func (l *Lineup) BlankRecord() common.CrudRecord {

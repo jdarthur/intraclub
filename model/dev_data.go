@@ -1,8 +1,10 @@
 package model
 
 import (
+	"context"
 	"intraclub/common"
 	"sort"
+	"time"
 )
 
 func SeedDevData() {
@@ -12,13 +14,22 @@ func SeedDevData() {
 	seedDevFormat(user.ID)
 }
 
+func getDevContext() context.Context {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	_ = cancel
+	return ctx
+}
+
 func seedDevUsers() *User {
 	user1 := NewUser()
 	user1.FirstName = "JD"
 	user1.LastName = "Arthur"
 	user1.Email = "jdarthur@gatech.edu"
 
-	v, err := common.CreateOne(common.GlobalDatabaseProvider, user1)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	v, err := common.CreateOne(ctx, common.GlobalDatabaseProvider, user1)
 	if err != nil {
 		panic(err)
 	}
@@ -26,6 +37,7 @@ func seedDevUsers() *User {
 }
 
 func seedDevScoringStructures(u UserId) {
+	ctx := getDevContext()
 	scoringStructure := NewScoringStructure()
 	scoringStructure.Name = "Tennis standard set"
 	scoringStructure.Owner = u
@@ -36,7 +48,7 @@ func seedDevScoringStructures(u UserId) {
 		InstantWinThreshold: 7,
 	}
 
-	v, err := common.CreateOne(common.GlobalDatabaseProvider, scoringStructure)
+	v, err := common.CreateOne(ctx, common.GlobalDatabaseProvider, scoringStructure)
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +65,7 @@ func seedDevScoringStructures(u UserId) {
 		v.ID, v.ID, v.ID,
 	}
 
-	_, err = common.CreateOne(common.GlobalDatabaseProvider, scoringStructure2)
+	_, err = common.CreateOne(ctx, common.GlobalDatabaseProvider, scoringStructure2)
 	if err != nil {
 		panic(err)
 	}
@@ -64,12 +76,13 @@ var MensTwo = "Men's 2"
 var MensThree = "Men's 3"
 
 func seedDevRatings(u UserId) {
+	ctx := getDevContext()
 	r := NewRating()
 	r.UserId = u
 	r.Name = MensOne
 	r.Description = RatingOne
 
-	_, err := common.CreateOne(common.GlobalDatabaseProvider, r)
+	_, err := common.CreateOne(ctx, common.GlobalDatabaseProvider, r)
 	if err != nil {
 		panic(err)
 	}
@@ -79,7 +92,7 @@ func seedDevRatings(u UserId) {
 	r.Name = MensTwo
 	r.Description = RatingTwo
 
-	_, err = common.CreateOne(common.GlobalDatabaseProvider, r)
+	_, err = common.CreateOne(ctx, common.GlobalDatabaseProvider, r)
 	if err != nil {
 		panic(err)
 	}
@@ -89,14 +102,15 @@ func seedDevRatings(u UserId) {
 	r.Name = MensThree
 	r.Description = RatingThree
 
-	_, err = common.CreateOne(common.GlobalDatabaseProvider, r)
+	_, err = common.CreateOne(ctx, common.GlobalDatabaseProvider, r)
 	if err != nil {
 		panic(err)
 	}
 }
 
 func seedDevFormat(u UserId) {
-	ratings, err := common.GetAll[*Rating](common.GlobalDatabaseProvider)
+	ctx := getDevContext()
+	ratings, err := common.GetAll[*Rating](ctx, common.GlobalDatabaseProvider)
 	if err != nil {
 		panic(err)
 	}
@@ -123,7 +137,7 @@ func seedDevFormat(u UserId) {
 
 	}
 
-	_, err = common.CreateOne(common.GlobalDatabaseProvider, format)
+	_, err = common.CreateOne(ctx, common.GlobalDatabaseProvider, format)
 	if err != nil {
 		panic(err)
 	}
