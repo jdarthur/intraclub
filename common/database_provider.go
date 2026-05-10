@@ -6,8 +6,6 @@ import (
 	"time"
 )
 
-var GlobalDatabaseProvider DatabaseProvider
-
 // WhereFunc is a function signature used in DatabaseProvider.GetAllWhere
 // which provides a CrudRecord and allows the caller to define a function
 // to potentially filter the result from the output list. If the WhereFunc
@@ -116,8 +114,11 @@ func GetAll[T CrudRecord](ctx context.Context, db DatabaseProvider) ([]T, error)
 // returning a []T instead of a []CrudRecord
 func GetAllWhere[T CrudRecord](ctx context.Context, db DatabaseProvider, where WhereFuncT[T]) ([]T, error) {
 	var zero T
-	w := func(_ context.Context, c CrudRecord) bool {
-		return where(ctx, c.(T))
+	var w WhereFunc
+	if where != nil {
+		w = func(_ context.Context, c CrudRecord) bool {
+			return where(ctx, c.(T))
+		}
 	}
 
 	v, err := db.GetAllWhere(ctx, zero, w)

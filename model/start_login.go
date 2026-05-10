@@ -121,7 +121,8 @@ func (l *LoginToken) DynamicallyValid(ctx context.Context, db common.DatabasePro
 }
 
 type StartLoginTokenManager struct {
-	tokens sync.Map // map[string]*LoginToken
+	tokens           sync.Map // map[string]*LoginToken
+	DatabaseProvider common.DatabaseProvider
 }
 
 func (m *StartLoginTokenManager) GetToken(token string) (*LoginToken, bool) {
@@ -245,7 +246,6 @@ type LoginResponse struct {
 
 func (m *StartLoginTokenManager) OneTimePassword(c *gin.Context) {
 
-	db := common.GlobalDatabaseProvider
 	request := &RequestForLoginToken{}
 	err := c.Bind(request)
 	if err != nil {
@@ -255,7 +255,7 @@ func (m *StartLoginTokenManager) OneTimePassword(c *gin.Context) {
 
 	fmt.Println(request)
 
-	token, doesNotExist, err := m.RequestToken(c.Request.Context(), db, request)
+	token, doesNotExist, err := m.RequestToken(c.Request.Context(), m.DatabaseProvider, request)
 	if err != nil {
 		code := http.StatusInternalServerError
 		if doesNotExist {

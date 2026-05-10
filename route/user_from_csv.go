@@ -15,7 +15,11 @@ type CsvImportResult struct {
 	AlreadyExisting []*model.User
 }
 
-func HandleCsvImport(c *gin.Context) {
+type CsvImportHandler struct {
+	DatabaseProvider common.DatabaseProvider
+}
+
+func (h *CsvImportHandler) HandleCsvImport(c *gin.Context) {
 	v, ok := c.GetPostForm("file")
 	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "form file not provided"})
@@ -28,7 +32,7 @@ func HandleCsvImport(c *gin.Context) {
 		return
 	}
 
-	created, existing, err := model.ParseAndCreateCsvUsers(c.Request.Context(), common.GlobalDatabaseProvider, userList)
+	created, existing, err := model.ParseAndCreateCsvUsers(c.Request.Context(), h.DatabaseProvider, userList)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

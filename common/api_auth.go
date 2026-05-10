@@ -73,7 +73,7 @@ func ValidateToken(token string) (*AuthToken, error) {
 
 var UserType CrudRecord
 
-func GetToken(c *gin.Context) (*AuthToken, error) {
+func GetToken(c *gin.Context, db DatabaseProvider) (*AuthToken, error) {
 	token := c.Request.Header.Get(AuthTokenHeaderValue)
 	if token == "" {
 		return nil, nil
@@ -84,8 +84,8 @@ func GetToken(c *gin.Context) (*AuthToken, error) {
 	}
 
 	userId := valid.UserId
-	if UserType != nil {
-		err := ExistsById(c.Request.Context(), GlobalDatabaseProvider, UserType, userId)
+	if db != nil && UserType != nil {
+		err := ExistsById(c.Request.Context(), db, UserType, userId)
 		if err != nil {
 			return nil, err
 		}

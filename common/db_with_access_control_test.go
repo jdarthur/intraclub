@@ -287,3 +287,254 @@ func TestEditableBySysAdmin(t *testing.T) {
 	}
 	fmt.Printf("%+v\n", v)
 }
+
+func TestGetAllByOwner(t *testing.T) {
+	db := NewUnitTestDBProvider()
+	ownerId := NewRecordId()
+	otherId := NewRecordId()
+
+	// Create a record owned by ownerId
+	_ = newStoredPrivateTestRecord(t, db, ownerId)
+	_ = newStoredPrivateTestRecord(t, db, ownerId)
+	// Create a record owned by someone else
+	newStoredPrivateTestRecord(t, db, otherId)
+
+	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: ownerId}
+	results, err := wac.GetAll(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 2 {
+		t.Fatalf("expected 2 records, got %d", len(results))
+	}
+}
+
+func TestGetAllByUnauthorizedUser(t *testing.T) {
+	db := NewUnitTestDBProvider()
+	ownerId := NewRecordId()
+	unauthorizedId := NewRecordId()
+
+	newStoredPrivateTestRecord(t, db, ownerId)
+
+	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: unauthorizedId}
+	results, err := wac.GetAll(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("expected 0 records for unauthorized user, got %d", len(results))
+	}
+}
+
+func TestGetAllBySysAdmin(t *testing.T) {
+	db := NewUnitTestDBProvider()
+	ownerId := NewRecordId()
+	adminId := NewRecordId()
+
+	newStoredPrivateTestRecord(t, db, ownerId)
+
+	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, c RecordId) (bool, error) {
+		return c == adminId, nil
+	}
+
+	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: adminId}
+	results, err := wac.GetAll(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected 1 record for sys admin, got %d", len(results))
+	}
+}
+
+func TestDeleteOneByIdNotFoundNonOwner(t *testing.T) {
+	db := NewUnitTestDBProvider()
+	ownerId := NewRecordId()
+	newStoredPrivateTestRecord(t, db, ownerId)
+
+	nonExistentId := NewRecordId()
+	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: ownerId}
+	_, exists, err := wac.DeleteOneById(context.Background(), &PrivateTestRecord{}, nonExistentId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Fatal("should not exist for non-existent record")
+	}
+}
+
+func TestUpdateOneByIdNotFound(t *testing.T) {
+	db := NewUnitTestDBProvider()
+	ownerId := NewRecordId()
+	newStoredPrivateTestRecord(t, db, ownerId)
+
+	nonExistent := &PrivateTestRecord{
+		ID:    NewRecordId(),
+		Owner: ownerId,
+	}
+	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: ownerId}
+	err := wac.UpdateOneById(context.Background(), nonExistent)
+	if err == nil {
+		t.Fatal("expected error updating non-existent record")
+	}
+}
+
+func TestDeleteBySharedToUser(t *testing.T) {
+	db := NewUnitTestDBProvider()
+	ownerId := NewRecordId()
+	r := newStoredPrivateTestRecord(t, db, ownerId)
+
+	sharedToId := NewRecordId()
+	err := r.ShareTo(context.Background(), db, sharedToId, ownerId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Shared user should be able to read but not delete (only owner/sysadmin can edit)
+	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: sharedToId}
+	v, exists, err := wac.GetOneById(context.Background(), &PrivateTestRecord{}, r.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Fatal("shared user should be able to read")
+	}
+	fmt.Printf("%+v\n", v)
+
+	// Shared user should NOT be able to delete
+	_, exists, err = wac.DeleteOneById(context.Background(), &PrivateTestRecord{}, r.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Fatal("shared user should not be able to delete")
+	}
+}
+
+func TestUpdateBySharedToUser(t *testing.T) {
+	db := NewUnitTestDBProvider()
+	ownerId := NewRecordId()
+	r := newStoredPrivateTestRecord(t, db, ownerId)
+
+	sharedToId := NewRecordId()
+	err := r.ShareTo(context.Background(), db, sharedToId, ownerId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Shared user should NOT be able to update
+	updated := &PrivateTestRecord{
+		ID:    r.ID,
+		Owner: ownerId,
+		Value: "new value",
+	}
+	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: sharedToId}
+	err = wac.UpdateOneById(context.Background(), updated)
+	if err == nil {
+		t.Fatal("shared user should not be able to update")
+	}
+}
+
+func TestGetOneBySharedToUser(t *testing.T) {
+	db := NewUnitTestDBProvider()
+	ownerId := NewRecordId()
+	r := newStoredPrivateTestRecord(t, db, ownerId)
+
+	sharedToId := NewRecordId()
+	err := r.ShareTo(context.Background(), db, sharedToId, ownerId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: sharedToId}
+	v, exists, err := wac.GetOneById(context.Background(), &PrivateTestRecord{}, r.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Fatal("shared user should be able to read")
+	}
+	fmt.Printf("%+v\n", v)
+}
+
+func TestUpdateOneBySharedToUser(t *testing.T) {
+	db := NewUnitTestDBProvider()
+	ownerId := NewRecordId()
+	r := newStoredPrivateTestRecord(t, db, ownerId)
+
+	// Share the record
+	sharedToId := NewRecordId()
+	err := r.ShareTo(context.Background(), db, sharedToId, ownerId)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Shared user tries to update - should fail
+	updated := &PrivateTestRecord{
+		ID:    r.ID,
+		Owner: ownerId,
+		Value: "updated by shared user",
+	}
+	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: sharedToId}
+	err = wac.UpdateOneById(context.Background(), updated)
+	if err == nil {
+		t.Fatal("shared user should not be able to update")
+	}
+}
+
+func TestGetOneIdDoesNotExist(t *testing.T) {
+	db := NewUnitTestDBProvider()
+	ownerId := NewRecordId()
+	newStoredPrivateTestRecord(t, db, ownerId)
+
+	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: ownerId}
+	_, exists, err := wac.GetOneById(context.Background(), &PrivateTestRecord{}, NewRecordId())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if exists {
+		t.Fatal("should not exist for non-existent ID")
+	}
+}
+
+func TestGetAllWithMultipleOwners(t *testing.T) {
+	db := NewUnitTestDBProvider()
+	owner1 := NewRecordId()
+	owner2 := NewRecordId()
+	owner3 := NewRecordId()
+
+	newStoredPrivateTestRecord(t, db, owner1)
+	newStoredPrivateTestRecord(t, db, owner1)
+	newStoredPrivateTestRecord(t, db, owner2)
+	newStoredPrivateTestRecord(t, db, owner3)
+
+	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: owner1}
+	results, err := wac.GetAll(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 2 {
+		t.Fatalf("expected 2 records for owner1, got %d", len(results))
+	}
+}
+
+func TestDeleteBySysAdmin(t *testing.T) {
+	db := NewUnitTestDBProvider()
+	ownerId := NewRecordId()
+	r := newStoredPrivateTestRecord(t, db, ownerId)
+
+	sysAdminId := NewRecordId()
+	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, c RecordId) (bool, error) {
+		return c == sysAdminId, nil
+	}
+
+	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: sysAdminId}
+	v, exists, err := wac.DeleteOneById(context.Background(), &PrivateTestRecord{}, r.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !exists {
+		t.Fatal("sys admin should be able to delete")
+	}
+	fmt.Printf("%+v\n", v)
+}

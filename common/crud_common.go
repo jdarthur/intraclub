@@ -78,14 +78,14 @@ type CrudCommon[T CrudRecord] struct {
 	baseRoute string
 }
 
-func NewCrudCommon[T CrudRecord](createFunc func() T, userAuth bool) *CrudCommon[T] {
+func NewCrudCommon[T CrudRecord](createFunc func() T, userAuth bool, db DatabaseProvider) *CrudCommon[T] {
 	baseRoute := createFunc().Type()
 	return &CrudCommon[T]{
 		CreateRecord: createFunc,
 		UseAuth:      userAuth,
 		// baseRoute is automatically set up based on the table name of the provided createFunc
 		baseRoute:        fmt.Sprintf("/%s", baseRoute),
-		DatabaseProvider: GlobalDatabaseProvider,
+		DatabaseProvider: db,
 	}
 }
 
