@@ -24,7 +24,7 @@ func newDefaultSeasonWithTeams(t *testing.T, db database.DatabaseProvider, teamC
 	return newStoredSeason(t, db, commissioner.ID, teams), commissioner
 }
 
-func newStoredSeason(t *testing.T, db database.DatabaseProvider, commissioner UserId, teams []*Team) *Season {
+func newStoredSeason(t *testing.T, db database.DatabaseProvider, commissioner database.UserId, teams []*Team) *Season {
 	draft := newStoredDraft(t, db, commissioner)
 	facility := newStoredFacility(t, db, commissioner)
 	playoffStructure := newStoredPlayoffStructure(t, db)

@@ -19,12 +19,12 @@ type RulesetSection struct {
 }
 
 // GetOwner returns InvalidRecordId as RulesetSection has no specific owner.
-func (r *RulesetSection) GetOwner() database.RecordId {
-	return database.InvalidRecordId
+func (r *RulesetSection) GetOwner() database.UserId {
+	return database.InvalidUserId
 }
 
 // SetOwner is a no-op as RulesetSection has no specific owner.
-func (r *RulesetSection) SetOwner(recordId database.RecordId) {}
+func (r *RulesetSection) SetOwner(userId database.UserId) {}
 
 // Type returns the record type identifier for RulesetSection.
 func (r *RulesetSection) Type() string {
@@ -57,12 +57,12 @@ func (r *RulesetSection) DynamicallyValid(ctx context.Context, db database.Datab
 	return nil
 }
 
-func (r *RulesetSection) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (r *RulesetSection) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (r *RulesetSection) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{database.SysAdminRecordId}
+func (r *RulesetSection) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{database.SysAdminUserId}
 }
 
 // Timestamps returns the create and update timestamps for this RulesetSection record.

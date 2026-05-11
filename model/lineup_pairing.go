@@ -21,8 +21,8 @@ type LineupPairing struct {
 	ID              LineupPairingId // unique ID for this LineupPairing
 	LineupId        LineupId        // This correlates a LineupPairing into a group with other pairing and assigns to a Week
 	TeamId          TeamId          // Players must be on this team
-	Player1         UserId          // Player in slot 1 for the format / line
-	Player2         UserId          // Player in slot 2 for the format / line
+	Player1         database.UserId          // Player in slot 1 for the format / line
+	Player2         database.UserId          // Player in slot 2 for the format / line
 	FormatLineIndex int             // index in the Format.Lines list that this pairing applies to
 }
 
@@ -38,8 +38,8 @@ func (l *LineupPairing) UniquenessEquivalent(other *LineupPairing) error {
 	return nil
 }
 
-func (l *LineupPairing) GetOwner() database.RecordId {
-	return database.InvalidRecordId
+func (l *LineupPairing) GetOwner() database.UserId {
+	return database.InvalidUserId
 }
 
 func (l *LineupPairing) Type() string {
@@ -54,15 +54,15 @@ func (l *LineupPairing) SetId(id database.RecordId) {
 	l.ID = LineupPairingId(id)
 }
 
-func (l *LineupPairing) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (l *LineupPairing) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return EditableByTeamCaptainOrCoCaptains(ctx, db, l.TeamId)
 }
 
-func (l *LineupPairing) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (l *LineupPairing) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return AccessibleByTeamMembers(ctx, db, l.TeamId)
 }
 
-func (l *LineupPairing) SetOwner(recordId database.RecordId) {
+func (l *LineupPairing) SetOwner(userId database.UserId) {
 	// don't need to do anything here as editable-by rights
 	// are enforced via the team ID
 }

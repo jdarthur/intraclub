@@ -11,11 +11,11 @@ type staticFailRecord struct {
 	Value string
 }
 
-func (s *staticFailRecord) GetOwner() RecordId {
-	return InvalidRecordId
+func (s *staticFailRecord) GetOwner() UserId {
+	return InvalidUserId
 }
 
-func (s *staticFailRecord) SetOwner(recordId RecordId) {}
+func (s *staticFailRecord) SetOwner(userId UserId) {}
 
 func (s *staticFailRecord) Type() string {
 	return "static_fail"
@@ -29,11 +29,11 @@ func (s *staticFailRecord) SetId(id RecordId) {
 	s.ID = id
 }
 
-func (s *staticFailRecord) EditableBy(_ context.Context, db DatabaseProvider) []RecordId {
+func (s *staticFailRecord) EditableBy(_ context.Context, db DatabaseProvider) []UserId {
 	return nil
 }
 
-func (s *staticFailRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []RecordId {
+func (s *staticFailRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []UserId {
 	return nil
 }
 
@@ -57,11 +57,11 @@ type dynamicFailRecord struct {
 	Value string
 }
 
-func (d *dynamicFailRecord) GetOwner() RecordId {
-	return InvalidRecordId
+func (d *dynamicFailRecord) GetOwner() UserId {
+	return InvalidUserId
 }
 
-func (d *dynamicFailRecord) SetOwner(recordId RecordId) {}
+func (d *dynamicFailRecord) SetOwner(userId UserId) {}
 
 func (d *dynamicFailRecord) Type() string {
 	return "dynamic_fail"
@@ -75,11 +75,11 @@ func (d *dynamicFailRecord) SetId(id RecordId) {
 	d.ID = id
 }
 
-func (d *dynamicFailRecord) EditableBy(_ context.Context, db DatabaseProvider) []RecordId {
+func (d *dynamicFailRecord) EditableBy(_ context.Context, db DatabaseProvider) []UserId {
 	return nil
 }
 
-func (d *dynamicFailRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []RecordId {
+func (d *dynamicFailRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []UserId {
 	return nil
 }
 

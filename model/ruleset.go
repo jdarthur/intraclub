@@ -63,7 +63,7 @@ type Ruleset struct {
 	// cannot edit this Ruleset, but may always Fork it into a
 	// new Ruleset if they would like to modify it for their
 	// own Season, for example.
-	Owner UserId `json:"owner"`
+	Owner database.UserId `json:"owner"`
 }
 
 func (r *Ruleset) PreUpdate(ctx context.Context, db database.DatabaseProvider, existingValues database.CrudRecord) error {
@@ -102,20 +102,20 @@ func (r *Ruleset) SetId(id database.RecordId) {
 	r.ID = RulesetId(id)
 }
 
-func (r *Ruleset) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return database.SysAdminAndUsers(r.Owner.RecordId())
+func (r *Ruleset) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return database.SysAdminAndUsers(r.Owner)
 }
 
-func (r *Ruleset) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (r *Ruleset) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (r *Ruleset) SetOwner(recordId database.RecordId) {
-	r.Owner = UserId(recordId)
+func (r *Ruleset) SetOwner(userId database.UserId) {
+	r.Owner = userId
 }
 
-func (r *Ruleset) GetOwner() database.RecordId {
-	return r.Owner.RecordId()
+func (r *Ruleset) GetOwner() database.UserId {
+	return r.Owner
 }
 
 func (r *Ruleset) StaticallyValid() error {
@@ -253,7 +253,7 @@ func (r *Ruleset) BlankRecord() database.CrudRecord {
 	return new(Ruleset)
 }
 
-func (r *Ruleset) Fork(ctx context.Context, db database.DatabaseProvider, newUserId UserId) (*Ruleset, error) {
+func (r *Ruleset) Fork(ctx context.Context, db database.DatabaseProvider, newUserId database.UserId) (*Ruleset, error) {
 	sectionRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
 		return nil, err
@@ -315,11 +315,11 @@ func (id RuleSectionId) Empty() bool {
 }
 
 type RuleSection struct {
-	ID       RuleSectionId `json:"section_id"`
-	Parent   RulesetId     `json:"parent"`
-	Title    string        `json:"title"`
-	Markdown string        `json:"markdown"`
-	Owner    UserId        `json:"owner"`
+	ID       RuleSectionId   `json:"section_id"`
+	Parent   RulesetId       `json:"parent"`
+	Title    string          `json:"title"`
+	Markdown string          `json:"markdown"`
+	Owner    database.UserId `json:"owner"`
 }
 
 func (section *RuleSection) Type() string {
@@ -334,20 +334,20 @@ func (section *RuleSection) SetId(id database.RecordId) {
 	section.ID = RuleSectionId(id)
 }
 
-func (section *RuleSection) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return database.SysAdminAndUsers(section.Owner.RecordId())
+func (section *RuleSection) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return database.SysAdminAndUsers(section.Owner)
 }
 
-func (section *RuleSection) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (section *RuleSection) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (section *RuleSection) SetOwner(recordId database.RecordId) {
-	section.Owner = UserId(recordId)
+func (section *RuleSection) SetOwner(userId database.UserId) {
+	section.Owner = userId
 }
 
-func (section *RuleSection) GetOwner() database.RecordId {
-	return section.Owner.RecordId()
+func (section *RuleSection) GetOwner() database.UserId {
+	return section.Owner
 }
 
 func (section *RuleSection) StaticallyValid() error {

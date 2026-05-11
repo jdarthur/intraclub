@@ -14,7 +14,7 @@ func newDefaultStoredDraft(t *testing.T, db database.DatabaseProvider) *Draft {
 	return newStoredDraft(t, db, user.ID)
 }
 
-func newStoredDraft(t *testing.T, db database.DatabaseProvider, commissioner UserId) *Draft {
+func newStoredDraft(t *testing.T, db database.DatabaseProvider, commissioner database.UserId) *Draft {
 	draft := NewDraft()
 	draft.Owner = commissioner
 	draft.Format = newDefaultStoredFormat(t, db).ID
@@ -69,7 +69,7 @@ func newRandomDraft(t *testing.T, db database.DatabaseProvider, playerCount, tea
 	draft := newUninitializedRandomDraft(t, db, playerCount, teamCount)
 
 	// create random captains
-	users := make([]UserId, 0, playerCount)
+	users := make([]database.UserId, 0, playerCount)
 	for i := 0; i < teamCount; i++ {
 		user := newStoredUser(t, db)
 		users = append(users, user.ID)
@@ -121,7 +121,7 @@ func doRandomDraft(t *testing.T, db database.DatabaseProvider, playerCount int, 
 	return draft
 }
 
-func selectRandomAvailableByCaptain(t *testing.T, draft *Draft, captain UserId, db database.DatabaseProvider) {
+func selectRandomAvailableByCaptain(t *testing.T, draft *Draft, captain database.UserId, db database.DatabaseProvider) {
 	available := draft.GetAllAvailableToSelect(captain, db)
 	index := rand.Intn(len(available))
 	err := draft.SelectByCaptain(context.Background(), available[index], captain, db)
@@ -519,7 +519,7 @@ func TestDoubleInitializeDraft(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	draft := newRandomDraft(t, db, 100, 4)
 
-	err := draft.Initialize(context.Background(), db, []UserId{})
+	err := draft.Initialize(context.Background(), db, []database.UserId{})
 	if err == nil {
 		t.Fatal("Expected draft double-initialize to be invalid")
 	}
@@ -530,7 +530,7 @@ func TestInitializeDraftWithInvalidCaptain(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	draft := newUninitializedRandomDraft(t, db, 100, 4)
 
-	err := draft.Initialize(context.Background(), db, []UserId{UserId(database.InvalidRecordId)})
+	err := draft.Initialize(context.Background(), db, []database.UserId{database.InvalidUserId})
 	if err == nil {
 		t.Fatal("Expected invalid captain ID to be invalid")
 	}
@@ -556,7 +556,7 @@ func TestInvalidAvailablePlayerId(t *testing.T) {
 	// Try to add invalid player - this should fail validation
 	availablePlayer := &DraftAvailablePlayer{
 		DraftId:  draft.ID,
-		PlayerId: UserId(database.InvalidRecordId),
+		PlayerId: database.InvalidUserId,
 	}
 	_, err := database.CreateOne(context.Background(), db, availablePlayer)
 	if err == nil {
@@ -580,7 +580,7 @@ func TestDraftHasSelectionBeforeInitialization(t *testing.T) {
 		t.Fatal("Expected draft to have no captains before initialization")
 	}
 
-	err = draft.Initialize(context.Background(), db, []UserId{newStoredUser(t, db).ID})
+	err = draft.Initialize(context.Background(), db, []database.UserId{newStoredUser(t, db).ID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -593,7 +593,7 @@ func TestDraftAddAvailablePlayers(t *testing.T) {
 	draft := newRandomDraft(t, db, 9, 2)
 	playerToAdd := newStoredUser(t, db)
 
-	err := draft.AssignDraftablePlayers(context.Background(), db, []UserId{playerToAdd.ID})
+	err := draft.AssignDraftablePlayers(context.Background(), db, []database.UserId{playerToAdd.ID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -615,7 +615,7 @@ func TestDraftReAddAvailablePlayers(t *testing.T) {
 	availablePlayers, _ := draft.GetAvailablePlayers(context.Background(), db)
 	playerToAdd := availablePlayers[0]
 
-	err := draft.AssignDraftablePlayers(context.Background(), db, []UserId{playerToAdd})
+	err := draft.AssignDraftablePlayers(context.Background(), db, []database.UserId{playerToAdd})
 	if err != nil {
 		t.Fatal(err)
 	}

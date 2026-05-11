@@ -24,11 +24,11 @@ func TestNewRecordIdNeverGeneratesUnavailableIds(t *testing.T) {
 		if id == InvalidRecordId {
 			t.Fatal("NewRecordId generated InvalidRecordId")
 		}
-		if id == EveryoneRecordId {
-			t.Fatal("NewRecordId generated EveryoneRecordId")
+		if id == RecordId(EveryoneUserId) {
+			t.Fatal("NewRecordId generated EveryoneUserId")
 		}
-		if id == SysAdminRecordId {
-			t.Fatal("NewRecordId generated SysAdminRecordId")
+		if id == RecordId(SysAdminUserId) {
+			t.Fatal("NewRecordId generated SysAdminUserId")
 		}
 	}
 }
@@ -37,11 +37,11 @@ func TestRecordIdValidRecordId(t *testing.T) {
 	if InvalidRecordId.ValidRecordId() {
 		t.Fatal("InvalidRecordId should not be valid")
 	}
-	if EveryoneRecordId.ValidRecordId() {
-		t.Fatal("EveryoneRecordId should not be valid")
+	if RecordId(EveryoneUserId).ValidRecordId() {
+		t.Fatal("EveryoneUserId should not be valid as RecordId")
 	}
-	if SysAdminRecordId.ValidRecordId() {
-		t.Fatal("SysAdminRecordId should not be valid")
+	if RecordId(SysAdminUserId).ValidRecordId() {
+		t.Fatal("SysAdminUserId should not be valid as RecordId")
 	}
 	id := NewRecordId()
 	if !id.ValidRecordId() {
@@ -167,14 +167,14 @@ func TestUnmarshalStringIdListInvalid(t *testing.T) {
 }
 
 func TestSysAdminAndUsers(t *testing.T) {
-	userId1 := RecordId(100)
-	userId2 := RecordId(200)
+	userId1 := UserId(100)
+	userId2 := UserId(200)
 	result := SysAdminAndUsers(userId1, userId2)
 	if len(result) != 3 {
 		t.Fatalf("Expected 3 IDs, got %d", len(result))
 	}
-	if result[0] != SysAdminRecordId {
-		t.Fatalf("Expected SysAdminRecordId first, got %d", result[0])
+	if result[0] != SysAdminUserId {
+		t.Fatalf("Expected SysAdminUserId first, got %d", result[0])
 	}
 	if result[1] != userId1 {
 		t.Fatalf("Expected userId1 second, got %d", result[1])
@@ -189,8 +189,8 @@ func TestSysAdminAndUsersEmpty(t *testing.T) {
 	if len(result) != 1 {
 		t.Fatalf("Expected 1 ID (sys admin), got %d", len(result))
 	}
-	if result[0] != SysAdminRecordId {
-		t.Fatalf("Expected SysAdminRecordId, got %d", result[0])
+	if result[0] != SysAdminUserId {
+		t.Fatalf("Expected SysAdminUserId, got %d", result[0])
 	}
 }
 

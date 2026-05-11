@@ -12,8 +12,8 @@ type testUnique struct {
 	ReferenceId2 RecordId
 }
 
-func (t *testUnique) GetOwner() RecordId {
-	return InvalidRecordId
+func (t *testUnique) GetOwner() UserId {
+	return InvalidUserId
 }
 
 func (t *testUnique) UniquenessEquivalent(other *testUnique) error {
@@ -35,15 +35,15 @@ func (t *testUnique) SetId(id RecordId) {
 	t.RecordId = id
 }
 
-func (t *testUnique) EditableBy(_ context.Context, db DatabaseProvider) []RecordId {
+func (t *testUnique) EditableBy(_ context.Context, db DatabaseProvider) []UserId {
 	return nil
 }
 
-func (t *testUnique) AccessibleTo(_ context.Context, db DatabaseProvider) []RecordId {
+func (t *testUnique) AccessibleTo(_ context.Context, db DatabaseProvider) []UserId {
 	return nil
 }
 
-func (t *testUnique) SetOwner(recordId RecordId) {}
+func (t *testUnique) SetOwner(userId UserId) {}
 
 func (t *testUnique) StaticallyValid() error {
 	return nil

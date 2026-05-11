@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newStoredFacility(t *testing.T, db database.DatabaseProvider, owner UserId) *Facility {
+func newStoredFacility(t *testing.T, db database.DatabaseProvider, owner database.UserId) *Facility {
 	facility := NewFacility()
 	facility.UserId = owner
 	facility.Name = fmt.Sprintf("Test facility %s", database.NewRecordId())
@@ -39,7 +39,7 @@ func TestFacilityCrud(t *testing.T) {
 	fmt.Printf("%+v\n", facility)
 
 	// do CRUD via the WithAccessControl construct
-	wac := database.WithAccessControl[*Facility]{Database: db, AccessControlUser: user.GetId()}
+	wac := database.WithAccessControl[*Facility]{Database: db, AccessControlUser: user.ID}
 
 	// copy facility to a new record and update in the database
 	f2 := copyFacility(facility)
@@ -77,7 +77,7 @@ func TestEditableBySysAdmin(t *testing.T) {
 	sysAdmin := newSysAdmin(t, db)
 	facility := newStoredFacility(t, db, user.ID)
 
-	wac := database.WithAccessControl[*Facility]{Database: db, AccessControlUser: sysAdmin.GetId()}
+	wac := database.WithAccessControl[*Facility]{Database: db, AccessControlUser: sysAdmin.ID}
 	canEdit := wac.CanUserEdit(facility)
 	if !canEdit {
 		t.Fatalf("Sys admin should be able to edit facility")
@@ -119,7 +119,7 @@ func TestFacilityAppliedToSeasonCannotBeDeleted(t *testing.T) {
 
 	facilityId := season.Facility.RecordId()
 
-	wac := database.NewWithAccessControl[*Facility](context.Background(), db, commish.ID.RecordId())
+	wac := database.NewWithAccessControl[*Facility](context.Background(), db, commish.ID)
 	_, _, err := wac.DeleteOneById(context.Background(), &Facility{}, facilityId)
 	if err == nil {
 		t.Fatal("expected error on delete")

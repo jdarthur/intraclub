@@ -7,7 +7,7 @@ import (
 	"intraclub/database"
 )
 
-func newStoredTeam(t *testing.T, db database.DatabaseProvider, captain UserId) *Team {
+func newStoredTeam(t *testing.T, db database.DatabaseProvider, captain database.UserId) *Team {
 	team := NewDefaultTeam(captain, "Test Team")
 
 	v, err := database.CreateOne(context.Background(), db, team)

@@ -19,11 +19,11 @@ type testRouteRecord struct {
 	Value string
 }
 
-func (t *testRouteRecord) GetOwner() database.RecordId {
-	return database.InvalidRecordId
+func (t *testRouteRecord) GetOwner() database.UserId {
+	return database.InvalidUserId
 }
 
-func (t *testRouteRecord) SetOwner(recordId database.RecordId) {}
+func (t *testRouteRecord) SetOwner(userId database.UserId) {}
 
 func (t *testRouteRecord) Type() string {
 	return "test_route"
@@ -37,11 +37,11 @@ func (t *testRouteRecord) SetId(id database.RecordId) {
 	t.ID = id
 }
 
-func (t *testRouteRecord) EditableBy(_ context.Context, db database.DatabaseProvider) []database.RecordId {
+func (t *testRouteRecord) EditableBy(_ context.Context, db database.DatabaseProvider) []database.UserId {
 	return nil
 }
 
-func (t *testRouteRecord) AccessibleTo(_ context.Context, db database.DatabaseProvider) []database.RecordId {
+func (t *testRouteRecord) AccessibleTo(_ context.Context, db database.DatabaseProvider) []database.UserId {
 	return nil
 }
 

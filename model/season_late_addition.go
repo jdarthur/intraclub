@@ -12,26 +12,26 @@ import (
 type SeasonLateAddition struct {
 	ID        database.RecordId `json:"id"`
 	SeasonId  SeasonId          `json:"season_id"`
-	UserId    UserId            `json:"user_id"`
+	UserId    database.UserId            `json:"user_id"`
 	CreatedAt time.Time         `json:"created_at"`
 	UpdatedAt time.Time         `json:"updated_at"`
 }
 
 // GetOwner returns InvalidRecordId as SeasonLateAddition has no specific owner.
-func (s *SeasonLateAddition) GetOwner() database.RecordId {
-	return database.InvalidRecordId
+func (s *SeasonLateAddition) GetOwner() database.UserId {
+	return database.InvalidUserId
 }
 
 // SetOwner is a no-op as SeasonLateAddition has no specific owner.
-func (s *SeasonLateAddition) SetOwner(recordId database.RecordId) {}
+func (s *SeasonLateAddition) SetOwner(userId database.UserId) {}
 
 // AccessibleTo returns everyone as SeasonLateAddition records are public.
-func (s *SeasonLateAddition) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (s *SeasonLateAddition) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (s *SeasonLateAddition) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{database.SysAdminRecordId}
+func (s *SeasonLateAddition) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{database.SysAdminUserId}
 }
 
 // Type returns the record type identifier for SeasonLateAddition.

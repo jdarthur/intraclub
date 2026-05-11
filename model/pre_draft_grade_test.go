@@ -123,7 +123,7 @@ func TestPreDraftInvalidRating(t *testing.T) {
 func TestPreDraftInvalidPlayerId(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	grade := newValidGrade(t, db)
-	grade.PlayerId = UserId(database.InvalidRecordId)
+	grade.PlayerId = database.InvalidUserId
 	err := grade.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Expected error, got nil")
@@ -134,7 +134,7 @@ func TestPreDraftInvalidPlayerId(t *testing.T) {
 func TestPreDraftInvalidGraderId(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	grade := newValidGrade(t, db)
-	grade.GraderId = UserId(database.InvalidRecordId)
+	grade.GraderId = database.InvalidUserId
 	err := grade.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Expected error, got nil")

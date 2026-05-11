@@ -21,22 +21,22 @@ func (id CommentId) String() string {
 }
 
 type Comment struct {
-	ID        CommentId    `json:"id"`                           // unique ID for this comment
-	Blurb     BlurbId      `json:"references"`                   // ID of the Blurb that this comment is on
-	ReplyTo   CommentId    `json:"references_comment"`           // ID of the Comment that this is in reference to (if any)
-	Owner     UserId       `json:"user_id" bson:"user_id"`       // ID of the User that created this comment
-	Content   string       `json:"content" bson:"content"`       // content of the comment itself
-	EditedAt  time.Time    `json:"edited_at" bson:"edited_at"`   // time that this Comment was edited (if applicable)
-	CreatedAt time.Time    `json:"created_at" bson:"created_at"` // when this comment was created
-	Reactions ReactionList `json:"reactions" bson:"reactions"`   // list of user reactions to this comment, if any
+	ID        CommentId       `json:"id"`                           // unique ID for this comment
+	Blurb     BlurbId         `json:"references"`                   // ID of the Blurb that this comment is on
+	ReplyTo   CommentId       `json:"references_comment"`           // ID of the Comment that this is in reference to (if any)
+	Owner     database.UserId `json:"user_id" bson:"user_id"`       // ID of the User that created this comment
+	Content   string          `json:"content" bson:"content"`       // content of the comment itself
+	EditedAt  time.Time       `json:"edited_at" bson:"edited_at"`   // time that this Comment was edited (if applicable)
+	CreatedAt time.Time       `json:"created_at" bson:"created_at"` // when this comment was created
+	Reactions ReactionList    `json:"reactions" bson:"reactions"`   // list of user reactions to this comment, if any
 }
 
-func (c *Comment) GetOwner() database.RecordId {
-	return c.Owner.RecordId()
+func (c *Comment) GetOwner() database.UserId {
+	return c.Owner
 }
 
-func (c *Comment) CanOnlyDelete(ctx context.Context, db database.DatabaseProvider, userId database.RecordId) bool {
-	return UserId(userId) != c.Owner
+func (c *Comment) CanOnlyDelete(ctx context.Context, db database.DatabaseProvider, userId database.UserId) bool {
+	return userId != c.Owner
 }
 
 func (c *Comment) GetTimeStamps() (created, updated time.Time) {
@@ -71,37 +71,37 @@ func (c *Comment) SetId(id database.RecordId) {
 	c.ID = CommentId(id)
 }
 
-func (c *Comment) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (c *Comment) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	blurb, err := database.GetExistingRecordById(ctx, db, &Blurb{}, c.Blurb.RecordId())
 	if err != nil {
-		return []database.RecordId{}
+		return []database.UserId{}
 	}
 	season, err := database.GetExistingRecordById(ctx, db, &Season{}, blurb.Season.RecordId())
 	if err != nil {
-		return []database.RecordId{}
+		return []database.UserId{}
 	}
 
-	editors := []database.RecordId{
-		database.SysAdminRecordId,
-		c.Owner.RecordId(),
-		blurb.Owner.RecordId(),
+	editors := []database.UserId{
+		database.SysAdminUserId,
+		c.Owner,
+		blurb.Owner,
 	}
 
 	commissioners, err := season.GetCommissioners(ctx, db)
 	if err == nil {
 		for _, commissioner := range commissioners {
-			editors = append(editors, commissioner.RecordId())
+			editors = append(editors, commissioner)
 		}
 	}
 	return editors
 }
 
-func (c *Comment) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (c *Comment) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (c *Comment) SetOwner(recordId database.RecordId) {
-	c.Owner = UserId(recordId)
+func (c *Comment) SetOwner(userId database.UserId) {
+	c.Owner = userId
 }
 
 func (c *Comment) StaticallyValid() error {

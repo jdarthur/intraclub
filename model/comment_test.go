@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newValidComment(u UserId, blurb BlurbId) *Comment {
+func newValidComment(u database.UserId, blurb BlurbId) *Comment {
 	c := NewComment()
 	c.Owner = u
 	c.Content = "content"
@@ -16,7 +16,7 @@ func newValidComment(u UserId, blurb BlurbId) *Comment {
 	return c
 }
 
-func getAnyTeamCaptain(t *testing.T, db database.DatabaseProvider, season *Season) UserId {
+func getAnyTeamCaptain(t *testing.T, db database.DatabaseProvider, season *Season ) database.UserId {
 	teams, err := season.GetTeams(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func copyComment(c *Comment) *Comment {
 	}
 }
 
-func newStoredComment(t *testing.T, db database.DatabaseProvider, user UserId, blurb *Blurb) *Comment {
+func newStoredComment(t *testing.T, db database.DatabaseProvider, user database.UserId, blurb *Blurb) *Comment {
 	c := newValidComment(user, blurb.ID)
 
 	v, err := database.CreateOne(context.Background(), db, c)
@@ -97,7 +97,7 @@ func TestCommentCreateDateIsEmpty(t *testing.T) {
 func TestCommentUserIdIsInvalid(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	blurb, _ := newDefaultBlurb(t, db)
-	c := newValidComment(UserId(database.InvalidRecordId), blurb.ID)
+	c := newValidComment(database.InvalidUserId, blurb.ID)
 	err := c.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Error("Invalid user id should produce error")
@@ -115,7 +115,7 @@ func TestEditBySysAdmin(t *testing.T) {
 	copied := copyComment(c)
 	copied.Content = "new content"
 
-	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: sysAdmin.ID.RecordId()}
+	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: sysAdmin.ID}
 	err := wac.UpdateOneById(context.Background(), copied)
 	if err == nil {
 		t.Error("Edit by privileged non-owner should produce error")
@@ -136,7 +136,7 @@ func TestEditByCommissioner(t *testing.T) {
 	copied := copyComment(c)
 	copied.Content = "new content"
 
-	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: commissioner.RecordId()}
+	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: commissioner}
 	err := wac.UpdateOneById(context.Background(), copied)
 	if err == nil {
 		t.Error("Edit by commissioner should produce error")
@@ -154,7 +154,7 @@ func TestEditByOwner(t *testing.T) {
 	copied := copyComment(c)
 	copied.Content = "new content"
 
-	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: c.Owner.RecordId()}
+	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: c.Owner}
 	err := wac.UpdateOneById(context.Background(), copied)
 	if err != nil {
 		t.Error("Edit by owner should not produce error")
@@ -182,7 +182,7 @@ func TestDeleteBySysAdmin(t *testing.T) {
 	c := newStoredComment(t, db, blurb.Owner, blurb)
 	sysAdmin := newSysAdmin(t, db)
 
-	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: sysAdmin.ID.RecordId()}
+	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: sysAdmin.ID}
 	_, _, err := wac.DeleteOneById(context.Background(), c, c.ID.RecordId())
 	if err != nil {
 		t.Fatal(err)
@@ -201,7 +201,7 @@ func TestDeleteByCommissioner(t *testing.T) {
 	copied := copyComment(c)
 	copied.Content = "new content"
 
-	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: commissioner.RecordId()}
+	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: commissioner}
 	err := wac.UpdateOneById(context.Background(), copied)
 	if err == nil {
 		t.Error("Edit by commissioner should produce error")
@@ -215,7 +215,7 @@ func TestDeleteByOwner(t *testing.T) {
 	blurb, _ := newDefaultBlurb(t, db)
 	c := newStoredComment(t, db, blurb.Owner, blurb)
 
-	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: c.Owner.RecordId()}
+	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: c.Owner}
 	_, _, err := wac.DeleteOneById(context.Background(), c, c.ID.RecordId())
 	if err != nil {
 		t.Fatal(err)

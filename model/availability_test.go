@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newStoredAvailability(t *testing.T, db database.DatabaseProvider, u UserId, week WeekId) *Availability {
+func newStoredAvailability(t *testing.T, db database.DatabaseProvider, u database.UserId, week WeekId) *Availability {
 
 	availability := NewAvailability()
 	availability.UserId = u
@@ -36,7 +36,7 @@ func TestAvailabilityOnlyAccessibleToTeamMembers(t *testing.T) {
 	v := newDefaultAvailability(t, db)
 
 	otherUser := newStoredUser(t, db)
-	wac := database.WithAccessControl[*Availability]{Database: db, AccessControlUser: otherUser.ID.RecordId()}
+	wac := database.WithAccessControl[*Availability]{Database: db, AccessControlUser: otherUser.ID}
 	v, exists, err := wac.GetOneById(context.Background(), &Availability{}, v.ID)
 	if err != nil {
 		t.Fatal(err)
@@ -53,7 +53,7 @@ func TestAvailabilityIsAccessibleToTeamMembers(t *testing.T) {
 	week := newStoredWeek(t, db, season)
 	v := newStoredAvailability(t, db, userId, week.ID)
 
-	wac := database.WithAccessControl[*Availability]{Database: db, AccessControlUser: userId.RecordId()}
+	wac := database.WithAccessControl[*Availability]{Database: db, AccessControlUser: userId}
 	v, exists, err := wac.GetOneById(context.Background(), &Availability{}, v.ID)
 	if err != nil {
 		t.Fatal(err)

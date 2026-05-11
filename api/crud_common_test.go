@@ -14,18 +14,18 @@ import (
 
 type testCrudRecord struct {
 	ID        database.RecordId
-	Owner     database.RecordId
+	Owner     database.UserId
 	Value     string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
-func (t *testCrudRecord) GetOwner() database.RecordId {
+func (t *testCrudRecord) GetOwner() database.UserId {
 	return t.Owner
 }
 
-func (t *testCrudRecord) SetOwner(recordId database.RecordId) {
-	t.Owner = recordId
+func (t *testCrudRecord) SetOwner(userId database.UserId) {
+	t.Owner = userId
 }
 
 func newTestCrudRecord() *testCrudRecord {
@@ -47,11 +47,11 @@ func (t *testCrudRecord) SetId(id database.RecordId) {
 	t.ID = id
 }
 
-func (t *testCrudRecord) EditableBy(_ context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{t.Owner, database.SysAdminRecordId}
+func (t *testCrudRecord) EditableBy(_ context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{t.Owner, database.SysAdminUserId}
 }
 
-func (t *testCrudRecord) AccessibleTo(_ context.Context, db database.DatabaseProvider) []database.RecordId {
+func (t *testCrudRecord) AccessibleTo(_ context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -153,7 +153,7 @@ func TestCrudCommonCreateSuccess(t *testing.T) {
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
-		Token:            &AuthToken{UserId: ownerId},
+		Token:            &AuthToken{UserId: database.UserId(ownerId)},
 		Body:             newTestCrudRecord(),
 	}
 
@@ -167,7 +167,7 @@ func TestCrudCommonCreateSuccess(t *testing.T) {
 
 	result := resp.(gin.H)
 	resource := result[ResourceKey]
-	if resource.(*testCrudRecord).Owner != ownerId {
+	if resource.(*testCrudRecord).Owner != database.UserId(ownerId) {
 		t.Fatal("Owner should be set from token")
 	}
 	if resource.(*testCrudRecord).ID == database.InvalidRecordId {
@@ -182,7 +182,7 @@ func TestCrudCommonGetOneSuccess(t *testing.T) {
 	// Create a record first
 	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
-	v.Owner = ownerId
+	v.Owner = database.UserId(ownerId)
 	created, err := database.CreateOne(context.Background(), db, v)
 	if err != nil {
 		t.Fatal(err)
@@ -196,7 +196,7 @@ func TestCrudCommonGetOneSuccess(t *testing.T) {
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
-		Token:            &AuthToken{UserId: ownerId},
+		Token:            &AuthToken{UserId: database.UserId(ownerId)},
 		PathId:           created.ID,
 	}
 
@@ -227,7 +227,7 @@ func TestCrudCommonGetOneNotFound(t *testing.T) {
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
-		Token:            &AuthToken{UserId: database.NewRecordId()},
+		Token:            &AuthToken{UserId: database.InvalidUserId},
 		PathId:           database.NewRecordId(),
 	}
 
@@ -247,7 +247,7 @@ func TestCrudCommonGetAllSuccess(t *testing.T) {
 	ownerId := database.NewRecordId()
 	for i := 0; i < 3; i++ {
 		v := newTestCrudRecord()
-		v.Owner = ownerId
+		v.Owner = database.UserId(ownerId)
 		_, err := database.CreateOne(context.Background(), db, v)
 		if err != nil {
 			t.Fatal(err)
@@ -262,7 +262,7 @@ func TestCrudCommonGetAllSuccess(t *testing.T) {
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
-		Token:            &AuthToken{UserId: ownerId},
+		Token:            &AuthToken{UserId: database.UserId(ownerId)},
 	}
 
 	resp, status, err := route.Handler(req)
@@ -286,7 +286,7 @@ func TestCrudCommonDeleteSuccess(t *testing.T) {
 
 	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
-	v.Owner = ownerId
+	v.Owner = database.UserId(ownerId)
 	created, err := database.CreateOne(context.Background(), db, v)
 	if err != nil {
 		t.Fatal(err)
@@ -300,7 +300,7 @@ func TestCrudCommonDeleteSuccess(t *testing.T) {
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
-		Token:            &AuthToken{UserId: ownerId},
+		Token:            &AuthToken{UserId: database.UserId(ownerId)},
 		PathId:           created.ID,
 	}
 
@@ -357,7 +357,7 @@ func TestCrudCommonDeleteNotFound(t *testing.T) {
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
-		Token:            &AuthToken{UserId: ownerId},
+		Token:            &AuthToken{UserId: database.UserId(ownerId)},
 		PathId:           database.NewRecordId(),
 	}
 
@@ -376,7 +376,7 @@ func TestCrudCommonUpdateSuccess(t *testing.T) {
 
 	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
-	v.Owner = ownerId
+	v.Owner = database.UserId(ownerId)
 	created, err := database.CreateOne(context.Background(), db, v)
 	if err != nil {
 		t.Fatal(err)
@@ -391,11 +391,11 @@ func TestCrudCommonUpdateSuccess(t *testing.T) {
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
-		Token:            &AuthToken{UserId: ownerId},
+		Token:            &AuthToken{UserId: database.UserId(ownerId)},
 		PathId:           created.ID,
 		Body: &testCrudRecord{
 			ID:    created.ID,
-			Owner: ownerId,
+			Owner: database.UserId(ownerId),
 			Value: "updated",
 		},
 	}
@@ -456,7 +456,7 @@ func TestCrudCommonCreateEmptyValue(t *testing.T) {
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
-		Token:            &AuthToken{UserId: ownerId},
+		Token:            &AuthToken{UserId: database.UserId(ownerId)},
 		Body:             func() *testCrudRecord { r := newTestCrudRecord(); r.Value = ""; return r }(),
 	}
 
@@ -475,7 +475,7 @@ func TestCrudCommonGetOneAccessibleToEveryone(t *testing.T) {
 
 	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
-	v.Owner = ownerId
+	v.Owner = database.UserId(ownerId)
 	created, err := database.CreateOne(context.Background(), db, v)
 	if err != nil {
 		t.Fatal(err)
@@ -491,7 +491,7 @@ func TestCrudCommonGetOneAccessibleToEveryone(t *testing.T) {
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
-		Token:            &AuthToken{UserId: nonOwnerId},
+		Token:            &AuthToken{UserId: database.UserId(nonOwnerId)},
 		PathId:           created.ID,
 	}
 
@@ -510,7 +510,7 @@ func TestCrudCommonDeleteUnauthorized(t *testing.T) {
 
 	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
-	v.Owner = ownerId
+	v.Owner = database.UserId(ownerId)
 	created, err := database.CreateOne(context.Background(), db, v)
 	if err != nil {
 		t.Fatal(err)
@@ -525,7 +525,7 @@ func TestCrudCommonDeleteUnauthorized(t *testing.T) {
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
-		Token:            &AuthToken{UserId: unauthorizedId},
+		Token:            &AuthToken{UserId: database.UserId(unauthorizedId)},
 		PathId:           created.ID,
 	}
 

@@ -23,8 +23,8 @@ type Lineup struct {
 	WeekId WeekId // Week that this Lineup applies to
 }
 
-func (l *Lineup) GetOwner() database.RecordId {
-	return database.InvalidRecordId
+func (l *Lineup) GetOwner() database.UserId {
+	return database.InvalidUserId
 }
 
 func (l *Lineup) UniquenessEquivalent(other *Lineup) error {
@@ -34,16 +34,16 @@ func (l *Lineup) UniquenessEquivalent(other *Lineup) error {
 	return nil
 }
 
-func (l *Lineup) SetOwner(recordId database.RecordId) {
+func (l *Lineup) SetOwner(userId database.UserId) {
 	// don't need to do anything here as ownership is enforced by
 	// team captain or co-captain status
 }
 
-func (l *Lineup) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (l *Lineup) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return EditableByTeamCaptainOrCoCaptains(ctx, db, l.TeamId)
 }
 
-func (l *Lineup) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (l *Lineup) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return AccessibleByTeamMembers(ctx, db, l.TeamId)
 }
 
