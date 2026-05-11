@@ -2,27 +2,28 @@ package model
 
 import (
 	"context"
-	"intraclub/common"
 	"time"
+
+	"intraclub/database"
 )
 
 // DraftAvailablePlayer is a join table record that links a Draft to available players.
 // Each record represents a User who is eligible to be drafted in a specific Draft.
 type DraftAvailablePlayer struct {
-	ID        common.RecordId `json:"id"`
-	DraftId   DraftId         `json:"draft_id"`
-	PlayerId  UserId          `json:"player_id"`
-	CreatedAt time.Time       `json:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at"`
+	ID        database.RecordId `json:"id"`
+	DraftId   DraftId           `json:"draft_id"`
+	PlayerId  UserId            `json:"player_id"`
+	CreatedAt time.Time         `json:"created_at"`
+	UpdatedAt time.Time         `json:"updated_at"`
 }
 
 // GetOwner returns InvalidRecordId as DraftAvailablePlayer has no specific owner.
-func (d *DraftAvailablePlayer) GetOwner() common.RecordId {
-	return common.InvalidRecordId
+func (d *DraftAvailablePlayer) GetOwner() database.RecordId {
+	return database.InvalidRecordId
 }
 
 // SetOwner is a no-op as DraftAvailablePlayer has no specific owner.
-func (d *DraftAvailablePlayer) SetOwner(recordId common.RecordId) {}
+func (d *DraftAvailablePlayer) SetOwner(recordId database.RecordId) {}
 
 // Type returns the record type identifier for DraftAvailablePlayer.
 func (d *DraftAvailablePlayer) Type() string {
@@ -30,12 +31,12 @@ func (d *DraftAvailablePlayer) Type() string {
 }
 
 // GetId returns the unique identifier for this DraftAvailablePlayer record.
-func (d *DraftAvailablePlayer) GetId() common.RecordId {
+func (d *DraftAvailablePlayer) GetId() database.RecordId {
 	return d.ID
 }
 
 // SetId sets the unique identifier for this DraftAvailablePlayer record.
-func (d *DraftAvailablePlayer) SetId(id common.RecordId) {
+func (d *DraftAvailablePlayer) SetId(id database.RecordId) {
 	d.ID = id
 }
 
@@ -45,22 +46,22 @@ func (d *DraftAvailablePlayer) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that both the referenced Draft and User records exist.
-func (d *DraftAvailablePlayer) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	if err := common.ExistsById(ctx, db, &Draft{}, d.DraftId.RecordId()); err != nil {
+func (d *DraftAvailablePlayer) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	if err := database.ExistsById(ctx, db, &Draft{}, d.DraftId.RecordId()); err != nil {
 		return err
 	}
-	if err := common.ExistsById(ctx, db, &User{}, d.PlayerId.RecordId()); err != nil {
+	if err := database.ExistsById(ctx, db, &User{}, d.PlayerId.RecordId()); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (d *DraftAvailablePlayer) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (d *DraftAvailablePlayer) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
-func (d *DraftAvailablePlayer) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{common.SysAdminRecordId}
+func (d *DraftAvailablePlayer) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{database.SysAdminRecordId}
 }
 
 // Timestamps returns the create and update timestamps for this DraftAvailablePlayer record.
@@ -78,6 +79,6 @@ func (d *DraftAvailablePlayer) SetUpdatedAt(updatedAt time.Time) {
 	d.UpdatedAt = updatedAt
 }
 
-func (d *DraftAvailablePlayer) BlankRecord() common.CrudRecord {
+func (d *DraftAvailablePlayer) BlankRecord() database.CrudRecord {
 	return new(DraftAvailablePlayer)
 }

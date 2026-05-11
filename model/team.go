@@ -3,14 +3,15 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
 	"time"
+
+	"intraclub/database"
 )
 
-type TeamId common.RecordId
+type TeamId database.RecordId
 
-func (t TeamId) RecordId() common.RecordId {
-	return common.RecordId(t)
+func (t TeamId) RecordId() database.RecordId {
+	return database.RecordId(t)
 }
 
 func (t TeamId) String() string {
@@ -26,37 +27,37 @@ const (
 )
 
 type TeamAssignment struct {
-	ID        common.RecordId `json:"id"`
-	TeamId    TeamId          `json:"team_id"`
-	UserId    UserId          `json:"user_id"`
-	Role      TeamRole        `json:"role"`
-	CreatedAt time.Time       `json:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at"`
-	DeletedAt *time.Time      `json:"deleted_at"`
+	ID        database.RecordId `json:"id"`
+	TeamId    TeamId            `json:"team_id"`
+	UserId    UserId            `json:"user_id"`
+	Role      TeamRole          `json:"role"`
+	CreatedAt time.Time         `json:"created_at"`
+	UpdatedAt time.Time         `json:"updated_at"`
+	DeletedAt *time.Time        `json:"deleted_at"`
 }
 
-func (a *TeamAssignment) GetOwner() common.RecordId {
-	return common.InvalidRecordId
+func (a *TeamAssignment) GetOwner() database.RecordId {
+	return database.InvalidRecordId
 }
 
-func (a *TeamAssignment) SetOwner(recordId common.RecordId) {
+func (a *TeamAssignment) SetOwner(recordId database.RecordId) {
 	// No owner field to set
 }
 
-func (a *TeamAssignment) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+func (a *TeamAssignment) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
 	// Team assignments are editable by captains/co-captains of team
-	team, exists, err := common.GetOneById(ctx, db, &Team{}, a.TeamId.RecordId())
+	team, exists, err := database.GetOneById(ctx, db, &Team{}, a.TeamId.RecordId())
 	if err != nil || !exists {
-		return []common.RecordId{}
+		return []database.RecordId{}
 	}
 	return team.EditableBy(ctx, db)
 }
 
-func (a *TeamAssignment) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+func (a *TeamAssignment) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
 	// Team assignments are accessible to team members
-	team, exists, err := common.GetOneById(ctx, db, &Team{}, a.TeamId.RecordId())
+	team, exists, err := database.GetOneById(ctx, db, &Team{}, a.TeamId.RecordId())
 	if err != nil || !exists {
-		return []common.RecordId{common.EveryoneRecordId}
+		return []database.RecordId{database.EveryoneRecordId}
 	}
 	return team.AccessibleTo(ctx, db)
 }
@@ -68,11 +69,11 @@ func (a *TeamAssignment) StaticallyValid() error {
 	return nil
 }
 
-func (a *TeamAssignment) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	if err := common.ExistsById(ctx, db, &Team{}, a.TeamId.RecordId()); err != nil {
+func (a *TeamAssignment) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	if err := database.ExistsById(ctx, db, &Team{}, a.TeamId.RecordId()); err != nil {
 		return err
 	}
-	if err := common.ExistsById(ctx, db, &User{}, a.UserId.RecordId()); err != nil {
+	if err := database.ExistsById(ctx, db, &User{}, a.UserId.RecordId()); err != nil {
 		return err
 	}
 	return nil
@@ -82,15 +83,15 @@ func (a *TeamAssignment) Type() string {
 	return "team_assignment"
 }
 
-func (a *TeamAssignment) GetId() common.RecordId {
+func (a *TeamAssignment) GetId() database.RecordId {
 	return a.ID
 }
 
-func (a *TeamAssignment) SetId(id common.RecordId) {
+func (a *TeamAssignment) SetId(id database.RecordId) {
 	a.ID = id
 }
 
-func (a *TeamAssignment) PreCreate(db common.DatabaseProvider) error {
+func (a *TeamAssignment) PreCreate(db database.DatabaseProvider) error {
 	return nil
 }
 
@@ -106,7 +107,7 @@ func (a *TeamAssignment) PostUpdate() error {
 	return nil
 }
 
-func (a *TeamAssignment) PreDelete(_ context.Context, db common.DatabaseProvider) error {
+func (a *TeamAssignment) PreDelete(_ context.Context, db database.DatabaseProvider) error {
 	return nil
 }
 
@@ -130,7 +131,7 @@ func (a *TeamAssignment) SetDeletedAt(deletedAt *time.Time) {
 	a.DeletedAt = deletedAt
 }
 
-func (a *TeamAssignment) BlankRecord() common.CrudRecord {
+func (a *TeamAssignment) BlankRecord() database.CrudRecord {
 	return new(TeamAssignment)
 }
 
@@ -145,11 +146,11 @@ type Team struct {
 	DeletedAt   *time.Time          `json:"deleted_at"`
 }
 
-func (t *Team) GetOwner() common.RecordId {
-	return common.InvalidRecordId
+func (t *Team) GetOwner() database.RecordId {
+	return database.InvalidRecordId
 }
 
-func (t *Team) SetOwner(recordId common.RecordId) {
+func (t *Team) SetOwner(recordId database.RecordId) {
 	// don't need to do anything as Captain will not necessarily
 	// be the same as the RecordId that was passed into the
 	// Create request for this type. The Captain for a given
@@ -173,14 +174,14 @@ func NewDefaultTeam(captain UserId, name string) *Team {
 	return team
 }
 
-func (t *Team) getAssignments(ctx context.Context, db common.DatabaseProvider) ([]*TeamAssignment, error) {
+func (t *Team) getAssignments(ctx context.Context, db database.DatabaseProvider) ([]*TeamAssignment, error) {
 	filter := func(_ context.Context, a *TeamAssignment) bool {
 		return a.TeamId == t.ID
 	}
-	return common.GetAllWhere[*TeamAssignment](ctx, db, filter)
+	return database.GetAllWhere[*TeamAssignment](ctx, db, filter)
 }
 
-func (t *Team) GetCaptain(ctx context.Context, db common.DatabaseProvider) (UserId, error) {
+func (t *Team) GetCaptain(ctx context.Context, db database.DatabaseProvider) (UserId, error) {
 	assignments, err := t.getAssignments(ctx, db)
 	if err != nil {
 		return UserId(0), err
@@ -193,7 +194,7 @@ func (t *Team) GetCaptain(ctx context.Context, db common.DatabaseProvider) (User
 	return UserId(0), fmt.Errorf("no captain found for team %s", t.ID)
 }
 
-func (t *Team) GetCoCaptains(ctx context.Context, db common.DatabaseProvider) ([]UserId, error) {
+func (t *Team) GetCoCaptains(ctx context.Context, db database.DatabaseProvider) ([]UserId, error) {
 	assignments, err := t.getAssignments(ctx, db)
 	if err != nil {
 		return nil, err
@@ -207,7 +208,7 @@ func (t *Team) GetCoCaptains(ctx context.Context, db common.DatabaseProvider) ([
 	return coCaptains, nil
 }
 
-func (t *Team) GetMembers(ctx context.Context, db common.DatabaseProvider) ([]UserId, error) {
+func (t *Team) GetMembers(ctx context.Context, db database.DatabaseProvider) ([]UserId, error) {
 	assignments, err := t.getAssignments(ctx, db)
 	if err != nil {
 		return nil, err
@@ -219,7 +220,7 @@ func (t *Team) GetMembers(ctx context.Context, db common.DatabaseProvider) ([]Us
 	return members, nil
 }
 
-func (t *Team) IsTeamMember(ctx context.Context, db common.DatabaseProvider, u UserId) (bool, error) {
+func (t *Team) IsTeamMember(ctx context.Context, db database.DatabaseProvider, u UserId) (bool, error) {
 	members, err := t.GetMembers(ctx, db)
 	if err != nil {
 		return false, err
@@ -232,9 +233,9 @@ func (t *Team) IsTeamMember(ctx context.Context, db common.DatabaseProvider, u U
 	return false, nil
 }
 
-func (t *Team) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+func (t *Team) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
 	// Captains and co-captains can edit
-	ids := make([]common.RecordId, 0)
+	ids := make([]database.RecordId, 0)
 
 	// Get captain
 	if captain, err := t.GetCaptain(ctx, db); err == nil {
@@ -249,11 +250,11 @@ func (t *Team) EditableBy(ctx context.Context, db common.DatabaseProvider) []com
 	return ids
 }
 
-func (t *Team) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+func (t *Team) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
 	// All team members can access
 	members, err := t.GetMembers(ctx, db)
 	if err != nil {
-		return []common.RecordId{common.EveryoneRecordId}
+		return []database.RecordId{database.EveryoneRecordId}
 	}
 	return UserIdListToRecordIdList(members)
 }
@@ -262,11 +263,11 @@ func (t *Team) StaticallyValid() error {
 	return nil
 }
 
-func (t *Team) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+func (t *Team) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
 	// If tempCaptain is set, skip captain validation (it will be created in PostCreate)
 	if t.tempCaptain != UserId(0) {
 		// Still verify tempCaptain is a valid user
-		if err := common.ExistsById(ctx, db, &User{}, t.tempCaptain.RecordId()); err != nil {
+		if err := database.ExistsById(ctx, db, &User{}, t.tempCaptain.RecordId()); err != nil {
 			return err
 		}
 		return nil
@@ -308,7 +309,7 @@ func (t *Team) DynamicallyValid(ctx context.Context, db common.DatabaseProvider)
 		return err
 	}
 	for _, member := range members {
-		err = common.ExistsById(ctx, db, &User{}, member.RecordId())
+		err = database.ExistsById(ctx, db, &User{}, member.RecordId())
 		if err != nil {
 			return err
 		}
@@ -321,19 +322,19 @@ func (t *Team) Type() string {
 	return "team"
 }
 
-func (t *Team) GetId() common.RecordId {
+func (t *Team) GetId() database.RecordId {
 	return t.ID.RecordId()
 }
 
-func (t *Team) SetId(id common.RecordId) {
+func (t *Team) SetId(id database.RecordId) {
 	t.ID = TeamId(id)
 }
 
-func (t *Team) PreCreate(db common.DatabaseProvider) error {
+func (t *Team) PreCreate(db database.DatabaseProvider) error {
 	return nil
 }
 
-func (t *Team) PostCreate(ctx context.Context, db common.DatabaseProvider) error {
+func (t *Team) PostCreate(ctx context.Context, db database.DatabaseProvider) error {
 	// If a captain was set during creation, create the team assignment for them
 	if t.tempCaptain != UserId(0) {
 		assignment := &TeamAssignment{
@@ -341,7 +342,7 @@ func (t *Team) PostCreate(ctx context.Context, db common.DatabaseProvider) error
 			UserId: t.tempCaptain,
 			Role:   TeamRoleCaptain,
 		}
-		_, err := common.CreateOne(ctx, db, assignment)
+		_, err := database.CreateOne(ctx, db, assignment)
 		if err != nil {
 			return err
 		}
@@ -359,7 +360,7 @@ func (t *Team) PostUpdate() error {
 	return nil
 }
 
-func (t *Team) PreDelete(ctx context.Context, db common.DatabaseProvider) error {
+func (t *Team) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
 	return nil
 }
 
@@ -383,12 +384,12 @@ func (t *Team) SetDeletedAt(deletedAt *time.Time) {
 	t.DeletedAt = deletedAt
 }
 
-func (t *Team) BlankRecord() common.CrudRecord {
+func (t *Team) BlankRecord() database.CrudRecord {
 	return new(Team)
 }
 
-func AccessibleByTeamMembers(ctx context.Context, db common.DatabaseProvider, t TeamId) []common.RecordId {
-	team, exists, err := common.GetOneById(ctx, db, &Team{}, t.RecordId())
+func AccessibleByTeamMembers(ctx context.Context, db database.DatabaseProvider, t TeamId) []database.RecordId {
+	team, exists, err := database.GetOneById(ctx, db, &Team{}, t.RecordId())
 	if err != nil {
 		fmt.Println(err)
 		return nil
@@ -405,8 +406,8 @@ func AccessibleByTeamMembers(ctx context.Context, db common.DatabaseProvider, t 
 	return UserIdListToRecordIdList(members)
 }
 
-func EditableByTeamCaptainOrCoCaptains(ctx context.Context, db common.DatabaseProvider, t TeamId) []common.RecordId {
-	team, exists, err := common.GetOneById(ctx, db, &Team{}, t.RecordId())
+func EditableByTeamCaptainOrCoCaptains(ctx context.Context, db database.DatabaseProvider, t TeamId) []database.RecordId {
+	team, exists, err := database.GetOneById(ctx, db, &Team{}, t.RecordId())
 	if err != nil {
 		fmt.Println(err)
 		return nil

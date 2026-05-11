@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sort"
 
-	"intraclub/common"
+	"intraclub/database"
 )
 
 type PreDraftRatingModifier int
@@ -21,7 +21,7 @@ func (p PreDraftRatingModifier) Int() int {
 }
 
 type PreDraftGrade struct {
-	ID       common.RecordId        // unique ID of this PreDraftGrade
+	ID       database.RecordId      // unique ID of this PreDraftGrade
 	PlayerId UserId                 // ID of the User who is being graded
 	DraftId  DraftId                // ID of the Draft that this PreDraftGrade pertains to
 	GraderId UserId                 // ID of the User providing a Grade
@@ -29,7 +29,7 @@ type PreDraftGrade struct {
 	Rating   RatingId
 }
 
-func (p *PreDraftGrade) GetOwner() common.RecordId {
+func (p *PreDraftGrade) GetOwner() database.RecordId {
 	return p.GraderId.RecordId()
 }
 
@@ -45,7 +45,7 @@ type PreDraftAggregate struct {
 	Aggregate float64 // average of the ratings for this player (higher is better)
 }
 
-func (p *PreDraftGrade) SetOwner(recordId common.RecordId) {
+func (p *PreDraftGrade) SetOwner(recordId database.RecordId) {
 	p.GraderId = UserId(recordId)
 }
 
@@ -57,20 +57,20 @@ func (p *PreDraftGrade) Type() string {
 	return "pre_draft_grade"
 }
 
-func (p *PreDraftGrade) GetId() common.RecordId {
+func (p *PreDraftGrade) GetId() database.RecordId {
 	return p.ID
 }
 
-func (p *PreDraftGrade) SetId(id common.RecordId) {
+func (p *PreDraftGrade) SetId(id database.RecordId) {
 	p.ID = id
 }
 
-func (p *PreDraftGrade) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{p.GraderId.RecordId()}
+func (p *PreDraftGrade) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{p.GraderId.RecordId()}
 }
 
-func (p *PreDraftGrade) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (p *PreDraftGrade) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
 func (p *PreDraftGrade) StaticallyValid() error {
@@ -80,21 +80,21 @@ func (p *PreDraftGrade) StaticallyValid() error {
 	return nil
 }
 
-func (p *PreDraftGrade) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+func (p *PreDraftGrade) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
 	// user ID being graded must be valid in DB
-	err := common.ExistsById(ctx, db, &User{}, p.PlayerId.RecordId())
+	err := database.ExistsById(ctx, db, &User{}, p.PlayerId.RecordId())
 	if err != nil {
 		return err
 	}
 
 	// grader must be a valid user in DB
-	err = common.ExistsById(ctx, db, &User{}, p.GraderId.RecordId())
+	err = database.ExistsById(ctx, db, &User{}, p.GraderId.RecordId())
 	if err != nil {
 		return err
 	}
 
 	// draft must exist in db
-	draft, err := common.GetExistingRecordById(ctx, db, &Draft{}, p.DraftId.RecordId())
+	draft, err := database.GetExistingRecordById(ctx, db, &Draft{}, p.DraftId.RecordId())
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (p *PreDraftGrade) DynamicallyValid(ctx context.Context, db common.Database
 		return fmt.Errorf("player ID '%s' is not in draft list", p.PlayerId)
 	}
 
-	format, err := common.GetExistingRecordById(ctx, db, &Format{}, draft.Format.RecordId())
+	format, err := database.GetExistingRecordById(ctx, db, &Format{}, draft.Format.RecordId())
 	if err != nil {
 		return err
 	}
@@ -160,24 +160,24 @@ func (p *PreDraftGrade) NumericRating(format *Format) float64 {
 	return float64(ratingBaseValue + p.Modifier.Int())
 }
 
-func GetPreDraftGradesByGraderId(ctx context.Context, db common.DatabaseProvider, graderId UserId) ([]*PreDraftGrade, error) {
-	return common.GetAllWhere[*PreDraftGrade](ctx, db, func(_ context.Context, c *PreDraftGrade) bool {
+func GetPreDraftGradesByGraderId(ctx context.Context, db database.DatabaseProvider, graderId UserId) ([]*PreDraftGrade, error) {
+	return database.GetAllWhere[*PreDraftGrade](ctx, db, func(_ context.Context, c *PreDraftGrade) bool {
 		return c.GraderId == graderId
 	})
 }
 
-func GetPreDraftGradesByPlayerId(ctx context.Context, db common.DatabaseProvider, playerId UserId) ([]*PreDraftGrade, error) {
-	return common.GetAllWhere[*PreDraftGrade](ctx, db, func(_ context.Context, c *PreDraftGrade) bool {
+func GetPreDraftGradesByPlayerId(ctx context.Context, db database.DatabaseProvider, playerId UserId) ([]*PreDraftGrade, error) {
+	return database.GetAllWhere[*PreDraftGrade](ctx, db, func(_ context.Context, c *PreDraftGrade) bool {
 		return c.PlayerId == playerId
 	})
 }
 
-func (p *PreDraftGrade) BlankRecord() common.CrudRecord {
+func (p *PreDraftGrade) BlankRecord() database.CrudRecord {
 	return new(PreDraftGrade)
 }
 
-func GetPreDraftGradesByDraftId(ctx context.Context, db common.DatabaseProvider, draftId DraftId) ([]*PreDraftGrade, error) {
-	return common.GetAllWhere[*PreDraftGrade](ctx, db, func(_ context.Context, c *PreDraftGrade) bool {
+func GetPreDraftGradesByDraftId(ctx context.Context, db database.DatabaseProvider, draftId DraftId) ([]*PreDraftGrade, error) {
+	return database.GetAllWhere[*PreDraftGrade](ctx, db, func(_ context.Context, c *PreDraftGrade) bool {
 		return c.DraftId == draftId
 	})
 }
@@ -209,7 +209,7 @@ func GetDraftAggregateForPlayer(allGrades []*PreDraftGrade, format *Format, id U
 	}
 }
 
-func GetSortedListOfAllPreDraftGradesDescending(ctx context.Context, db common.DatabaseProvider, draft *Draft) ([]PreDraftAggregate, error) {
+func GetSortedListOfAllPreDraftGradesDescending(ctx context.Context, db database.DatabaseProvider, draft *Draft) ([]PreDraftAggregate, error) {
 
 	// Get all pre draft grades for this draft
 	allGrades, err := GetPreDraftGradesByDraftId(ctx, db, draft.ID)
@@ -218,7 +218,7 @@ func GetSortedListOfAllPreDraftGradesDescending(ctx context.Context, db common.D
 	}
 
 	// get the format for the draft (to calculate the numeric value of each PreDraftGrade)
-	format, err := common.GetExistingRecordById(ctx, db, &Format{}, draft.Format.RecordId())
+	format, err := database.GetExistingRecordById(ctx, db, &Format{}, draft.Format.RecordId())
 	if err != nil {
 		return nil, err
 	}

@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"testing"
 
-	"intraclub/common"
+	"intraclub/database"
 )
 
-func newStoredFacility(t *testing.T, db common.DatabaseProvider, owner UserId) *Facility {
+func newStoredFacility(t *testing.T, db database.DatabaseProvider, owner UserId) *Facility {
 	facility := NewFacility()
 	facility.UserId = owner
-	facility.Name = fmt.Sprintf("Test facility %s", common.NewRecordId())
-	facility.Address = fmt.Sprintf("%s Test Rd.", common.NewRecordId())
+	facility.Name = fmt.Sprintf("Test facility %s", database.NewRecordId())
+	facility.Address = fmt.Sprintf("%s Test Rd.", database.NewRecordId())
 	facility.NumberOfCourts = 5
-	v, err := common.CreateOne(context.Background(), db, facility)
+	v, err := database.CreateOne(context.Background(), db, facility)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,13 +33,13 @@ func copyFacility(facility *Facility) *Facility {
 
 func TestFacilityCrud(t *testing.T) {
 	// create a database, user, and facility
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	user := newStoredUser(t, db)
 	facility := newStoredFacility(t, db, user.ID)
 	fmt.Printf("%+v\n", facility)
 
 	// do CRUD via the WithAccessControl construct
-	wac := common.WithAccessControl[*Facility]{Database: db, AccessControlUser: user.GetId()}
+	wac := database.WithAccessControl[*Facility]{Database: db, AccessControlUser: user.GetId()}
 
 	// copy facility to a new record and update in the database
 	f2 := copyFacility(facility)
@@ -72,12 +72,12 @@ func TestFacilityCrud(t *testing.T) {
 }
 
 func TestEditableBySysAdmin(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	user := newStoredUser(t, db)
 	sysAdmin := newSysAdmin(t, db)
 	facility := newStoredFacility(t, db, user.ID)
 
-	wac := common.WithAccessControl[*Facility]{Database: db, AccessControlUser: sysAdmin.GetId()}
+	wac := database.WithAccessControl[*Facility]{Database: db, AccessControlUser: sysAdmin.GetId()}
 	canEdit := wac.CanUserEdit(facility)
 	if !canEdit {
 		t.Fatalf("Sys admin should be able to edit facility")
@@ -85,13 +85,13 @@ func TestEditableBySysAdmin(t *testing.T) {
 }
 
 func TestNameAlreadyExists(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	user := newStoredUser(t, db)
 	facility := newStoredFacility(t, db, user.ID)
 
 	copied := copyFacility(facility)
-	copied.ID = FacilityId(common.InvalidRecordId) // generate new record ID to force a name conflict with old record
-	_, err := common.CreateOne(context.Background(), db, copied)
+	copied.ID = FacilityId(database.InvalidRecordId) // generate new record ID to force a name conflict with old record
+	_, err := database.CreateOne(context.Background(), db, copied)
 	if err == nil {
 		t.Fatal("expected error on duplicate name")
 	}
@@ -99,14 +99,14 @@ func TestNameAlreadyExists(t *testing.T) {
 }
 
 func TestAddressAlreadyExists(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	user := newStoredUser(t, db)
 	facility := newStoredFacility(t, db, user.ID)
 
 	copied := copyFacility(facility)
 	copied.Name = "New name"
-	copied.ID = FacilityId(common.InvalidRecordId) // generate new record ID to force a name conflict with old record
-	_, err := common.CreateOne(context.Background(), db, copied)
+	copied.ID = FacilityId(database.InvalidRecordId) // generate new record ID to force a name conflict with old record
+	_, err := database.CreateOne(context.Background(), db, copied)
 	if err == nil {
 		t.Fatal("expected error on duplicate address")
 	}
@@ -114,12 +114,12 @@ func TestAddressAlreadyExists(t *testing.T) {
 }
 
 func TestFacilityAppliedToSeasonCannotBeDeleted(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
 
 	facilityId := season.Facility.RecordId()
 
-	wac := common.NewWithAccessControl[*Facility](context.Background(), db, commish.ID.RecordId())
+	wac := database.NewWithAccessControl[*Facility](context.Background(), db, commish.ID.RecordId())
 	_, _, err := wac.DeleteOneById(context.Background(), &Facility{}, facilityId)
 	if err == nil {
 		t.Fatal("expected error on delete")

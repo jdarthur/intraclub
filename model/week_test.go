@@ -6,32 +6,32 @@ import (
 	"testing"
 	"time"
 
-	"intraclub/common"
+	"intraclub/database"
 )
 
-func newStoredWeek(t *testing.T, db common.DatabaseProvider, season *Season) *Week {
+func newStoredWeek(t *testing.T, db database.DatabaseProvider, season *Season) *Week {
 	week := NewWeek()
 	week.DraftId = season.DraftId
 	week.Date = time.Date(0, 0, 0, 8, 0, 0, 0, time.UTC)
-	v, err := common.CreateOne(context.Background(), db, week)
+	v, err := database.CreateOne(context.Background(), db, week)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return v
 }
 
-func newStoredWeekAt(t *testing.T, db common.DatabaseProvider, season *Season, date time.Time) *Week {
+func newStoredWeekAt(t *testing.T, db database.DatabaseProvider, season *Season, date time.Time) *Week {
 	week := NewWeek()
 	week.DraftId = season.DraftId
 	week.Date = date
-	v, err := common.CreateOne(context.Background(), db, week)
+	v, err := database.CreateOne(context.Background(), db, week)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return v
 }
 
-func newDefaultSeasonWithWeeks(t *testing.T, db common.DatabaseProvider, weekCount int) (*Season, []*Week) {
+func newDefaultSeasonWithWeeks(t *testing.T, db database.DatabaseProvider, weekCount int) (*Season, []*Week) {
 	season, _ := newDefaultSeasonWithTeams(t, db, 4)
 
 	weeks := make([]*Week, 0)
@@ -41,7 +41,7 @@ func newDefaultSeasonWithWeeks(t *testing.T, db common.DatabaseProvider, weekCou
 	return season, weeks
 }
 
-func newDefaultSeasonWithWeeksAndTeams(t *testing.T, db common.DatabaseProvider, teams []*Team, weekCount int) (*Season, []*Week) {
+func newDefaultSeasonWithWeeksAndTeams(t *testing.T, db database.DatabaseProvider, teams []*Team, weekCount int) (*Season, []*Week) {
 	captain, err := teams[0].GetCaptain(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
@@ -57,10 +57,10 @@ func newDefaultSeasonWithWeeksAndTeams(t *testing.T, db common.DatabaseProvider,
 }
 
 func TestInvalidDraftId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	week := NewWeek()
 	week.Date = time.Now()
-	_, err := common.CreateOne(context.Background(), db, week)
+	_, err := database.CreateOne(context.Background(), db, week)
 	if err == nil {
 		t.Fatal("expected error on invalid draft id")
 	}
@@ -68,7 +68,7 @@ func TestInvalidDraftId(t *testing.T) {
 }
 
 func TestWeeksSorted(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	draft, season := newCompletedDraft(t, db)
 	week1 := newStoredWeekAt(t, db, season, time.Now().AddDate(0, 0, 1))
 	week2 := newStoredWeekAt(t, db, season, time.Now().AddDate(0, 0, 5))

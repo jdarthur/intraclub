@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"intraclub/common"
+	"intraclub/database"
 )
 
 func newValidRating(u UserId) *Rating {
@@ -16,13 +16,13 @@ func newValidRating(u UserId) *Rating {
 	}
 }
 
-func newStoredRating(t *testing.T, db common.DatabaseProvider) *Rating {
+func newStoredRating(t *testing.T, db database.DatabaseProvider) *Rating {
 	user := newStoredUser(t, db)
 	r := NewRating()
 	r.UserId = user.ID
-	r.Name = fmt.Sprintf("Rating %s", common.NewRecordId())
+	r.Name = fmt.Sprintf("Rating %s", database.NewRecordId())
 	r.Description = "test description"
-	v, err := common.CreateOne(context.Background(), db, r)
+	v, err := database.CreateOne(context.Background(), db, r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestRatingNameEmpty(t *testing.T) {
 }
 
 func TestRatingNameWhitespace(t *testing.T) {
-	r := newValidRating(UserId(common.InvalidRecordId))
+	r := newValidRating(UserId(database.InvalidRecordId))
 	r.Name = "   "
 	err := r.StaticallyValid()
 	if err == nil {
@@ -58,7 +58,7 @@ func TestRatingNameWhitespace(t *testing.T) {
 }
 
 func TestRatingDescriptionEmpty(t *testing.T) {
-	r := newValidRating(UserId(common.InvalidRecordId))
+	r := newValidRating(UserId(database.InvalidRecordId))
 	r.Description = ""
 
 	err := r.StaticallyValid()
@@ -69,7 +69,7 @@ func TestRatingDescriptionEmpty(t *testing.T) {
 }
 
 func TestRatingDescriptionWhitespace(t *testing.T) {
-	r := newValidRating(UserId(common.InvalidRecordId))
+	r := newValidRating(UserId(database.InvalidRecordId))
 	r.Description = "\n\n\n\n"
 
 	err := r.StaticallyValid()
@@ -80,8 +80,8 @@ func TestRatingDescriptionWhitespace(t *testing.T) {
 }
 
 func TestRatingUserIdNotValid(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
-	r := newValidRating(UserId(common.InvalidRecordId))
+	db := database.NewUnitTestDBProvider()
+	r := newValidRating(UserId(database.InvalidRecordId))
 
 	err := r.DynamicallyValid(context.Background(), db)
 	if err == nil {
@@ -91,11 +91,11 @@ func TestRatingUserIdNotValid(t *testing.T) {
 }
 
 func TestRatingUpdateBySysAdmin(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	r := newStoredRating(t, db)
 	sysAdmin := newSysAdmin(t, db)
 
-	wac := common.WithAccessControl[*Rating]{Database: db, AccessControlUser: sysAdmin.ID.RecordId()}
+	wac := database.WithAccessControl[*Rating]{Database: db, AccessControlUser: sysAdmin.ID.RecordId()}
 
 	copied := copyRating(r)
 	copied.Name = "new name"
@@ -105,7 +105,7 @@ func TestRatingUpdateBySysAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	v, err := common.GetExistingRecordById(context.Background(), db, &Rating{}, r.ID.RecordId())
+	v, err := database.GetExistingRecordById(context.Background(), db, &Rating{}, r.ID.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,23 +115,23 @@ func TestRatingUpdateBySysAdmin(t *testing.T) {
 }
 
 func TestRatingCannotBeDeletedWhenInUse(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	format := newDefaultStoredFormat(t, db)
 
 	ratingId := format.PossibleRatings[0].RecordId()
-	rating, err := common.GetExistingRecordById(context.Background(), db, &Rating{}, ratingId)
+	rating, err := database.GetExistingRecordById(context.Background(), db, &Rating{}, ratingId)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	wac := common.WithAccessControl[*Rating]{Database: db, AccessControlUser: rating.UserId.RecordId()}
+	wac := database.WithAccessControl[*Rating]{Database: db, AccessControlUser: rating.UserId.RecordId()}
 	_, _, err = wac.DeleteOneById(context.Background(), &Rating{}, ratingId)
 	if err == nil {
 		t.Fatal("Expected error on delete of in-use rating")
 	}
 	fmt.Println(err)
 
-	_, exists, err := common.GetOneById(context.Background(), db, &Rating{}, ratingId)
+	_, exists, err := database.GetOneById(context.Background(), db, &Rating{}, ratingId)
 	if err != nil {
 		t.Fatal(err)
 	}

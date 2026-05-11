@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"intraclub/common"
 	"math/rand"
 	"strings"
 	"testing"
+
+	"intraclub/database"
 )
 
 var FirstNames = []string{
@@ -132,7 +133,7 @@ func TestImportCsvToUserList(t *testing.T) {
 }
 
 func TestImportCsvToFreshDatabase(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	users := generateCsvAndParse(t)
 	newUsers, existingUsers, err := ParseAndCreateCsvUsers(context.Background(), db, users)
 	if err != nil {
@@ -150,7 +151,7 @@ func TestImportCsvToFreshDatabase(t *testing.T) {
 
 func TestParseNewAndExistingUsers(t *testing.T) {
 
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	users := generateCsvAndParse(t)
 	_, _, err := ParseAndCreateCsvUsers(context.Background(), db, users)
 	if err != nil {
@@ -169,7 +170,7 @@ func TestParseNewAndExistingUsers(t *testing.T) {
 
 func TestPartiallyImportCsvToDatabase(t *testing.T) {
 
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	users := generateCsvAndParse(t)
 	_, _, err := ParseAndCreateCsvUsers(context.Background(), db, users)
 	if err != nil {
@@ -185,7 +186,7 @@ func TestPartiallyImportCsvToDatabase(t *testing.T) {
 	fmt.Printf("newUsers count: %d\n", len(newUsers))
 	fmt.Printf("existingUsers count: %d\n", len(existingUsers))
 
-	allUsers, err := common.GetAll[*User](context.Background(), db)
+	allUsers, err := database.GetAll[*User](context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
 	}

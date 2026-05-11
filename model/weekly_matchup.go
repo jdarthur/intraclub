@@ -3,13 +3,14 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
+
+	"intraclub/database"
 )
 
-type WeeklyMatchupId common.RecordId
+type WeeklyMatchupId database.RecordId
 
-func (id WeeklyMatchupId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id WeeklyMatchupId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id WeeklyMatchupId) String() string {
@@ -22,12 +23,12 @@ type TeamMatchup struct {
 	Bye      bool
 }
 
-func (t *TeamMatchup) Validate(ctx context.Context, db common.DatabaseProvider, season *Season) error {
-	if t.Bye && t.AwayTeam != TeamId(common.InvalidRecordId) {
+func (t *TeamMatchup) Validate(ctx context.Context, db database.DatabaseProvider, season *Season) error {
+	if t.Bye && t.AwayTeam != TeamId(database.InvalidRecordId) {
 		return fmt.Errorf("away team ID must not be set during a bye")
 	}
 
-	err := common.ExistsById(ctx, db, &Team{}, t.HomeTeam.RecordId())
+	err := database.ExistsById(ctx, db, &Team{}, t.HomeTeam.RecordId())
 	if err != nil {
 		return fmt.Errorf("home team error: %s", err)
 	}
@@ -37,7 +38,7 @@ func (t *TeamMatchup) Validate(ctx context.Context, db common.DatabaseProvider, 
 	}
 
 	if !t.Bye {
-		err = common.ExistsById(ctx, db, &Team{}, t.AwayTeam.RecordId())
+		err = database.ExistsById(ctx, db, &Team{}, t.AwayTeam.RecordId())
 		if err != nil {
 			return fmt.Errorf("away team error: %s", err)
 		}
@@ -58,8 +59,8 @@ type WeeklyMatchup struct {
 	Matchups []*TeamMatchup // List of TeamMatchup s for this WeeklyMatchup, e.g. team 1 playing team 2, team 3 on bye, etc.
 }
 
-func (w *WeeklyMatchup) GetOwner() common.RecordId {
-	return common.InvalidRecordId
+func (w *WeeklyMatchup) GetOwner() database.RecordId {
+	return database.InvalidRecordId
 }
 
 func (w *WeeklyMatchup) UniquenessEquivalent(other *WeeklyMatchup) error {
@@ -77,23 +78,23 @@ func (w *WeeklyMatchup) Type() string {
 	return "weekly_matchup"
 }
 
-func (w *WeeklyMatchup) GetId() common.RecordId {
+func (w *WeeklyMatchup) GetId() database.RecordId {
 	return w.ID.RecordId()
 }
 
-func (w *WeeklyMatchup) SetId(id common.RecordId) {
+func (w *WeeklyMatchup) SetId(id database.RecordId) {
 	w.ID = WeeklyMatchupId(id)
 }
 
-func (w *WeeklyMatchup) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+func (w *WeeklyMatchup) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
 	return EditableBySeason(ctx, db, w.SeasonId)
 }
 
-func (w *WeeklyMatchup) AccessibleTo(_ context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (w *WeeklyMatchup) AccessibleTo(_ context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
-func (w *WeeklyMatchup) SetOwner(recordId common.RecordId) {
+func (w *WeeklyMatchup) SetOwner(recordId database.RecordId) {
 	// don't need to do anything here as the ownership of the
 	// WeeklyMatchup record type is automatically inferred &
 	// enforced by the associated Season assigned to it
@@ -121,14 +122,14 @@ func (w *WeeklyMatchup) StaticallyValid() error {
 	return nil
 }
 
-func (w *WeeklyMatchup) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	week, err := common.GetExistingRecordById(ctx, db, &Week{}, w.WeekId.RecordId())
+func (w *WeeklyMatchup) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	week, err := database.GetExistingRecordById(ctx, db, &Week{}, w.WeekId.RecordId())
 	if err != nil {
 		return err
 	}
 
 	// validate that the season in question exists.
-	season, err := common.GetExistingRecordById(ctx, db, &Season{}, w.SeasonId.RecordId())
+	season, err := database.GetExistingRecordById(ctx, db, &Season{}, w.SeasonId.RecordId())
 	if err != nil {
 		return err
 	}
@@ -149,7 +150,7 @@ func (w *WeeklyMatchup) DynamicallyValid(ctx context.Context, db common.Database
 	return w.ValidateThatEachTeamHasOneMatchup(ctx, db, season)
 }
 
-func (w *WeeklyMatchup) ValidateThatEachTeamHasOneMatchup(ctx context.Context, db common.DatabaseProvider, season *Season) error {
+func (w *WeeklyMatchup) ValidateThatEachTeamHasOneMatchup(ctx context.Context, db database.DatabaseProvider, season *Season) error {
 	m := make(map[TeamId]bool)
 	for _, matchup := range w.Matchups {
 		m[matchup.HomeTeam] = true
@@ -174,6 +175,6 @@ func (w *WeeklyMatchup) ValidateThatEachTeamHasOneMatchup(ctx context.Context, d
 	return nil
 }
 
-func (w *WeeklyMatchup) BlankRecord() common.CrudRecord {
+func (w *WeeklyMatchup) BlankRecord() database.CrudRecord {
 	return new(WeeklyMatchup)
 }

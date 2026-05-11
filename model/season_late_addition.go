@@ -2,35 +2,36 @@ package model
 
 import (
 	"context"
-	"intraclub/common"
 	"time"
+
+	"intraclub/database"
 )
 
 // SeasonLateAddition is a join table record that links a Season to Users added after the draft.
 // This allows tracking users who joined a season after the draft was completed.
 type SeasonLateAddition struct {
-	ID        common.RecordId `json:"id"`
-	SeasonId  SeasonId        `json:"season_id"`
-	UserId    UserId          `json:"user_id"`
-	CreatedAt time.Time       `json:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at"`
+	ID        database.RecordId `json:"id"`
+	SeasonId  SeasonId          `json:"season_id"`
+	UserId    UserId            `json:"user_id"`
+	CreatedAt time.Time         `json:"created_at"`
+	UpdatedAt time.Time         `json:"updated_at"`
 }
 
 // GetOwner returns InvalidRecordId as SeasonLateAddition has no specific owner.
-func (s *SeasonLateAddition) GetOwner() common.RecordId {
-	return common.InvalidRecordId
+func (s *SeasonLateAddition) GetOwner() database.RecordId {
+	return database.InvalidRecordId
 }
 
 // SetOwner is a no-op as SeasonLateAddition has no specific owner.
-func (s *SeasonLateAddition) SetOwner(recordId common.RecordId) {}
+func (s *SeasonLateAddition) SetOwner(recordId database.RecordId) {}
 
 // AccessibleTo returns everyone as SeasonLateAddition records are public.
-func (s *SeasonLateAddition) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (s *SeasonLateAddition) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
-func (s *SeasonLateAddition) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{common.SysAdminRecordId}
+func (s *SeasonLateAddition) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{database.SysAdminRecordId}
 }
 
 // Type returns the record type identifier for SeasonLateAddition.
@@ -39,12 +40,12 @@ func (s *SeasonLateAddition) Type() string {
 }
 
 // GetId returns the unique identifier for this SeasonLateAddition record.
-func (s *SeasonLateAddition) GetId() common.RecordId {
+func (s *SeasonLateAddition) GetId() database.RecordId {
 	return s.ID
 }
 
 // SetId sets the unique identifier for this SeasonLateAddition record.
-func (s *SeasonLateAddition) SetId(id common.RecordId) {
+func (s *SeasonLateAddition) SetId(id database.RecordId) {
 	s.ID = id
 }
 
@@ -54,11 +55,11 @@ func (s *SeasonLateAddition) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that both the referenced Season and User records exist.
-func (s *SeasonLateAddition) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	if err := common.ExistsById(ctx, db, &Season{}, s.SeasonId.RecordId()); err != nil {
+func (s *SeasonLateAddition) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	if err := database.ExistsById(ctx, db, &Season{}, s.SeasonId.RecordId()); err != nil {
 		return err
 	}
-	if err := common.ExistsById(ctx, db, &User{}, s.UserId.RecordId()); err != nil {
+	if err := database.ExistsById(ctx, db, &User{}, s.UserId.RecordId()); err != nil {
 		return err
 	}
 	return nil
@@ -79,6 +80,6 @@ func (s *SeasonLateAddition) SetUpdatedAt(updatedAt time.Time) {
 	s.UpdatedAt = updatedAt
 }
 
-func (s *SeasonLateAddition) BlankRecord() common.CrudRecord {
+func (s *SeasonLateAddition) BlankRecord() database.CrudRecord {
 	return new(SeasonLateAddition)
 }

@@ -1,4 +1,4 @@
-package common
+package api
 
 import (
 	"context"
@@ -9,37 +9,39 @@ import (
 	"strings"
 	"testing"
 
+	"intraclub/database"
+
 	"github.com/gin-gonic/gin"
 )
 
 type testRouteRecord struct {
-	ID    RecordId
+	ID    database.RecordId
 	Value string
 }
 
-func (t *testRouteRecord) GetOwner() RecordId {
-	return InvalidRecordId
+func (t *testRouteRecord) GetOwner() database.RecordId {
+	return database.InvalidRecordId
 }
 
-func (t *testRouteRecord) SetOwner(recordId RecordId) {}
+func (t *testRouteRecord) SetOwner(recordId database.RecordId) {}
 
 func (t *testRouteRecord) Type() string {
 	return "test_route"
 }
 
-func (t *testRouteRecord) GetId() RecordId {
+func (t *testRouteRecord) GetId() database.RecordId {
 	return t.ID
 }
 
-func (t *testRouteRecord) SetId(id RecordId) {
+func (t *testRouteRecord) SetId(id database.RecordId) {
 	t.ID = id
 }
 
-func (t *testRouteRecord) EditableBy(_ context.Context, db DatabaseProvider) []RecordId {
+func (t *testRouteRecord) EditableBy(_ context.Context, db database.DatabaseProvider) []database.RecordId {
 	return nil
 }
 
-func (t *testRouteRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []RecordId {
+func (t *testRouteRecord) AccessibleTo(_ context.Context, db database.DatabaseProvider) []database.RecordId {
 	return nil
 }
 
@@ -47,11 +49,11 @@ func (t *testRouteRecord) StaticallyValid() error {
 	return nil
 }
 
-func (t *testRouteRecord) DynamicallyValid(_ context.Context, db DatabaseProvider) error {
+func (t *testRouteRecord) DynamicallyValid(_ context.Context, db database.DatabaseProvider) error {
 	return nil
 }
 
-func (t *testRouteRecord) BlankRecord() CrudRecord {
+func (t *testRouteRecord) BlankRecord() database.CrudRecord {
 	return new(testRouteRecord)
 }
 
@@ -98,7 +100,7 @@ func (r routeWithId) Handler(request ApiRequest[*testRouteRecord]) (any, int, er
 }
 
 func TestRouteFamilyHandle(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	family := RouteFamily[*testRouteRecord]{
 		DatabaseProvider: db,
 		UseAuth:          false,
@@ -124,7 +126,7 @@ func TestRouteFamilyHandle(t *testing.T) {
 }
 
 func TestRouteFamilyWithAuth(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	family := RouteFamily[*testRouteRecord]{
 		DatabaseProvider: db,
 		UseAuth:          true,
@@ -142,7 +144,7 @@ func TestRouteFamilyWithAuth(t *testing.T) {
 }
 
 func TestRouteFamilyMultipleRoutes(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	family := RouteFamily[*testRouteRecord]{
 		DatabaseProvider: db,
 	}
@@ -158,7 +160,7 @@ func TestRouteFamilyMultipleRoutes(t *testing.T) {
 }
 
 func TestRouteWrapperHandleNoAuth(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	family := RouteFamily[*testRouteRecord]{
 		DatabaseProvider: db,
 		UseAuth:          false,
@@ -180,7 +182,7 @@ func TestRouteWrapperHandleNoAuth(t *testing.T) {
 }
 
 func TestRouteWrapperHandleWithPathId(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	family := RouteFamily[*testRouteRecord]{
 		DatabaseProvider: db,
 		UseAuth:          false,
@@ -191,7 +193,7 @@ func TestRouteWrapperHandleWithPathId(t *testing.T) {
 	group := router.Group("/api")
 	family.Handle(group, routeWithId{})
 
-	testId := NewRecordId()
+	testId := database.NewRecordId()
 
 	// Make a request with path ID
 	w := httptest.NewRecorder()
@@ -210,7 +212,7 @@ func TestRouteWrapperHandleWithPathId(t *testing.T) {
 }
 
 func TestRouteWrapperHandleWithBody(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	family := RouteFamily[*testRouteRecord]{
 		DatabaseProvider: db,
 		UseAuth:          false,
@@ -235,7 +237,7 @@ func TestRouteWrapperHandleWithBody(t *testing.T) {
 }
 
 func TestRouteFamilyWithMiddleware(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	middlewareCalled := false
 
 	family := RouteFamily[*testRouteRecord]{
@@ -356,7 +358,7 @@ func TestApiRequestParseQueryEmpty(t *testing.T) {
 }
 
 func TestRouteFamilyDatabaseProviderSetOnWrappers(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	family := RouteFamily[*testRouteRecord]{
 		DatabaseProvider: db,
 	}

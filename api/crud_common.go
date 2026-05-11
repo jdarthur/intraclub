@@ -1,10 +1,13 @@
-package common
+package api
 
 import (
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"intraclub/database"
+
+	"github.com/gin-gonic/gin"
 )
 
 var ResourceKey = "resource"
@@ -32,7 +35,7 @@ var CrudWrapperFunctionAll = []CrudWrapperFunctionType{
 // and is used to create ApiRoute objects which can be passed into a RouteFamily.
 // This is used in CrudCommon.HandleRouteTypes to auto-generate API routes from
 // boilerplate CRUD methods defined on CrudCommon
-type genericApiRoute[T CrudRecord] struct {
+type genericApiRoute[T database.CrudRecord] struct {
 	httpMethod     HttpMethod
 	path           string
 	requestBody    func() T
@@ -58,7 +61,7 @@ func (g genericApiRoute[T]) Handler(request ApiRequest[T]) (any, int, error) {
 // This allows you to implement a CrudRecord with its own business
 // logic and automatically generate the relevant CRUD APIs in a
 // common format at the model's BaseRoute and assign them to the router
-type CrudCommon[T CrudRecord] struct {
+type CrudCommon[T database.CrudRecord] struct {
 	CreateRecord func() T
 	UseAuth      bool
 
@@ -69,7 +72,7 @@ type CrudCommon[T CrudRecord] struct {
 
 	// DatabaseProvider is the DatabaseProvider that we will use for
 	// all CRUD operations.
-	DatabaseProvider DatabaseProvider
+	DatabaseProvider database.DatabaseProvider
 
 	// BaseRoute is the base route (e.g. `/user`) used for the various
 	// endpoints on the CrudCommon. It is derived from the Type() function
@@ -78,7 +81,7 @@ type CrudCommon[T CrudRecord] struct {
 	baseRoute string
 }
 
-func NewCrudCommon[T CrudRecord](createFunc func() T, userAuth bool, db DatabaseProvider) *CrudCommon[T] {
+func NewCrudCommon[T database.CrudRecord](createFunc func() T, userAuth bool, db database.DatabaseProvider) *CrudCommon[T] {
 	baseRoute := createFunc().Type()
 	return &CrudCommon[T]{
 		CreateRecord: createFunc,
@@ -110,7 +113,7 @@ func (c *CrudCommon[T]) createCrudRecord(route ApiRoute[T], request ApiRequest[T
 	// to enforce accessible-only-to-team constraints or setting a user ID to enforce only
 	// editable by creator constraints
 	// a
-	v, err := CreateOne(request.Context, c.DatabaseProvider, body)
+	v, err := database.CreateOne(request.Context, c.DatabaseProvider, body)
 	if err != nil {
 		return nil, http.StatusBadRequest, err
 	}
@@ -125,7 +128,7 @@ func (c *CrudCommon[T]) getCrudRecordById(route ApiRoute[T], req ApiRequest[T]) 
 	recordType, _ := route.RequestBody()
 
 	// helper class to validate that the ApiRequest passed in here is able to access this record
-	wac := WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(req)}
+	wac := database.WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(req)}
 	v, exists, err := wac.GetOneById(req.Context, recordType, req.PathId)
 	if err != nil {
 		return t, http.StatusBadRequest, err
@@ -139,7 +142,7 @@ func (c *CrudCommon[T]) getCrudRecordById(route ApiRoute[T], req ApiRequest[T]) 
 // getAllCrudRecordsById gets all CrudRecord of the type T that this CrudCommon is configured to use,
 // which are accessible to the user who made the ApiRequest.
 func (c *CrudCommon[T]) getAllCrudRecords(route ApiRoute[T], req ApiRequest[T]) (t any, status int, err error) {
-	wac := WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(req)}
+	wac := database.WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(req)}
 	v, err := wac.GetAll(req.Context)
 	if err != nil {
 		return t, http.StatusInternalServerError, err
@@ -153,7 +156,7 @@ func (c *CrudCommon[T]) deleteCrudRecordById(route ApiRoute[T], req ApiRequest[T
 		return t, http.StatusBadRequest, errors.New("token must be passed into delete route")
 	}
 
-	wac := WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(req)}
+	wac := database.WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(req)}
 	recordType, _ := route.RequestBody()
 	v, exists, err := wac.DeleteOneById(req.Context, recordType, req.PathId)
 	if err != nil {
@@ -175,7 +178,7 @@ func (c *CrudCommon[T]) updateCrudRecord(route ApiRoute[T], request ApiRequest[T
 	// wax.UpdateOneById gets the correct record from the DatabaseProvider
 	request.Body.SetId(request.PathId)
 
-	wac := WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(request)}
+	wac := database.WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(request)}
 	err = wac.UpdateOneById(request.Context, request.Body)
 	if err != nil {
 		return nil, http.StatusBadRequest, err
@@ -228,8 +231,8 @@ func (c *CrudCommon[T]) HandleRouteTypes(e *gin.RouterGroup, crudRouteTypes ...C
 	f.Handle(e, routes...)
 }
 
-func getTokenUserIdIfExists[T CrudRecord](req ApiRequest[T]) RecordId {
-	userId := InvalidRecordId
+func getTokenUserIdIfExists[T database.CrudRecord](req ApiRequest[T]) database.RecordId {
+	userId := database.InvalidRecordId
 	if req.Token != nil {
 		userId = req.Token.UserId
 	}

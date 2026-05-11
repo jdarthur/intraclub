@@ -1,12 +1,13 @@
-package common
+package api
 
 import (
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"net/http"
 	"runtime"
+
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // ApiError is an error wrapper that provides a common way to structure errors
@@ -54,7 +55,7 @@ func (e ErrorCode) String(references []any) string {
 		fmt.Sprintf("Invalid object ID: '%s'", references...),                    // InvalidPrimitiveObjectId
 		fmt.Sprintf("%s with ID '%s' does not exist", references...),             // CrudRecordWithObjectIdDoesNotExist
 		fmt.Sprintf("Field %s is not updatable", references...),                  // FieldNotUpdatable
-		fmt.Sprintf("%s with %s %v already exists", references...),               //FieldMustBeGloballyUnique
+		fmt.Sprintf("%s with %s %v already exists", references...),               // FieldMustBeGloballyUnique
 		fmt.Sprintf("User %+v is not an admin user", references...),              // UserIsNotAdmin
 		fmt.Sprintf("Field '%s' is required", references...),                     // FieldIsRequired
 		"Facility must have at least 1 court",                                    // FacilityMustHaveAtLeastOneCourt
@@ -77,8 +78,8 @@ func (e ErrorCode) HttpStatus() int {
 		http.StatusUnauthorized,        // UserIsNotAdmin
 		http.StatusBadRequest,          // FieldIsRequired
 		http.StatusBadRequest,          // FacilityMustHaveAtLeastOneCourt
-		http.StatusBadRequest,          //InvalidNestedObjectId
-		http.StatusBadRequest,          //EmptyObjectId
+		http.StatusBadRequest,          // InvalidNestedObjectId
+		http.StatusBadRequest,          // EmptyObjectId
 	}[e]
 }
 

@@ -2,17 +2,18 @@ package route
 
 import (
 	"errors"
-	"intraclub/common"
-	"intraclub/model"
 	"net/http"
+
+	"intraclub/api"
+	"intraclub/model"
 )
 
 var GetMySeasonsRoute = "/seasons_composite"
 
 type GetMySeasons struct{}
 
-func (c GetMySeasons) Path() (common.HttpMethod, string) {
-	return common.HttpMethodGet, GetMySeasonsRoute
+func (c GetMySeasons) Path() (api.HttpMethod, string) {
+	return api.HttpMethodGet, GetMySeasonsRoute
 }
 
 func (c GetMySeasons) RequestBody() (*model.SeasonComposite, bool) {
@@ -24,7 +25,7 @@ type seasonCompositeQueryParams struct {
 	AsCommissioner []string `json:"as_commissioner"`
 }
 
-func (c GetMySeasons) Handler(req common.ApiRequest[*model.SeasonComposite]) (any, int, error) {
+func (c GetMySeasons) Handler(req api.ApiRequest[*model.SeasonComposite]) (any, int, error) {
 	if req.Token == nil {
 		return nil, http.StatusUnauthorized, errors.New("token must be passed into create user route")
 	}

@@ -5,29 +5,29 @@ import (
 	"fmt"
 	"testing"
 
-	"intraclub/common"
+	"intraclub/database"
 )
 
-func newStoredCommissionerProposalForSeason(t *testing.T, db common.DatabaseProvider, season *Season, mustBeUnanimous bool) *CommissionerProposal {
+func newStoredCommissionerProposalForSeason(t *testing.T, db database.DatabaseProvider, season *Season, mustBeUnanimous bool) *CommissionerProposal {
 	proposal := NewCommissionerProposal()
 	proposal.Description = "test description"
 	proposal.SeasonId = season.ID
 	proposal.MustBeUnanimous = mustBeUnanimous
 
-	v, err := common.CreateOne(context.Background(), db, proposal)
+	v, err := database.CreateOne(context.Background(), db, proposal)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return v
 }
 
-func newStoredCommissionerProposal(t *testing.T, db common.DatabaseProvider, mustBeUnanimous bool) (*Season, *CommissionerProposal) {
+func newStoredCommissionerProposal(t *testing.T, db database.DatabaseProvider, mustBeUnanimous bool) (*Season, *CommissionerProposal) {
 	season, _ := newDefaultSeasonWithTeams(t, db, 4)
 	proposal := newStoredCommissionerProposalForSeason(t, db, season, mustBeUnanimous)
 	return season, proposal
 }
 
-func assertProposalStatus(t *testing.T, proposal *CommissionerProposal, db common.DatabaseProvider, expectAccepted, expectRejected bool) {
+func assertProposalStatus(t *testing.T, proposal *CommissionerProposal, db database.DatabaseProvider, expectAccepted, expectRejected bool) {
 	accepted, rejected, err := proposal.Status(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
@@ -44,7 +44,7 @@ func assertProposalStatus(t *testing.T, proposal *CommissionerProposal, db commo
 }
 
 func TestCommissionerProposalUnanimousConsent(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, prop := newStoredCommissionerProposal(t, db, true)
 
 	commissioners, err := season.GetCommissioners(context.Background(), db)
@@ -85,7 +85,7 @@ func TestCommissionerProposalUnanimousConsent(t *testing.T) {
 }
 
 func TestCommissionerProposalUnanimousConsentOneNoRejects(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, prop := newStoredCommissionerProposal(t, db, true)
 
 	commissioners, _ := season.GetCommissioners(context.Background(), db)
@@ -97,7 +97,7 @@ func TestCommissionerProposalUnanimousConsentOneNoRejects(t *testing.T) {
 }
 
 func TestCommissionerProposalFiftyPercentPlusOneAccepted(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, prop := newStoredCommissionerProposal(t, db, false)
 
 	teams, err := season.GetTeams(context.Background(), db)
@@ -126,7 +126,7 @@ func TestCommissionerProposalFiftyPercentPlusOneAccepted(t *testing.T) {
 }
 
 func TestCommissionerProposalFiftyPercentPlusOneRejected(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, prop := newStoredCommissionerProposal(t, db, false)
 
 	teams, err := season.GetTeams(context.Background(), db)
@@ -155,7 +155,7 @@ func TestCommissionerProposalFiftyPercentPlusOneRejected(t *testing.T) {
 }
 
 func TestCommissionerProposalTieIsRejected(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, _ := newDefaultSeasonWithTeams(t, db, 5)
 	prop := newStoredCommissionerProposalForSeason(t, db, season, false)
 
@@ -185,7 +185,7 @@ func TestCommissionerProposalTieIsRejected(t *testing.T) {
 }
 
 func TestCommissionerProposalInvalidVoterId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	_, prop := newStoredCommissionerProposal(t, db, true)
 	otherUser := newStoredUser(t, db)
 	err := prop.Vote(context.Background(), db, otherUser.ID, false)
@@ -206,11 +206,11 @@ func copyProposal(p *CommissionerProposal) *CommissionerProposal {
 }
 
 func TestCommissionerProposalUnanimousConstraintCannotBeUpdated(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	_, prop := newStoredCommissionerProposal(t, db, true)
 	copied := copyProposal(prop)
 	copied.MustBeUnanimous = false
-	err := common.UpdateOne(context.Background(), db, copied)
+	err := database.UpdateOne(context.Background(), db, copied)
 	if err == nil {
 		t.Fatal("expected error when updating unanimous constraint")
 	}

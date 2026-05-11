@@ -1,4 +1,4 @@
-package common
+package database
 
 import (
 	"context"
@@ -210,7 +210,7 @@ func updateRecordAndReQuery(t *testing.T, db DatabaseProvider, r *PrivateTestRec
 }
 
 func TestUpdateOneByUnauthorized(t *testing.T) {
-	//create a record in the database
+	// create a record in the database
 	db := NewUnitTestDBProvider()
 	ownerId := NewRecordId()
 	r := newStoredPrivateTestRecord(t, db, ownerId)
@@ -226,7 +226,7 @@ func TestUpdateOneByUnauthorized(t *testing.T) {
 }
 
 func TestAccessibleByEveryone(t *testing.T) {
-	//create a record in the database
+	// create a record in the database
 	db := NewUnitTestDBProvider()
 	ownerId := NewRecordId()
 	r := newStoredPrivateTestRecord(t, db, ownerId)

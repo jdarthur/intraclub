@@ -3,9 +3,10 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
 	"math/rand/v2"
 	"testing"
+
+	"intraclub/database"
 )
 
 func randomEmail() EmailAddress {
@@ -18,22 +19,22 @@ func randomPhoneNumber() PhoneNumber {
 	return PhoneNumber(fmt.Sprintf("%d", random))
 }
 
-func newStoredUser(t *testing.T, db common.DatabaseProvider) *User {
+func newStoredUser(t *testing.T, db database.DatabaseProvider) *User {
 	user := NewUser()
 	user.Email = randomEmail()
 	user.FirstName = fmt.Sprintf("Test %d", rand.Uint64())
 	user.LastName = "User"
 	user.PhoneNumber = randomPhoneNumber()
 
-	v, err := common.CreateOne(context.Background(), db, user)
+	v, err := database.CreateOne(context.Background(), db, user)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return v
 }
 
-func newSysAdmin(t *testing.T, db common.DatabaseProvider) *User {
-	common.SysAdminCheck = IsUserSystemAdministrator
+func newSysAdmin(t *testing.T, db database.DatabaseProvider) *User {
+	database.SysAdminCheck = IsUserSystemAdministrator
 	sysAdmin := newStoredUser(t, db)
 	err := sysAdmin.AssignRole(context.Background(), db, SystemAdministrator)
 	if err != nil {
@@ -53,11 +54,11 @@ func copyUser(u *User) *User {
 }
 
 func TestDuplicateUserEmail(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	user := newStoredUser(t, db)
 	user2 := copyUser(user)
 
-	_, err := common.CreateOne(context.Background(), db, user2)
+	_, err := database.CreateOne(context.Background(), db, user2)
 	if err == nil {
 		t.Fatal("expected duplicate user error")
 	}
@@ -65,12 +66,12 @@ func TestDuplicateUserEmail(t *testing.T) {
 }
 
 func TestDuplicateUserFirstAndLastName(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	user := newStoredUser(t, db)
 	user2 := copyUser(user)
 	user2.Email = "new@email.com"
 
-	_, err := common.CreateOne(context.Background(), db, user2)
+	_, err := database.CreateOne(context.Background(), db, user2)
 	if err == nil {
 		t.Fatal("expected duplicate user error")
 	}
@@ -78,13 +79,13 @@ func TestDuplicateUserFirstAndLastName(t *testing.T) {
 }
 
 func TestDuplicateUserPhoneNumber(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	user := newStoredUser(t, db)
 	user2 := copyUser(user)
 	user2.Email = "new@email.com"
 	user2.FirstName = "Test12345"
 
-	_, err := common.CreateOne(context.Background(), db, user2)
+	_, err := database.CreateOne(context.Background(), db, user2)
 	if err == nil {
 		t.Fatal("expected duplicate user error")
 	}

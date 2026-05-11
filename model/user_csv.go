@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
-	"intraclub/common"
 	"io"
 	"os"
 	"sort"
 	"strings"
+
+	"intraclub/database"
 )
 
 const (
@@ -121,8 +122,8 @@ func ParseCsvLine(line, headers []string) (*User, error) {
 	return user, nil
 }
 
-func ParseUserList(ctx context.Context, db common.DatabaseProvider, input []*User) (newUsers, alreadyExistingUsers []*User, err error) {
-	existingUsersInDatabase, err := common.GetAll[*User](ctx, db)
+func ParseUserList(ctx context.Context, db database.DatabaseProvider, input []*User) (newUsers, alreadyExistingUsers []*User, err error) {
+	existingUsersInDatabase, err := database.GetAll[*User](ctx, db)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -150,7 +151,7 @@ func ParseUserList(ctx context.Context, db common.DatabaseProvider, input []*Use
 	return newUsers, alreadyExistingUsers, nil
 }
 
-func ParseAndCreateCsvUsers(ctx context.Context, db common.DatabaseProvider, csvUserList []*User) (createdUsers, existingUsers []*User, err error) {
+func ParseAndCreateCsvUsers(ctx context.Context, db database.DatabaseProvider, csvUserList []*User) (createdUsers, existingUsers []*User, err error) {
 
 	newUsers, alreadyExistingUsers, err := ParseUserList(ctx, db, csvUserList)
 	if err != nil {
@@ -159,7 +160,7 @@ func ParseAndCreateCsvUsers(ctx context.Context, db common.DatabaseProvider, csv
 
 	created := make([]*User, 0)
 	for _, user := range newUsers {
-		v, err := common.CreateOne(ctx, db, user)
+		v, err := database.CreateOne(ctx, db, user)
 		if err != nil {
 			return nil, nil, err
 		}

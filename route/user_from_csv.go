@@ -1,10 +1,12 @@
 package route
 
 import (
-	"github.com/gin-gonic/gin"
-	"intraclub/common"
-	"intraclub/model"
 	"net/http"
+
+	"intraclub/database"
+	"intraclub/model"
+
+	"github.com/gin-gonic/gin"
 )
 
 var UserImportBaseRoute = "/user_import"
@@ -16,7 +18,7 @@ type CsvImportResult struct {
 }
 
 type CsvImportHandler struct {
-	DatabaseProvider common.DatabaseProvider
+	DatabaseProvider database.DatabaseProvider
 }
 
 func (h *CsvImportHandler) HandleCsvImport(c *gin.Context) {

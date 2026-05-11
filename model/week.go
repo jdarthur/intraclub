@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"intraclub/common"
 	"sort"
 	"time"
+
+	"intraclub/database"
 )
 
-type WeekId common.RecordId
+type WeekId database.RecordId
 
-func (id WeekId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id WeekId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id WeekId) String() string {
@@ -26,12 +27,12 @@ type Week struct {
 	Note    string
 }
 
-func (w *Week) GetOwner() common.RecordId {
-	return common.InvalidRecordId
+func (w *Week) GetOwner() database.RecordId {
+	return database.InvalidRecordId
 }
 
-func (w *Week) PreDelete(ctx context.Context, db common.DatabaseProvider) error {
-	draft, exists, err := common.GetOneById(ctx, db, &Draft{}, w.DraftId.RecordId())
+func (w *Week) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
+	draft, exists, err := database.GetOneById(ctx, db, &Draft{}, w.DraftId.RecordId())
 	if err != nil {
 		return err
 	}
@@ -50,9 +51,9 @@ func (w *Week) PreDelete(ctx context.Context, db common.DatabaseProvider) error 
 	return nil
 }
 
-func (w *Week) DeleteAssignedAvailabilities(ctx context.Context, db common.DatabaseProvider) error {
+func (w *Week) DeleteAssignedAvailabilities(ctx context.Context, db database.DatabaseProvider) error {
 	// get all availability records assigned to this Week
-	availabilities, err := common.GetAllWhere[*Availability](ctx, db, func(_ context.Context, c *Availability) bool {
+	availabilities, err := database.GetAllWhere[*Availability](ctx, db, func(_ context.Context, c *Availability) bool {
 		return c.WeekId == w.ID
 	})
 	if err != nil {
@@ -61,7 +62,7 @@ func (w *Week) DeleteAssignedAvailabilities(ctx context.Context, db common.Datab
 
 	// delete each assigned availability
 	for _, a := range availabilities {
-		_, _, err = common.DeleteOneById(ctx, db, &Availability{}, a.ID)
+		_, _, err = database.DeleteOneById(ctx, db, &Availability{}, a.ID)
 		if err != nil {
 			return err
 		}
@@ -69,7 +70,7 @@ func (w *Week) DeleteAssignedAvailabilities(ctx context.Context, db common.Datab
 	return nil
 }
 
-func (w *Week) PreUpdate(_ context.Context, db common.DatabaseProvider, existingValues common.CrudRecord) error {
+func (w *Week) PreUpdate(_ context.Context, db database.DatabaseProvider, existingValues database.CrudRecord) error {
 	weekInDatabase := existingValues.(*Week)
 	if w.DraftId != weekInDatabase.DraftId {
 		return fmt.Errorf("Draft ID %s cannot be changed\n", w.DraftId)
@@ -77,7 +78,7 @@ func (w *Week) PreUpdate(_ context.Context, db common.DatabaseProvider, existing
 	return nil
 }
 
-func (w *Week) SetOwner(recordId common.RecordId) {
+func (w *Week) SetOwner(recordId database.RecordId) {
 	// don't need to do anything as Week records have
 	// ownership automatically inferred / enforced by the
 	// values of the SeasonId field
@@ -87,9 +88,9 @@ func NewWeek() *Week {
 	return &Week{}
 }
 
-func (w *Week) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+func (w *Week) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
 
-	draft, err := common.GetExistingRecordById(ctx, db, &Draft{}, w.DraftId.RecordId())
+	draft, err := database.GetExistingRecordById(ctx, db, &Draft{}, w.DraftId.RecordId())
 	if err != nil {
 		fmt.Printf("Error getting draft in week.EditableBy(): %s", err)
 		return nil
@@ -106,11 +107,11 @@ func (w *Week) EditableBy(ctx context.Context, db common.DatabaseProvider) []com
 	if season != nil {
 		EditableBySeason(ctx, db, season.ID)
 	}
-	return []common.RecordId{draft.Owner.RecordId()}
+	return []database.RecordId{draft.Owner.RecordId()}
 }
 
-func (w *Week) AccessibleTo(_ context.Context, _ common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{common.EveryoneRecordId}
+func (w *Week) AccessibleTo(_ context.Context, _ database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{database.EveryoneRecordId}
 }
 
 func (w *Week) StaticallyValid() error {
@@ -120,10 +121,10 @@ func (w *Week) StaticallyValid() error {
 	return nil
 }
 
-func (w *Week) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+func (w *Week) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
 
 	// draft ID must be set for the week
-	err := common.ExistsById(ctx, db, &Draft{}, w.DraftId.RecordId())
+	err := database.ExistsById(ctx, db, &Draft{}, w.DraftId.RecordId())
 	if err != nil {
 		return err
 	}
@@ -135,11 +136,11 @@ func (w *Week) Type() string {
 	return "week"
 }
 
-func (w *Week) GetId() common.RecordId {
+func (w *Week) GetId() database.RecordId {
 	return w.ID.RecordId()
 }
 
-func (w *Week) SetId(id common.RecordId) {
+func (w *Week) SetId(id database.RecordId) {
 	w.ID = WeekId(id)
 }
 
@@ -158,9 +159,9 @@ func (w *Week) GetNextWeek(allWeeks []*Week) (*Week, error) {
 
 // GetWeeksForDraft gets all the Week records associated with a Draft,
 // sorted in ascending order by Week.Date
-func GetWeeksForDraft(ctx context.Context, db common.DatabaseProvider, id DraftId) ([]*Week, error) {
+func GetWeeksForDraft(ctx context.Context, db database.DatabaseProvider, id DraftId) ([]*Week, error) {
 	// get all weeks with matching draft ID
-	allWeeks, err := common.GetAllWhere[*Week](ctx, db, func(_ context.Context, c *Week) bool {
+	allWeeks, err := database.GetAllWhere[*Week](ctx, db, func(_ context.Context, c *Week) bool {
 		return c.DraftId == id
 	})
 	if err != nil {
@@ -174,7 +175,7 @@ func GetWeeksForDraft(ctx context.Context, db common.DatabaseProvider, id DraftI
 	return allWeeks, nil
 }
 
-func (w *Week) PushBackDefault(ctx context.Context, db common.DatabaseProvider) error {
+func (w *Week) PushBackDefault(ctx context.Context, db database.DatabaseProvider) error {
 	allWeeks, err := GetWeeksForDraft(ctx, db, w.DraftId)
 	if err != nil {
 		return err
@@ -205,7 +206,7 @@ func (w *Week) PushBackDefault(ctx context.Context, db common.DatabaseProvider) 
 
 		// update this week's date with the new week
 		weekToPush.Date = newDate
-		err = common.UpdateOne(ctx, db, weekToPush)
+		err = database.UpdateOne(ctx, db, weekToPush)
 		if err != nil {
 			return err
 		}
@@ -229,14 +230,14 @@ func (w *Week) PushBackDefault(ctx context.Context, db common.DatabaseProvider) 
 	return nil
 }
 
-func (w *Week) MoveAvailabilities(ctx context.Context, db common.DatabaseProvider, pushedTo *Week) error {
+func (w *Week) MoveAvailabilities(ctx context.Context, db database.DatabaseProvider, pushedTo *Week) error {
 	// delete all the availabilities for this week
 	err := w.DeleteAssignedAvailabilities(ctx, db)
 	if err != nil {
 		return err
 	}
 
-	nextWeekAvailabilities, err := common.GetAllWhere[*Availability](ctx, db, func(_ context.Context, c *Availability) bool {
+	nextWeekAvailabilities, err := database.GetAllWhere[*Availability](ctx, db, func(_ context.Context, c *Availability) bool {
 		return c.WeekId == pushedTo.ID
 	})
 	if err != nil {
@@ -245,7 +246,7 @@ func (w *Week) MoveAvailabilities(ctx context.Context, db common.DatabaseProvide
 
 	for _, a := range nextWeekAvailabilities {
 		a.WeekId = w.ID
-		err = common.UpdateOne(ctx, db, a)
+		err = database.UpdateOne(ctx, db, a)
 		if err != nil {
 			return err
 		}
@@ -265,6 +266,6 @@ func (w *Week) PushBackTo(newDate time.Time) {
 
 }
 
-func (w *Week) BlankRecord() common.CrudRecord {
+func (w *Week) BlankRecord() database.CrudRecord {
 	return new(Week)
 }

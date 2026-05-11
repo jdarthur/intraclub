@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"intraclub/common"
 	"sort"
 	"strings"
+
+	"intraclub/database"
 )
 
-type BlurbId common.RecordId
+type BlurbId database.RecordId
 
-func (id BlurbId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id BlurbId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id BlurbId) String() string {
@@ -29,21 +30,21 @@ type Blurb struct {
 	Reactions ReactionList
 }
 
-func (b *Blurb) GetOwner() common.RecordId {
+func (b *Blurb) GetOwner() database.RecordId {
 	return b.Owner.RecordId()
 }
 
-func (b *Blurb) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{
+func (b *Blurb) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{
 		b.Owner.RecordId(),
 	}
 }
 
-func (b *Blurb) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (b *Blurb) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
-func (b *Blurb) SetOwner(recordId common.RecordId) {
+func (b *Blurb) SetOwner(recordId database.RecordId) {
 	b.Owner = UserId(recordId)
 }
 
@@ -64,20 +65,20 @@ func (b *Blurb) StaticallyValid() error {
 	return nil
 }
 
-func (b *Blurb) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+func (b *Blurb) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
 
-	err := common.ExistsById(ctx, db, &User{}, b.Owner.RecordId())
+	err := database.ExistsById(ctx, db, &User{}, b.Owner.RecordId())
 	if err != nil {
 		return err
 	}
 
-	err = common.ExistsById(ctx, db, &Season{}, b.Season.RecordId())
+	err = database.ExistsById(ctx, db, &Season{}, b.Season.RecordId())
 	if err != nil {
 		return err
 	}
 
 	for _, id := range b.Photos {
-		v, exists, err := common.GetOneById(ctx, db, &Photo{}, id.RecordId())
+		v, exists, err := database.GetOneById(ctx, db, &Photo{}, id.RecordId())
 		if err != nil {
 			return err
 		}
@@ -95,15 +96,15 @@ func (b *Blurb) Type() string {
 	return "blurb"
 }
 
-func (b *Blurb) GetId() common.RecordId {
+func (b *Blurb) GetId() database.RecordId {
 	return b.ID.RecordId()
 }
 
-func (b *Blurb) SetId(id common.RecordId) {
+func (b *Blurb) SetId(id database.RecordId) {
 	b.ID = BlurbId(id)
 }
 
-func (b *Blurb) React(ctx context.Context, db common.DatabaseProvider, u UserId, t reactionType) error {
+func (b *Blurb) React(ctx context.Context, db database.DatabaseProvider, u UserId, t reactionType) error {
 	r := &Reaction{
 		UserId: u,
 		Type:   t,
@@ -121,10 +122,10 @@ func (b *Blurb) React(ctx context.Context, db common.DatabaseProvider, u UserId,
 
 	b.Reactions = append(b.Reactions, r)
 
-	return common.UpdateOne(ctx, db, b)
+	return database.UpdateOne(ctx, db, b)
 }
 
-func (b *Blurb) Unreact(ctx context.Context, db common.DatabaseProvider, u UserId, t reactionType) error {
+func (b *Blurb) Unreact(ctx context.Context, db database.DatabaseProvider, u UserId, t reactionType) error {
 	r := &Reaction{
 		UserId: u,
 		Type:   t,
@@ -144,21 +145,21 @@ func (b *Blurb) Unreact(ctx context.Context, db common.DatabaseProvider, u UserI
 	}
 
 	b.Reactions = newList
-	return common.UpdateOne(ctx, db, b)
+	return database.UpdateOne(ctx, db, b)
 }
 
-func (b *Blurb) CanUserCommentOrReact(ctx context.Context, db common.DatabaseProvider, u UserId) error {
+func (b *Blurb) CanUserCommentOrReact(ctx context.Context, db database.DatabaseProvider, u UserId) error {
 	// no error when we receive an empty user ID
-	if u.RecordId() == common.InvalidRecordId {
+	if u.RecordId() == database.InvalidRecordId {
 		return nil
 	}
 
-	err := common.ExistsById(ctx, db, &User{}, u.RecordId())
+	err := database.ExistsById(ctx, db, &User{}, u.RecordId())
 	if err != nil {
 		return err
 	}
 
-	season, exists, err := common.GetOneById(ctx, db, &Season{}, b.Season.RecordId())
+	season, exists, err := database.GetOneById(ctx, db, &Season{}, b.Season.RecordId())
 	if err != nil {
 		return err
 	}
@@ -178,8 +179,8 @@ func (b *Blurb) CanUserCommentOrReact(ctx context.Context, db common.DatabasePro
 	return nil
 }
 
-func (b *Blurb) GetComments(ctx context.Context, db common.DatabaseProvider) ([]*Comment, error) {
-	v, err := common.GetAllWhere[*Comment](ctx, db, func(_ context.Context, c *Comment) bool {
+func (b *Blurb) GetComments(ctx context.Context, db database.DatabaseProvider) ([]*Comment, error) {
+	v, err := database.GetAllWhere[*Comment](ctx, db, func(_ context.Context, c *Comment) bool {
 		return c.Blurb == b.ID
 	})
 	if err != nil {
@@ -193,6 +194,6 @@ func (b *Blurb) GetComments(ctx context.Context, db common.DatabaseProvider) ([]
 	return v, nil
 }
 
-func (b *Blurb) BlankRecord() common.CrudRecord {
+func (b *Blurb) BlankRecord() database.CrudRecord {
 	return new(Blurb)
 }

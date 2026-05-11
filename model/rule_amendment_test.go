@@ -3,9 +3,10 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
 	"strings"
 	"testing"
+
+	"intraclub/database"
 )
 
 func assertRuleAmendmentIsStaticallyInvalid(t *testing.T, r *RuleAmendment, containsText string) {
@@ -19,7 +20,7 @@ func assertRuleAmendmentIsStaticallyInvalid(t *testing.T, r *RuleAmendment, cont
 	fmt.Println(err)
 }
 
-func assertDynamicallyInvalid(t *testing.T, db common.DatabaseProvider, r *RuleAmendment, containsText string) {
+func assertDynamicallyInvalid(t *testing.T, db database.DatabaseProvider, r *RuleAmendment, containsText string) {
 	err := r.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Expected DynamicallyValid to return error")
@@ -30,7 +31,7 @@ func assertDynamicallyInvalid(t *testing.T, db common.DatabaseProvider, r *RuleA
 	fmt.Println(err)
 }
 
-func assertAmendmentIsInvalidForRuleset(t *testing.T, db common.DatabaseProvider, r *Ruleset, a *RuleAmendment, containsText string) {
+func assertAmendmentIsInvalidForRuleset(t *testing.T, db database.DatabaseProvider, r *Ruleset, a *RuleAmendment, containsText string) {
 	_, err := r.Amend(context.Background(), db, a)
 	if err == nil {
 		t.Fatal("Expected Amend to return error")
@@ -54,23 +55,23 @@ func TestRuleAmendmentTypeInvalid(t *testing.T) {
 func TestRuleAmendmentTargetSectionIdIsNonEmptyOnAddSection(t *testing.T) {
 	r := &RuleAmendment{
 		Type:          RuleAmendmentTypeAddSection,
-		TargetSection: RuleSectionId(common.NewRecordId()),
+		TargetSection: RuleSectionId(database.NewRecordId()),
 	}
 	assertRuleAmendmentIsStaticallyInvalid(t, r, "'target section'")
 }
 
 func TestRuleAmendmentTargetSectionIdDoesNotExist(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	r := &RuleAmendment{
 		Type:          RuleAmendmentTypeRemoveSection,
-		TargetSection: RuleSectionId(common.NewRecordId()),
+		TargetSection: RuleSectionId(database.NewRecordId()),
 	}
 	assertDynamicallyInvalid(t, db, r, "does not exist")
 
 }
 
 func TestRuleAmendmentTargetSectionIdIsNotInRuleset(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 	ruleset2 := newValidStoredRulesetWithOneSection(t, db)
 
@@ -91,7 +92,7 @@ func TestNewContentsEmpty(t *testing.T) {
 	r := RuleAmendment{
 		Type:       RuleAmendmentTypeAddSection,
 		NewSection: RuleSection{Markdown: ""},
-		After:      RuleSectionId(common.NewRecordId()),
+		After:      RuleSectionId(database.NewRecordId()),
 	}
 	err := r.StaticallyValid()
 	if err == nil {
@@ -104,7 +105,7 @@ func TestNewContentsIsNotEmptyOnRemoveSection(t *testing.T) {
 	r := &RuleAmendment{
 		Type:          RuleAmendmentTypeRemoveSection,
 		NewSection:    RuleSection{Markdown: "test"},
-		TargetSection: RuleSectionId(common.NewRecordId()),
+		TargetSection: RuleSectionId(database.NewRecordId()),
 	}
 	assertRuleAmendmentIsStaticallyInvalid(t, r, "'new section' contents must be empty")
 }
@@ -113,7 +114,7 @@ func TestNewContentsIsNotEmptyOnReorderSection(t *testing.T) {
 	r := &RuleAmendment{
 		Type:       RuleAmendmentTypeReorderSection,
 		NewSection: RuleSection{Markdown: "test"},
-		After:      RuleSectionId(common.NewRecordId()),
+		After:      RuleSectionId(database.NewRecordId()),
 	}
 	assertRuleAmendmentIsStaticallyInvalid(t, r, "'new section' contents must be empty")
 }
@@ -121,7 +122,7 @@ func TestNewContentsIsNotEmptyOnReorderSection(t *testing.T) {
 func TestNewContentsMarkdownIsEmptyOnAddSection(t *testing.T) {
 	r := &RuleAmendment{
 		Type:  RuleAmendmentTypeAddSection,
-		After: RuleSectionId(common.NewRecordId()),
+		After: RuleSectionId(database.NewRecordId()),
 	}
 	assertRuleAmendmentIsStaticallyInvalid(t, r, "'new section' contents must not be empty")
 }
@@ -129,13 +130,13 @@ func TestNewContentsMarkdownIsEmptyOnAddSection(t *testing.T) {
 func TestNewContentsMarkdownIsEmptyOnModifySection(t *testing.T) {
 	r := &RuleAmendment{
 		Type:          RuleAmendmentTypeModifySection,
-		TargetSection: RuleSectionId(common.NewRecordId()),
+		TargetSection: RuleSectionId(database.NewRecordId()),
 	}
 	assertRuleAmendmentIsStaticallyInvalid(t, r, "'new section' contents must not be empty")
 }
 
 func TestNewContentsIsNotModifiedOnModifySection(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 
 	sections, err := ruleset.GetSections(context.Background(), db)
@@ -143,7 +144,7 @@ func TestNewContentsIsNotModifiedOnModifySection(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	existing, err := common.GetExistingRecordById(context.Background(), db, &RuleSection{}, sections[0].RecordId())
+	existing, err := database.GetExistingRecordById(context.Background(), db, &RuleSection{}, sections[0].RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +160,7 @@ func TestNewContentsIsNotModifiedOnModifySection(t *testing.T) {
 func TestParentRuleIdIsSetOnAddSectionContents(t *testing.T) {
 	r := &RuleAmendment{
 		Type:       RuleAmendmentTypeAddSection,
-		NewSection: RuleSection{Markdown: "test", Parent: RulesetId(common.NewRecordId())},
+		NewSection: RuleSection{Markdown: "test", Parent: RulesetId(database.NewRecordId())},
 	}
 	assertRuleAmendmentIsStaticallyInvalid(t, r, "'new section' parent must not be set")
 }
@@ -167,24 +168,24 @@ func TestParentRuleIdIsSetOnAddSectionContents(t *testing.T) {
 func TestSectionIdIsSetInAddSectionContents(t *testing.T) {
 	r := &RuleAmendment{
 		Type:       RuleAmendmentTypeAddSection,
-		NewSection: RuleSection{Markdown: "test", ID: RuleSectionId(common.NewRecordId())},
+		NewSection: RuleSection{Markdown: "test", ID: RuleSectionId(database.NewRecordId())},
 	}
 	assertRuleAmendmentIsStaticallyInvalid(t, r, "'new section' ID must not be set")
 }
 
 func TestTargetSectionIdIsNotInRulesetOnModifySection(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 	a := &RuleAmendment{
 		Type:          RuleAmendmentTypeModifySection,
 		NewSection:    RuleSection{Markdown: "new contents"},
-		TargetSection: RuleSectionId(common.NewRecordId()),
+		TargetSection: RuleSectionId(database.NewRecordId()),
 	}
 	assertAmendmentIsInvalidForRuleset(t, db, ruleset, a, "does not exist")
 }
 
 func TestAfterSectionIdIsNotInRulesetOnReorderSection(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 	ruleset2 := newValidStoredRulesetWithOneSection(t, db)
 
@@ -206,7 +207,7 @@ func TestAfterSectionIdIsNotInRulesetOnReorderSection(t *testing.T) {
 }
 
 func TestAfterSectionIdIsNotInRulesetOnAddSection(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 	ruleset2 := newValidStoredRulesetWithOneSection(t, db)
 
@@ -224,7 +225,7 @@ func TestAfterSectionIdIsNotInRulesetOnAddSection(t *testing.T) {
 }
 
 func TestAfterSectionIdDoesNotExistOnReorderSection(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 
 	sections, err := ruleset.GetSections(context.Background(), db)
@@ -235,13 +236,13 @@ func TestAfterSectionIdDoesNotExistOnReorderSection(t *testing.T) {
 	a := &RuleAmendment{
 		Type:          RuleAmendmentTypeReorderSection,
 		TargetSection: sections[0],
-		After:         RuleSectionId(common.NewRecordId()),
+		After:         RuleSectionId(database.NewRecordId()),
 	}
 	assertAmendmentIsInvalidForRuleset(t, db, ruleset, a, "does not exist")
 }
 
 func TestAfterSectionIdIsSameAsTargetSectionId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 
 	sections, err := ruleset.GetSections(context.Background(), db)
@@ -258,7 +259,7 @@ func TestAfterSectionIdIsSameAsTargetSectionId(t *testing.T) {
 }
 
 func TestAfterSectionIdIsSetOnRemoveSection(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 
 	sections, err := ruleset.GetSections(context.Background(), db)
@@ -275,7 +276,7 @@ func TestAfterSectionIdIsSetOnRemoveSection(t *testing.T) {
 }
 
 func TestAfterSectionIdIsSetOnModifySection(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithOneSection(t, db)
 
 	sections, err := ruleset.GetSections(context.Background(), db)
@@ -293,7 +294,7 @@ func TestAfterSectionIdIsSetOnModifySection(t *testing.T) {
 }
 
 func TestAfterSectionIdIsUnchangedOnReorderSection(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ruleset := newValidStoredRulesetWithXSections(t, db, 2)
 
 	sections, err := ruleset.GetSections(context.Background(), db)

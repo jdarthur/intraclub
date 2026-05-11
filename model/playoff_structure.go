@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"intraclub/common"
 	"math"
+
+	"intraclub/database"
 )
 
-type PlayoffStructureId common.RecordId
+type PlayoffStructureId database.RecordId
 
-func (id PlayoffStructureId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id PlayoffStructureId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id PlayoffStructureId) String() string {
@@ -25,11 +26,11 @@ type PlayoffStructure struct {
 	NumberOfTeams int // number of teams which make the playoffs
 }
 
-func (p *PlayoffStructure) GetOwner() common.RecordId {
+func (p *PlayoffStructure) GetOwner() database.RecordId {
 	return p.UserId.RecordId()
 }
 
-func (p *PlayoffStructure) PreUpdate(ctx context.Context, db common.DatabaseProvider, existingValues common.CrudRecord) error {
+func (p *PlayoffStructure) PreUpdate(ctx context.Context, db database.DatabaseProvider, existingValues database.CrudRecord) error {
 	s, err := p.GetAssignedSeasons(ctx, db)
 	if err != nil {
 		return err
@@ -40,7 +41,7 @@ func (p *PlayoffStructure) PreUpdate(ctx context.Context, db common.DatabaseProv
 	return nil
 }
 
-func (p *PlayoffStructure) PreDelete(ctx context.Context, db common.DatabaseProvider) error {
+func (p *PlayoffStructure) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
 	s, err := p.GetAssignedSeasons(ctx, db)
 	if err != nil {
 		return err
@@ -55,27 +56,27 @@ func NewPlayoffStructure() *PlayoffStructure {
 	return &PlayoffStructure{}
 }
 
-func (p *PlayoffStructure) SetOwner(recordId common.RecordId) {
+func (p *PlayoffStructure) SetOwner(recordId database.RecordId) {
 	p.UserId = UserId(recordId)
 }
 
-func (p *PlayoffStructure) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{p.UserId.RecordId()}
+func (p *PlayoffStructure) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{p.UserId.RecordId()}
 }
 
-func (p *PlayoffStructure) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (p *PlayoffStructure) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
 func (p *PlayoffStructure) Type() string {
 	return "playoff_structure"
 }
 
-func (p *PlayoffStructure) GetId() common.RecordId {
+func (p *PlayoffStructure) GetId() database.RecordId {
 	return p.ID.RecordId()
 }
 
-func (p *PlayoffStructure) SetId(id common.RecordId) {
+func (p *PlayoffStructure) SetId(id database.RecordId) {
 	p.ID = PlayoffStructureId(id)
 }
 
@@ -124,16 +125,16 @@ func (p *PlayoffStructure) NumberOfRounds() int {
 	return int(v)
 }
 
-func (p *PlayoffStructure) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	return common.ExistsById(ctx, db, &User{}, p.UserId.RecordId())
+func (p *PlayoffStructure) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	return database.ExistsById(ctx, db, &User{}, p.UserId.RecordId())
 }
 
-func (p *PlayoffStructure) GetAssignedSeasons(ctx context.Context, db common.DatabaseProvider) ([]*Season, error) {
-	return common.GetAllWhere[*Season](ctx, db, func(_ context.Context, c *Season) bool {
+func (p *PlayoffStructure) GetAssignedSeasons(ctx context.Context, db database.DatabaseProvider) ([]*Season, error) {
+	return database.GetAllWhere[*Season](ctx, db, func(_ context.Context, c *Season) bool {
 		return c.PlayoffStructure == p.ID
 	})
 }
 
-func (p *PlayoffStructure) BlankRecord() common.CrudRecord {
+func (p *PlayoffStructure) BlankRecord() database.CrudRecord {
 	return new(PlayoffStructure)
 }
