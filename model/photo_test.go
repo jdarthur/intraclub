@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newStoredPhoto(t *testing.T, db database.DatabaseProvider, owner UserId) *Photo {
+func newStoredPhoto(t *testing.T, db database.DatabaseProvider, owner database.UserId) *Photo {
 	b := make([]byte, 64)
 	n, err := rand.Read(b)
 	if n != 64 {

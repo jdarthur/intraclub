@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newValidRating(u UserId) *Rating {
+func newValidRating(u database.UserId) *Rating {
 	return &Rating{
 		UserId:      u,
 		Name:        "name",
@@ -48,7 +48,7 @@ func TestRatingNameEmpty(t *testing.T) {
 }
 
 func TestRatingNameWhitespace(t *testing.T) {
-	r := newValidRating(UserId(database.InvalidRecordId))
+	r := newValidRating(database.InvalidUserId)
 	r.Name = "   "
 	err := r.StaticallyValid()
 	if err == nil {
@@ -58,7 +58,7 @@ func TestRatingNameWhitespace(t *testing.T) {
 }
 
 func TestRatingDescriptionEmpty(t *testing.T) {
-	r := newValidRating(UserId(database.InvalidRecordId))
+	r := newValidRating(database.InvalidUserId)
 	r.Description = ""
 
 	err := r.StaticallyValid()
@@ -69,7 +69,7 @@ func TestRatingDescriptionEmpty(t *testing.T) {
 }
 
 func TestRatingDescriptionWhitespace(t *testing.T) {
-	r := newValidRating(UserId(database.InvalidRecordId))
+	r := newValidRating(database.InvalidUserId)
 	r.Description = "\n\n\n\n"
 
 	err := r.StaticallyValid()
@@ -81,7 +81,7 @@ func TestRatingDescriptionWhitespace(t *testing.T) {
 
 func TestRatingUserIdNotValid(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	r := newValidRating(UserId(database.InvalidRecordId))
+	r := newValidRating(database.InvalidUserId)
 
 	err := r.DynamicallyValid(context.Background(), db)
 	if err == nil {
@@ -95,7 +95,7 @@ func TestRatingUpdateBySysAdmin(t *testing.T) {
 	r := newStoredRating(t, db)
 	sysAdmin := newSysAdmin(t, db)
 
-	wac := database.WithAccessControl[*Rating]{Database: db, AccessControlUser: sysAdmin.ID.RecordId()}
+	wac := database.WithAccessControl[*Rating]{Database: db, AccessControlUser: sysAdmin.ID}
 
 	copied := copyRating(r)
 	copied.Name = "new name"
@@ -124,7 +124,7 @@ func TestRatingCannotBeDeletedWhenInUse(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wac := database.WithAccessControl[*Rating]{Database: db, AccessControlUser: rating.UserId.RecordId()}
+	wac := database.WithAccessControl[*Rating]{Database: db, AccessControlUser: rating.UserId}
 	_, _, err = wac.DeleteOneById(context.Background(), &Rating{}, ratingId)
 	if err == nil {
 		t.Fatal("Expected error on delete of in-use rating")

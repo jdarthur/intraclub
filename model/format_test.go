@@ -119,7 +119,7 @@ func TestFormatHasInvalidUserId(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	format := newDefaultFormat(t, db)
 
-	format.UserId = UserId(database.InvalidRecordId)
+	format.UserId = database.InvalidUserId
 	err := format.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Expected invalid user id to fail")

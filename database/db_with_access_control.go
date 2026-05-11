@@ -7,17 +7,17 @@ import (
 
 type WithAccessControl[T CrudRecord] struct {
 	Database          DatabaseProvider
-	AccessControlUser RecordId
+	AccessControlUser UserId
 }
 
-func NewWithAccessControl[T CrudRecord](ctx context.Context, db DatabaseProvider, accessControlUser RecordId) *WithAccessControl[T] {
+func NewWithAccessControl[T CrudRecord](ctx context.Context, db DatabaseProvider, accessControlUser UserId) *WithAccessControl[T] {
 	return &WithAccessControl[T]{
 		Database:          db,
 		AccessControlUser: accessControlUser,
 	}
 }
 
-var SysAdminCheck func(ctx context.Context, db DatabaseProvider, c RecordId) (bool, error)
+var SysAdminCheck func(ctx context.Context, db DatabaseProvider, userId UserId) (bool, error)
 
 func (w *WithAccessControl[T]) CanUserAccess(record T) bool {
 	list := record.AccessibleTo(context.Background(), w.Database)
@@ -27,7 +27,7 @@ func (w *WithAccessControl[T]) CanUserAccess(record T) bool {
 	}
 
 	for _, userId := range list {
-		if userId == w.AccessControlUser || userId == EveryoneRecordId {
+		if userId == w.AccessControlUser || userId == EveryoneUserId {
 			return true
 		}
 	}
@@ -59,13 +59,13 @@ func (w *WithAccessControl[T]) CanUserEdit(record T) bool {
 			}
 		}
 
-		if userId == SysAdminRecordId {
+		if userId == SysAdminUserId {
 			isSysAdminEditable = true
 		}
 	}
 
 	if isSysAdminEditable && SysAdminCheck != nil {
-		if editIsConstrained && cod.CanOnlyDelete(context.Background(), w.Database, SysAdminRecordId) {
+		if editIsConstrained && cod.CanOnlyDelete(context.Background(), w.Database, SysAdminUserId) {
 			return false
 		}
 		isSysAdmin, err := SysAdminCheck(context.Background(), w.Database, w.AccessControlUser)
@@ -131,7 +131,7 @@ func (w *WithAccessControl[T]) UpdateOneById(ctx context.Context, record T) (err
 
 	// make sure the owner is set on the record after we have validated that
 	// this user can edit
-	if record.GetOwner() == InvalidRecordId {
+	if record.GetOwner() == InvalidUserId {
 		record.SetOwner(t.GetOwner())
 	}
 

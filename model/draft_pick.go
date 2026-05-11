@@ -14,7 +14,7 @@ type DraftPick struct {
 	ID        database.RecordId `json:"id"`
 	DraftId   DraftId           `json:"draft_id"`
 	TeamId    TeamId            `json:"team_id"`
-	UserId    UserId            `json:"user_id"`
+	UserId    database.UserId            `json:"user_id"`
 	Round     int               `json:"round"`
 	Pick      int               `json:"pick"`
 	Rating    RatingId          `json:"rating"`
@@ -23,12 +23,12 @@ type DraftPick struct {
 }
 
 // GetOwner returns InvalidRecordId as DraftPick has no specific owner.
-func (d *DraftPick) GetOwner() database.RecordId {
-	return database.InvalidRecordId
+func (d *DraftPick) GetOwner() database.UserId {
+	return database.InvalidUserId
 }
 
 // SetOwner is a no-op as DraftPick has no specific owner.
-func (d *DraftPick) SetOwner(recordId database.RecordId) {}
+func (d *DraftPick) SetOwner(userId database.UserId) {}
 
 // Type returns the record type identifier for DraftPick.
 func (d *DraftPick) Type() string {
@@ -64,12 +64,12 @@ func (d *DraftPick) DynamicallyValid(ctx context.Context, db database.DatabasePr
 	return nil
 }
 
-func (d *DraftPick) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (d *DraftPick) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (d *DraftPick) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{database.SysAdminRecordId}
+func (d *DraftPick) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{database.SysAdminUserId}
 }
 
 // Timestamps returns the create and update timestamps for this DraftPick record.

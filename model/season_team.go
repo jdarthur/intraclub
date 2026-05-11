@@ -18,20 +18,20 @@ type SeasonTeam struct {
 }
 
 // GetOwner returns InvalidRecordId as SeasonTeam has no specific owner.
-func (s *SeasonTeam) GetOwner() database.RecordId {
-	return database.InvalidRecordId
+func (s *SeasonTeam) GetOwner() database.UserId {
+	return database.InvalidUserId
 }
 
 // SetOwner is a no-op as SeasonTeam has no specific owner.
-func (s *SeasonTeam) SetOwner(recordId database.RecordId) {}
+func (s *SeasonTeam) SetOwner(userId database.UserId) {}
 
 // AccessibleTo returns everyone as SeasonTeam records are public.
-func (s *SeasonTeam) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (s *SeasonTeam) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (s *SeasonTeam) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{database.SysAdminRecordId}
+func (s *SeasonTeam) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{database.SysAdminUserId}
 }
 
 // Type returns the record type identifier for SeasonTeam.

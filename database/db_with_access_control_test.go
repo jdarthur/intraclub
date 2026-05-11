@@ -8,17 +8,17 @@ import (
 
 type PrivateTestRecord struct {
 	ID       RecordId
-	Owner    RecordId
-	SharedTo []RecordId
+	Owner    UserId
+	SharedTo []UserId
 	Value    string
 }
 
-func (p *PrivateTestRecord) GetOwner() RecordId {
+func (p *PrivateTestRecord) GetOwner() UserId {
 	return p.Owner
 }
 
-func (p *PrivateTestRecord) SetOwner(recordId RecordId) {
-	p.Owner = recordId
+func (p *PrivateTestRecord) SetOwner(userId UserId) {
+	p.Owner = userId
 }
 
 func NewPrivateTestRecord() *PrivateTestRecord {
@@ -37,12 +37,12 @@ func (p *PrivateTestRecord) SetId(id RecordId) {
 	p.ID = id
 }
 
-func (p *PrivateTestRecord) EditableBy(_ context.Context, db DatabaseProvider) []RecordId {
-	return []RecordId{p.Owner, SysAdminRecordId}
+func (p *PrivateTestRecord) EditableBy(_ context.Context, db DatabaseProvider) []UserId {
+	return []UserId{p.Owner, SysAdminUserId}
 }
 
-func (p *PrivateTestRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []RecordId {
-	v := make([]RecordId, 0, 1+len(p.SharedTo))
+func (p *PrivateTestRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []UserId {
+	v := make([]UserId, 0, 1+len(p.SharedTo))
 	v = append(v, p.Owner)
 	v = append(v, p.SharedTo...)
 	return v
@@ -60,7 +60,7 @@ func (p *PrivateTestRecord) BlankRecord() CrudRecord {
 	return new(PrivateTestRecord)
 }
 
-func (p *PrivateTestRecord) ShareTo(ctx context.Context, db DatabaseProvider, shareToUserId, updateUserId RecordId) error {
+func (p *PrivateTestRecord) ShareTo(ctx context.Context, db DatabaseProvider, shareToUserId, updateUserId UserId) error {
 	for _, s := range p.SharedTo {
 		if shareToUserId == s {
 			return nil
@@ -72,7 +72,7 @@ func (p *PrivateTestRecord) ShareTo(ctx context.Context, db DatabaseProvider, sh
 	return wac.UpdateOneById(ctx, p)
 }
 
-func newStoredPrivateTestRecord(t *testing.T, db DatabaseProvider, owner RecordId) *PrivateTestRecord {
+func newStoredPrivateTestRecord(t *testing.T, db DatabaseProvider, owner UserId) *PrivateTestRecord {
 	r := NewPrivateTestRecord()
 	r.Owner = owner
 	v, err := CreateOne(context.Background(), db, r)
@@ -84,7 +84,7 @@ func newStoredPrivateTestRecord(t *testing.T, db DatabaseProvider, owner RecordI
 
 func TestGetOneViaOwner(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	userId := NewRecordId()
+	userId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, userId)
 
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: userId}
@@ -100,10 +100,10 @@ func TestGetOneViaOwner(t *testing.T) {
 
 func TestGetOneViaSharedTo(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
-	sharedToUserId := NewRecordId()
+	sharedToUserId := UserId(NewRecordId())
 	err := r.ShareTo(context.Background(), db, sharedToUserId, ownerId)
 	if err != nil {
 		t.Fatal(err)
@@ -122,11 +122,11 @@ func TestGetOneViaSharedTo(t *testing.T) {
 
 func TestGetOneUnauthorized(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
 	// attempt to get the record via another user ID
-	otherUserId := NewRecordId()
+	otherUserId := UserId(NewRecordId())
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: otherUserId}
 	_, exists, err := wac.GetOneById(context.Background(), r, r.GetId())
 	if err != nil {
@@ -139,7 +139,7 @@ func TestGetOneUnauthorized(t *testing.T) {
 
 func TestDeleteOneByOwner(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: ownerId}
@@ -155,10 +155,10 @@ func TestDeleteOneByOwner(t *testing.T) {
 
 func TestDeleteOneByUnauthorized(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
-	otherUserId := NewRecordId()
+	otherUserId := UserId(NewRecordId())
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: otherUserId}
 	_, exists, err := wac.DeleteOneById(context.Background(), r, r.GetId())
 	if err != nil {
@@ -171,7 +171,7 @@ func TestDeleteOneByUnauthorized(t *testing.T) {
 
 func TestUpdateOneByOwner(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
 	v, err := updateRecordAndReQuery(t, db, r, "new value", ownerId)
@@ -193,7 +193,7 @@ func updateRecordIntoCopy(r *PrivateTestRecord, newValue string) *PrivateTestRec
 	return copyOfRecord
 }
 
-func updateRecordAndReQuery(t *testing.T, db DatabaseProvider, r *PrivateTestRecord, newValue string, asUser RecordId) (*PrivateTestRecord, error) {
+func updateRecordAndReQuery(t *testing.T, db DatabaseProvider, r *PrivateTestRecord, newValue string, asUser UserId) (*PrivateTestRecord, error) {
 	copied := updateRecordIntoCopy(r, newValue)
 
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: asUser}
@@ -212,11 +212,11 @@ func updateRecordAndReQuery(t *testing.T, db DatabaseProvider, r *PrivateTestRec
 func TestUpdateOneByUnauthorized(t *testing.T) {
 	// create a record in the database
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
 	// attempt to update via another user ID
-	otherUserId := NewRecordId()
+	otherUserId := UserId(NewRecordId())
 	v, err := updateRecordAndReQuery(t, db, r, "new value", otherUserId)
 	if err == nil {
 		t.Fatal("expected an error updating by unauthorized user")
@@ -228,15 +228,15 @@ func TestUpdateOneByUnauthorized(t *testing.T) {
 func TestAccessibleByEveryone(t *testing.T) {
 	// create a record in the database
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
-	err := r.ShareTo(context.Background(), db, EveryoneRecordId, ownerId)
+	err := r.ShareTo(context.Background(), db, EveryoneUserId, ownerId)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// attempt to get via another user ID
-	otherUserId := NewRecordId()
+	otherUserId := UserId(NewRecordId())
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: otherUserId}
 	v, exists, err := wac.GetOneById(context.Background(), r, r.GetId())
 	if err != nil {
@@ -250,12 +250,12 @@ func TestAccessibleByEveryone(t *testing.T) {
 
 func TestAccessibleBySysAdmin(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
-	sysAdminId := NewRecordId()
-	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, c RecordId) (bool, error) {
-		return c == sysAdminId, nil
+	sysAdminId := UserId(NewRecordId())
+	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, userId UserId) (bool, error) {
+		return userId == sysAdminId, nil
 	}
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: sysAdminId}
 	v, exists, err := wac.GetOneById(context.Background(), r, r.GetId())
@@ -270,13 +270,13 @@ func TestAccessibleBySysAdmin(t *testing.T) {
 
 func TestEditableBySysAdmin(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 	fmt.Printf("%+v\n", r)
 
-	sysAdminId := NewRecordId()
-	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, c RecordId) (bool, error) {
-		return c == sysAdminId, nil
+	sysAdminId := UserId(NewRecordId())
+	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, userId UserId) (bool, error) {
+		return userId == sysAdminId, nil
 	}
 	v, err := updateRecordAndReQuery(t, db, r, "new value", sysAdminId)
 	if err != nil {
@@ -290,8 +290,8 @@ func TestEditableBySysAdmin(t *testing.T) {
 
 func TestGetAllByOwner(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
-	otherId := NewRecordId()
+	ownerId := UserId(NewRecordId())
+	otherId := UserId(NewRecordId())
 
 	// Create a record owned by ownerId
 	_ = newStoredPrivateTestRecord(t, db, ownerId)
@@ -311,8 +311,8 @@ func TestGetAllByOwner(t *testing.T) {
 
 func TestGetAllByUnauthorizedUser(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
-	unauthorizedId := NewRecordId()
+	ownerId := UserId(NewRecordId())
+	unauthorizedId := UserId(NewRecordId())
 
 	newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -328,13 +328,13 @@ func TestGetAllByUnauthorizedUser(t *testing.T) {
 
 func TestGetAllBySysAdmin(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
-	adminId := NewRecordId()
+	ownerId := UserId(NewRecordId())
+	adminId := UserId(NewRecordId())
 
 	newStoredPrivateTestRecord(t, db, ownerId)
 
-	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, c RecordId) (bool, error) {
-		return c == adminId, nil
+	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, userId UserId) (bool, error) {
+		return userId == adminId, nil
 	}
 
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: adminId}
@@ -349,7 +349,7 @@ func TestGetAllBySysAdmin(t *testing.T) {
 
 func TestDeleteOneByIdNotFoundNonOwner(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	newStoredPrivateTestRecord(t, db, ownerId)
 
 	nonExistentId := NewRecordId()
@@ -365,7 +365,7 @@ func TestDeleteOneByIdNotFoundNonOwner(t *testing.T) {
 
 func TestUpdateOneByIdNotFound(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	newStoredPrivateTestRecord(t, db, ownerId)
 
 	nonExistent := &PrivateTestRecord{
@@ -381,10 +381,10 @@ func TestUpdateOneByIdNotFound(t *testing.T) {
 
 func TestDeleteBySharedToUser(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
-	sharedToId := NewRecordId()
+	sharedToId := UserId(NewRecordId())
 	err := r.ShareTo(context.Background(), db, sharedToId, ownerId)
 	if err != nil {
 		t.Fatal(err)
@@ -413,10 +413,10 @@ func TestDeleteBySharedToUser(t *testing.T) {
 
 func TestUpdateBySharedToUser(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
-	sharedToId := NewRecordId()
+	sharedToId := UserId(NewRecordId())
 	err := r.ShareTo(context.Background(), db, sharedToId, ownerId)
 	if err != nil {
 		t.Fatal(err)
@@ -437,10 +437,10 @@ func TestUpdateBySharedToUser(t *testing.T) {
 
 func TestGetOneBySharedToUser(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
-	sharedToId := NewRecordId()
+	sharedToId := UserId(NewRecordId())
 	err := r.ShareTo(context.Background(), db, sharedToId, ownerId)
 	if err != nil {
 		t.Fatal(err)
@@ -459,11 +459,11 @@ func TestGetOneBySharedToUser(t *testing.T) {
 
 func TestUpdateOneBySharedToUser(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
 	// Share the record
-	sharedToId := NewRecordId()
+	sharedToId := UserId(NewRecordId())
 	err := r.ShareTo(context.Background(), db, sharedToId, ownerId)
 	if err != nil {
 		t.Fatal(err)
@@ -484,7 +484,7 @@ func TestUpdateOneBySharedToUser(t *testing.T) {
 
 func TestGetOneIdDoesNotExist(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	newStoredPrivateTestRecord(t, db, ownerId)
 
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: ownerId}
@@ -499,9 +499,9 @@ func TestGetOneIdDoesNotExist(t *testing.T) {
 
 func TestGetAllWithMultipleOwners(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	owner1 := NewRecordId()
-	owner2 := NewRecordId()
-	owner3 := NewRecordId()
+	owner1 := UserId(NewRecordId())
+	owner2 := UserId(NewRecordId())
+	owner3 := UserId(NewRecordId())
 
 	newStoredPrivateTestRecord(t, db, owner1)
 	newStoredPrivateTestRecord(t, db, owner1)
@@ -520,12 +520,12 @@ func TestGetAllWithMultipleOwners(t *testing.T) {
 
 func TestDeleteBySysAdmin(t *testing.T) {
 	db := NewUnitTestDBProvider()
-	ownerId := NewRecordId()
+	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
-	sysAdminId := NewRecordId()
-	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, c RecordId) (bool, error) {
-		return c == sysAdminId, nil
+	sysAdminId := UserId(NewRecordId())
+	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, userId UserId) (bool, error) {
+		return userId == sysAdminId, nil
 	}
 
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: sysAdminId}

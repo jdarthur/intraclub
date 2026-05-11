@@ -59,7 +59,7 @@ func (sc CompletedSecondary) Won() bool {
 
 type IndividualMatch struct {
 	ID             IndividualMatchId
-	Editors        []UserId
+	Editors        []database.UserId
 	Opponent       IndividualMatchId
 	Structure      ScoringStructureId
 	MainValue      int
@@ -71,8 +71,8 @@ type IndividualMatch struct {
 	_completed     []CompletedSecondary
 }
 
-func (s *IndividualMatch) GetOwner() database.RecordId {
-	return s.Editors[0].RecordId()
+func (s *IndividualMatch) GetOwner() database.UserId {
+	return s.Editors[0]
 }
 
 func NewMatch() *IndividualMatch {
@@ -91,16 +91,16 @@ func (s *IndividualMatch) SetId(id database.RecordId) {
 	s.ID = IndividualMatchId(id)
 }
 
-func (s *IndividualMatch) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return UserIdListToRecordIdList(s.Editors)
+func (s *IndividualMatch) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return s.Editors
 }
 
-func (s *IndividualMatch) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (s *IndividualMatch) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (s *IndividualMatch) SetOwner(recordId database.RecordId) {
-	s.Editors = append(s.Editors, UserId(recordId))
+func (s *IndividualMatch) SetOwner(userId database.UserId) {
+	s.Editors = append(s.Editors, userId)
 }
 
 func (s *IndividualMatch) StaticallyValid() error {

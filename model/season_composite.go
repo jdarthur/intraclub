@@ -53,13 +53,13 @@ func GetMySeasonsAsPlayerOrCommissioner(ctx context.Context, db database.Databas
 
 // isUserPlayer checks if this user is a player in a particular season,
 // by checking if they were selected in the season's draft.
-func isUserPlayer(ctx context.Context, c *Draft, userId database.RecordId, db database.DatabaseProvider) bool {
+func isUserPlayer(ctx context.Context, c *Draft, userId database.UserId, db database.DatabaseProvider) bool {
 	picks, err := c.GetPicks(ctx, db)
 	if err != nil {
 		return false
 	}
 	for _, pick := range picks {
-		if pick.UserId.RecordId() == userId {
+		if pick.UserId == userId {
 			return true
 		}
 	}
@@ -67,13 +67,13 @@ func isUserPlayer(ctx context.Context, c *Draft, userId database.RecordId, db da
 }
 
 // isUserCommissioner checks if the user is the commissioner of the provided draft
-func isUserCommissioner(c *Draft, userId database.RecordId) bool {
-	return c.Owner.RecordId() == userId
+func isUserCommissioner(c *Draft, userId database.UserId) bool {
+	return c.Owner == userId
 }
 
 // isUserPlayerOrCommissioner checks if the user is either a player or
 // the commissioner of the provided Draft
-func isUserPlayerOrCommissioner(ctx context.Context, c *Draft, userId database.RecordId, db database.DatabaseProvider) bool {
+func isUserPlayerOrCommissioner(ctx context.Context, c *Draft, userId database.UserId, db database.DatabaseProvider) bool {
 	return isUserCommissioner(c, userId) || isUserPlayer(ctx, c, userId, db)
 }
 

@@ -37,15 +37,15 @@ func (id FacilityId) MarshalJSON() ([]byte, error) {
 // NumberOfCourts. It may also have a
 type Facility struct {
 	ID             FacilityId `json:"id"`           // Unique ID for this Facility
-	UserId         UserId     `json:"user_id"`      // ID of the User who owns the record
+	UserId         database.UserId     `json:"user_id"`      // ID of the User who owns the record
 	Name           string     `json:"name"`         // Unique name for the Facility (to prevent duplicate records)
 	Address        string     `json:"address"`      // Unique street address for the Facility (to prevent duplicate records)
 	NumberOfCourts int        `json:"courts"`       // Number of courts available at the Facility
 	LayoutPhoto    PhotoId    `json:"layout_photo"` // ID of a Photo showing the layout of the Facility (i.e. orientation of courts, parking, etc.)
 }
 
-func (f *Facility) GetOwner() database.RecordId {
-	return f.UserId.RecordId()
+func (f *Facility) GetOwner() database.UserId {
+	return f.UserId
 }
 
 func (f *Facility) UniquenessEquivalent(other *Facility) error {
@@ -80,25 +80,25 @@ func (f *Facility) PreDelete(ctx context.Context, db database.DatabaseProvider) 
 }
 
 // SetOwner assigns the owner of this common.CrudRecord
-func (f *Facility) SetOwner(recordId database.RecordId) {
-	f.UserId = UserId(recordId)
+func (f *Facility) SetOwner(userId database.UserId) {
+	f.UserId = userId
 }
 
 // EditableBy returns a list of common.RecordId values who are allowed
 // to edit (or possibly delete) this common.CrudRecord
-func (f *Facility) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (f *Facility) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	// This record can only be edited by the owner. It should
 	// probably be created once and reused many times without
 	// modification, so it is unlikely that updates will occur
 	// very often. It also may not be deleted after assignment
 	// to a particular season (as described in PreDelete)
-	return database.SysAdminAndUsers(f.UserId.RecordId())
+	return database.SysAdminAndUsers(f.UserId)
 }
 
 // AccessibleTo returns a list of common.RecordId values who are allowed
 // to view this record (in this instance, all users, regardless of their
 // authentication status)
-func (f *Facility) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (f *Facility) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 

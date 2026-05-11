@@ -21,13 +21,13 @@ func (id PlayoffStructureId) String() string {
 
 type PlayoffStructure struct {
 	ID            PlayoffStructureId // unique ID for this record
-	UserId        UserId
+	UserId        database.UserId
 	Byes          int // number of teams which get a bye week
 	NumberOfTeams int // number of teams which make the playoffs
 }
 
-func (p *PlayoffStructure) GetOwner() database.RecordId {
-	return p.UserId.RecordId()
+func (p *PlayoffStructure) GetOwner() database.UserId {
+	return p.UserId
 }
 
 func (p *PlayoffStructure) PreUpdate(ctx context.Context, db database.DatabaseProvider, existingValues database.CrudRecord) error {
@@ -56,15 +56,15 @@ func NewPlayoffStructure() *PlayoffStructure {
 	return &PlayoffStructure{}
 }
 
-func (p *PlayoffStructure) SetOwner(recordId database.RecordId) {
-	p.UserId = UserId(recordId)
+func (p *PlayoffStructure) SetOwner(userId database.UserId) {
+	p.UserId = userId
 }
 
-func (p *PlayoffStructure) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{p.UserId.RecordId()}
+func (p *PlayoffStructure) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{p.UserId}
 }
 
-func (p *PlayoffStructure) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (p *PlayoffStructure) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 

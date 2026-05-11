@@ -18,12 +18,12 @@ type CommissionerProposal struct {
 	ID              database.RecordId // unique ID for this proposal
 	Description     string            // description of the change or action
 	SeasonId        SeasonId          // season that this pertains to
-	Votes           map[UserId]bool   // votes of all commissioners or team captains, true == vote in favor, false == vote against
+	Votes           map[database.UserId]bool   // votes of all commissioners or team captains, true == vote in favor, false == vote against
 	MustBeUnanimous bool              // true if this proposal must get unanimous consent to pass
 }
 
-func (c *CommissionerProposal) GetOwner() database.RecordId {
-	return database.InvalidRecordId
+func (c *CommissionerProposal) GetOwner() database.UserId {
+	return database.InvalidUserId
 }
 
 func (c *CommissionerProposal) PreUpdate(ctx context.Context, db database.DatabaseProvider, existingValues database.CrudRecord) error {
@@ -36,7 +36,7 @@ func (c *CommissionerProposal) PreUpdate(ctx context.Context, db database.Databa
 
 func NewCommissionerProposal() *CommissionerProposal {
 	return &CommissionerProposal{
-		Votes: make(map[UserId]bool),
+		Votes: make(map[database.UserId]bool),
 	}
 }
 
@@ -52,22 +52,22 @@ func (c *CommissionerProposal) SetId(id database.RecordId) {
 	c.ID = id
 }
 
-func (c *CommissionerProposal) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (c *CommissionerProposal) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	// proposal is editable only by the
 	return EditableBySeason(ctx, db, c.SeasonId)
 }
 
-func (c *CommissionerProposal) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (c *CommissionerProposal) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	// a commissioner proposal is only accessible to the other commissioners and the
 	// team captains involved in the given Season.
 	voters, err := c.GetAllVoterIds(ctx, db)
 	if err != nil {
 		fmt.Printf("Failed to get voters for commissioner proposal: %s\n", err.Error())
 	}
-	return UserIdListToRecordIdList(voters)
+	return voters
 }
 
-func (c *CommissionerProposal) SetOwner(recordId database.RecordId) {
+func (c *CommissionerProposal) SetOwner(userId database.UserId) {
 	// don't need to do anything here as the ownership of the
 	// CommissionerProposal record type is automatically inferred &
 	// enforced by the associated Season assigned to it
@@ -105,14 +105,14 @@ func (c *CommissionerProposal) DynamicallyValid(ctx context.Context, db database
 	return nil
 }
 
-func (c *CommissionerProposal) GetAllVoterIds(ctx context.Context, db database.DatabaseProvider) ([]UserId, error) {
+func (c *CommissionerProposal) GetAllVoterIds(ctx context.Context, db database.DatabaseProvider) ([]database.UserId, error) {
 	// get underlying season
 	season, err := database.GetExistingRecordById(ctx, db, &Season{}, c.SeasonId.RecordId())
 	if err != nil {
 		return nil, err
 	}
 	// add all commissioners as valid voters
-	output := make([]UserId, 0)
+	output := make([]database.UserId, 0)
 	commissioners, err := season.GetCommissioners(ctx, db)
 	if err == nil {
 		output = append(output, commissioners...)
@@ -126,7 +126,7 @@ func (c *CommissionerProposal) GetAllVoterIds(ctx context.Context, db database.D
 	return append(output, teamCaptains...), nil
 }
 
-func (c *CommissionerProposal) Vote(ctx context.Context, db database.DatabaseProvider, voterId UserId, vote bool) error {
+func (c *CommissionerProposal) Vote(ctx context.Context, db database.DatabaseProvider, voterId database.UserId, vote bool) error {
 	// add vote to the map
 	c.Votes[voterId] = vote
 
@@ -134,7 +134,7 @@ func (c *CommissionerProposal) Vote(ctx context.Context, db database.DatabasePro
 	return database.UpdateOne(ctx, db, c)
 }
 
-func (c *CommissionerProposal) VotesToPassOrFail(voterIds []UserId) (votesToPass, votesToFail int) {
+func (c *CommissionerProposal) VotesToPassOrFail(voterIds []database.UserId) (votesToPass, votesToFail int) {
 	if c.MustBeUnanimous {
 		// if the vote must be unanimous, then we need all voters to vote yes
 		// to pass, and one voter to vote not to fail

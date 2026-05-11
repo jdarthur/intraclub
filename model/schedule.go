@@ -23,8 +23,8 @@ type Schedule struct {
 	Matchups []WeeklyMatchupId
 }
 
-func (s *Schedule) GetOwner() database.RecordId {
-	return database.InvalidRecordId
+func (s *Schedule) GetOwner() database.UserId {
+	return database.InvalidUserId
 }
 
 func (s *Schedule) UniquenessEquivalent(other *Schedule) error {
@@ -35,7 +35,7 @@ func (s *Schedule) UniquenessEquivalent(other *Schedule) error {
 	return nil
 }
 
-func (s *Schedule) SetOwner(recordId database.RecordId) {
+func (s *Schedule) SetOwner(userId database.UserId) {
 	// don't need to do anything here as the ownership of the
 	// Schedule record type is automatically inferred &
 	// enforced by the associated Season assigned to it
@@ -45,11 +45,11 @@ func NewSchedule() *Schedule {
 	return &Schedule{}
 }
 
-func (s *Schedule) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (s *Schedule) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return EditableBySeason(ctx, db, s.SeasonId)
 }
 
-func (s *Schedule) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (s *Schedule) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 

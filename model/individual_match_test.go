@@ -15,8 +15,8 @@ func newStoredMatchPair(t *testing.T, db database.DatabaseProvider, s *ScoringSt
 	match1.Structure = s.ID
 	match2.Structure = s.ID
 
-	match1.Editors = []UserId{s.Owner}
-	match2.Editors = []UserId{s.Owner}
+	match1.Editors = []database.UserId{s.Owner}
+	match2.Editors = []database.UserId{s.Owner}
 
 	created1, err := database.CreateOne(context.Background(), db, match1)
 	if err != nil {

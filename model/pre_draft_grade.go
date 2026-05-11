@@ -22,15 +22,15 @@ func (p PreDraftRatingModifier) Int() int {
 
 type PreDraftGrade struct {
 	ID       database.RecordId      // unique ID of this PreDraftGrade
-	PlayerId UserId                 // ID of the User who is being graded
+	PlayerId database.UserId                 // ID of the User who is being graded
 	DraftId  DraftId                // ID of the Draft that this PreDraftGrade pertains to
-	GraderId UserId                 // ID of the User providing a Grade
+	GraderId database.UserId                 // ID of the User providing a Grade
 	Modifier PreDraftRatingModifier // 0, 1, or 2 to indicate that this is a weak, average, or strong version of this Rating
 	Rating   RatingId
 }
 
-func (p *PreDraftGrade) GetOwner() database.RecordId {
-	return p.GraderId.RecordId()
+func (p *PreDraftGrade) GetOwner() database.UserId {
+	return p.GraderId
 }
 
 func (p *PreDraftGrade) UniquenessEquivalent(other *PreDraftGrade) error {
@@ -41,12 +41,12 @@ func (p *PreDraftGrade) UniquenessEquivalent(other *PreDraftGrade) error {
 }
 
 type PreDraftAggregate struct {
-	PlayerId  UserId
+	PlayerId  database.UserId
 	Aggregate float64 // average of the ratings for this player (higher is better)
 }
 
-func (p *PreDraftGrade) SetOwner(recordId database.RecordId) {
-	p.GraderId = UserId(recordId)
+func (p *PreDraftGrade) SetOwner(userId database.UserId) {
+	p.GraderId = userId
 }
 
 func NewPreDraftGrade() *PreDraftGrade {
@@ -65,11 +65,11 @@ func (p *PreDraftGrade) SetId(id database.RecordId) {
 	p.ID = id
 }
 
-func (p *PreDraftGrade) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{p.GraderId.RecordId()}
+func (p *PreDraftGrade) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{p.GraderId}
 }
 
-func (p *PreDraftGrade) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (p *PreDraftGrade) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -160,13 +160,13 @@ func (p *PreDraftGrade) NumericRating(format *Format) float64 {
 	return float64(ratingBaseValue + p.Modifier.Int())
 }
 
-func GetPreDraftGradesByGraderId(ctx context.Context, db database.DatabaseProvider, graderId UserId) ([]*PreDraftGrade, error) {
+func GetPreDraftGradesByGraderId(ctx context.Context, db database.DatabaseProvider, graderId database.UserId) ([]*PreDraftGrade, error) {
 	return database.GetAllWhere[*PreDraftGrade](ctx, db, func(_ context.Context, c *PreDraftGrade) bool {
 		return c.GraderId == graderId
 	})
 }
 
-func GetPreDraftGradesByPlayerId(ctx context.Context, db database.DatabaseProvider, playerId UserId) ([]*PreDraftGrade, error) {
+func GetPreDraftGradesByPlayerId(ctx context.Context, db database.DatabaseProvider, playerId database.UserId) ([]*PreDraftGrade, error) {
 	return database.GetAllWhere[*PreDraftGrade](ctx, db, func(_ context.Context, c *PreDraftGrade) bool {
 		return c.PlayerId == playerId
 	})
@@ -182,7 +182,7 @@ func GetPreDraftGradesByDraftId(ctx context.Context, db database.DatabaseProvide
 	})
 }
 
-func GetDraftAggregateForPlayer(allGrades []*PreDraftGrade, format *Format, id UserId) PreDraftAggregate {
+func GetDraftAggregateForPlayer(allGrades []*PreDraftGrade, format *Format, id database.UserId) PreDraftAggregate {
 
 	// filter down to only the grades for this particular player ID
 	gradesForThisPlayer := make([]*PreDraftGrade, 0)

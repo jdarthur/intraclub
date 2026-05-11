@@ -231,8 +231,8 @@ func (c *CrudCommon[T]) HandleRouteTypes(e *gin.RouterGroup, crudRouteTypes ...C
 	f.Handle(e, routes...)
 }
 
-func getTokenUserIdIfExists[T database.CrudRecord](req ApiRequest[T]) database.RecordId {
-	userId := database.InvalidRecordId
+func getTokenUserIdIfExists[T database.CrudRecord](req ApiRequest[T]) database.UserId {
+	userId := database.InvalidUserId
 	if req.Token != nil {
 		userId = req.Token.UserId
 	}

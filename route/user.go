@@ -54,7 +54,7 @@ func (c WhoAmI) Handler(req api.ApiRequest[*model.User]) (any, int, error) {
 		return nil, http.StatusUnauthorized, errors.New("token must be passed into create user route")
 	}
 
-	user, err := database.GetExistingRecordById(req.Context, req.DatabaseProvider, &model.User{}, req.Token.UserId)
+	user, err := database.GetExistingRecordById(req.Context, req.DatabaseProvider, &model.User{}, req.Token.UserId.RecordId())
 	if err != nil {
 		return nil, http.StatusUnauthorized, err
 	}

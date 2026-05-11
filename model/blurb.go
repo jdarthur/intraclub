@@ -25,27 +25,27 @@ type Blurb struct {
 	Title     string
 	Content   string
 	Photos    []PhotoId
-	Owner     UserId
+	Owner     database.UserId
 	Season    SeasonId
 	Reactions ReactionList
 }
 
-func (b *Blurb) GetOwner() database.RecordId {
-	return b.Owner.RecordId()
+func (b *Blurb) GetOwner() database.UserId {
+	return b.Owner
 }
 
-func (b *Blurb) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{
-		b.Owner.RecordId(),
+func (b *Blurb) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{
+		b.Owner,
 	}
 }
 
-func (b *Blurb) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (b *Blurb) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (b *Blurb) SetOwner(recordId database.RecordId) {
-	b.Owner = UserId(recordId)
+func (b *Blurb) SetOwner(userId database.UserId) {
+	b.Owner = userId
 }
 
 func NewBlurb() *Blurb {
@@ -104,7 +104,7 @@ func (b *Blurb) SetId(id database.RecordId) {
 	b.ID = BlurbId(id)
 }
 
-func (b *Blurb) React(ctx context.Context, db database.DatabaseProvider, u UserId, t reactionType) error {
+func (b *Blurb) React(ctx context.Context, db database.DatabaseProvider, u database.UserId, t reactionType) error {
 	r := &Reaction{
 		UserId: u,
 		Type:   t,
@@ -125,7 +125,7 @@ func (b *Blurb) React(ctx context.Context, db database.DatabaseProvider, u UserI
 	return database.UpdateOne(ctx, db, b)
 }
 
-func (b *Blurb) Unreact(ctx context.Context, db database.DatabaseProvider, u UserId, t reactionType) error {
+func (b *Blurb) Unreact(ctx context.Context, db database.DatabaseProvider, u database.UserId, t reactionType) error {
 	r := &Reaction{
 		UserId: u,
 		Type:   t,
@@ -148,7 +148,7 @@ func (b *Blurb) Unreact(ctx context.Context, db database.DatabaseProvider, u Use
 	return database.UpdateOne(ctx, db, b)
 }
 
-func (b *Blurb) CanUserCommentOrReact(ctx context.Context, db database.DatabaseProvider, u UserId) error {
+func (b *Blurb) CanUserCommentOrReact(ctx context.Context, db database.DatabaseProvider, u database.UserId) error {
 	// no error when we receive an empty user ID
 	if u.RecordId() == database.InvalidRecordId {
 		return nil

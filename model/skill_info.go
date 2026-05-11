@@ -24,7 +24,7 @@ var LeagueTypes = []LeagueType{
 // Men's seniors team in 2024"
 type SkillInfo struct {
 	ID             database.RecordId `json:"id" bson:"_id"`          // unique ID, only queryable field (entry IDs are stored in a list on the User collection)
-	UserId         UserId            `json:"user_id" bson:"user_id"` // ID of the User that this record belongs to
+	UserId         database.UserId            `json:"user_id" bson:"user_id"` // ID of the User that this record belongs to
 	LeagueType     LeagueType        `json:"league_type"`            // Type of league (USTA / ALTA / T2)
 	MostRecentYear int               `json:"most_recent_year"`       // Year that you played on this team, e.g. 2024
 	Captain        string            `json:"captain"`                // Captain of the team for search convenience, e.g. John Smith
@@ -32,8 +32,8 @@ type SkillInfo struct {
 	Line           string            `json:"line"`                   // line that you played at, e.g. line 1 or line 5
 }
 
-func (s *SkillInfo) GetOwner() database.RecordId {
-	return s.UserId.RecordId()
+func (s *SkillInfo) GetOwner() database.UserId {
+	return s.UserId
 }
 
 func (s *SkillInfo) Type() string {
@@ -51,17 +51,17 @@ func (s *SkillInfo) SetId(id database.RecordId) {
 	panic("implement me")
 }
 
-func (s *SkillInfo) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (s *SkillInfo) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (s *SkillInfo) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (s *SkillInfo) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (s *SkillInfo) SetOwner(recordId database.RecordId) {
+func (s *SkillInfo) SetOwner(userId database.UserId) {
 	// TODO implement me
 	panic("implement me")
 }

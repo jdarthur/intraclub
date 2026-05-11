@@ -27,7 +27,7 @@ var JwtPublicKey *ecdsa.PublicKey
 var JwtPrivateKey *ecdsa.PrivateKey
 
 type AuthToken struct {
-	UserId database.RecordId
+	UserId database.UserId
 }
 
 func GenerateToken(userId database.RecordId) (string, error) {
@@ -70,7 +70,7 @@ func ValidateToken(token string) (*AuthToken, error) {
 	}
 
 	return &AuthToken{
-		UserId: userId,
+		UserId: database.UserId(userId),
 	}, nil
 }
 
@@ -88,7 +88,7 @@ func GetToken(c *gin.Context, db database.DatabaseProvider) (*AuthToken, error) 
 
 	userId := valid.UserId
 	if db != nil && UserType != nil {
-		err := database.ExistsById(c.Request.Context(), db, UserType, userId)
+		err := database.ExistsById(c.Request.Context(), db, UserType, userId.RecordId())
 		if err != nil {
 			return nil, err
 		}

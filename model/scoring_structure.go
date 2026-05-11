@@ -180,7 +180,7 @@ type ScoringStructure struct {
 	// Owner is the UserId who created this ScoringStructure.
 	// This is only used to allow deletion / update and to
 	// filter on one's own ScoringStructure records
-	Owner UserId `json:"owner"`
+	Owner database.UserId `json:"owner"`
 
 	// Name is a descriptive name for this ScoringStructure
 	Name string `json:"name"`
@@ -223,8 +223,8 @@ func (c *ScoringStructure) UniquenessEquivalent(other *ScoringStructure) error {
 	return nil
 }
 
-func (c *ScoringStructure) GetOwner() database.RecordId {
-	return c.Owner.RecordId()
+func (c *ScoringStructure) GetOwner() database.UserId {
+	return c.Owner
 }
 
 func NewScoringStructure() *ScoringStructure {
@@ -243,16 +243,16 @@ func (c *ScoringStructure) SetId(id database.RecordId) {
 	c.ID = ScoringStructureId(id)
 }
 
-func (c *ScoringStructure) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return database.SysAdminAndUsers(c.Owner.RecordId())
+func (c *ScoringStructure) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return database.SysAdminAndUsers(c.Owner)
 }
 
-func (c *ScoringStructure) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (c *ScoringStructure) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (c *ScoringStructure) SetOwner(recordId database.RecordId) {
-	c.Owner = UserId(recordId)
+func (c *ScoringStructure) SetOwner(userId database.UserId) {
+	c.Owner = userId
 }
 
 func (c *ScoringStructure) MaximumScoreCountingUnitsPlayed() (int, error) {

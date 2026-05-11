@@ -92,35 +92,63 @@ func UnmarshalStringIdList(bytes []byte) ([]RecordId, error) {
 	return l2, nil
 }
 
+// UserId is a first-class type representing a user identifier in the system.
+// It is used throughout the authorization and access control subsystems.
+type UserId RecordId
+
+func (id UserId) RecordId() RecordId {
+	return RecordId(id)
+}
+
+func (id UserId) String() string {
+	return RecordId(id).String()
+}
+
+func (id UserId) MarshalJSON() ([]byte, error) {
+	return RecordId(id).MarshalJSON()
+}
+
+func (id *UserId) UnmarshalJSON(bytes []byte) error {
+	v, err := RecordIdFromString(strings.Trim(string(bytes), "\""))
+	if err != nil {
+		return err
+	}
+	*id = UserId(v)
+	return nil
+}
+
 // InvalidRecordId is a special record ID that indicates a value hasn't been set
 var InvalidRecordId = RecordId(0)
 
-// EveryoneRecordId indicates that a CrudRecord is accessible by everyone
-var EveryoneRecordId = RecordId(1)
-var AccessibleToEveryone = []RecordId{EveryoneRecordId}
+// InvalidUserId is a special user ID that indicates a value hasn't been set
+var InvalidUserId = UserId(0)
 
-// SysAdminRecordId indicated that a CrudRecord is accessible / editable by users
-// the model.SystemAdministrator role applied to their model.User record
-var SysAdminRecordId = RecordId(2)
+// EveryoneUserId indicates that a CrudRecord is accessible by everyone
+var EveryoneUserId = UserId(1)
+var AccessibleToEveryone = []UserId{EveryoneUserId}
 
-func SysAdminAndUsers(users ...RecordId) []RecordId {
-	recordIds := make([]RecordId, 0, 1+len(users))
-	recordIds = append(recordIds, SysAdminRecordId)
-	recordIds = append(recordIds, users...)
-	return recordIds
+// SysAdminUserId indicates that a CrudRecord is accessible / editable by users
+// with the SystemAdministrator role applied to their User record
+var SysAdminUserId = UserId(2)
+
+func SysAdminAndUsers(users ...UserId) []UserId {
+	userIds := make([]UserId, 0, 1+len(users))
+	userIds = append(userIds, SysAdminUserId)
+	userIds = append(userIds, users...)
+	return userIds
 }
 
 // unavailableRecordIds is a list of RecordId values that cannot be set
 // in NewRecordId because they have a special meaning in the auth/access logic
 var unavailableRecordIds = []RecordId{
-	InvalidRecordId, EveryoneRecordId, SysAdminRecordId,
+	InvalidRecordId, RecordId(EveryoneUserId), RecordId(SysAdminUserId),
 }
 
 type Authorizable interface {
-	EditableBy(ctx context.Context, db DatabaseProvider) []RecordId
-	AccessibleTo(ctx context.Context, db DatabaseProvider) []RecordId
-	SetOwner(recordId RecordId)
-	GetOwner() RecordId
+	EditableBy(ctx context.Context, db DatabaseProvider) []UserId
+	AccessibleTo(ctx context.Context, db DatabaseProvider) []UserId
+	SetOwner(userId UserId)
+	GetOwner() UserId
 }
 
 type CrudRecord interface {
@@ -142,7 +170,7 @@ type PreUpdate interface {
 
 type CanOnlyDelete interface {
 	CrudRecord
-	CanOnlyDelete(ctx context.Context, db DatabaseProvider, userId RecordId) bool
+	CanOnlyDelete(ctx context.Context, db DatabaseProvider, userId UserId) bool
 }
 
 type PostUpdate interface {

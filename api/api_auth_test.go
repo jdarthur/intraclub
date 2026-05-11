@@ -51,7 +51,7 @@ func TestCreateToken(t *testing.T) {
 		t.Fatalf("ValidateToken failed: %v", err)
 	}
 
-	if at.UserId != userId {
+	if at.UserId != database.UserId(userId) {
 		t.Fatalf("token2.Owner != userId")
 	}
 
@@ -121,10 +121,10 @@ func TestGenerateTokenDifferentUsers(t *testing.T) {
 		t.Fatalf("ValidateToken for token2 failed: %v", err)
 	}
 
-	if at1.UserId != userId1 {
+	if at1.UserId != database.UserId(userId1) {
 		t.Fatalf("token1.UserId != userId1")
 	}
-	if at2.UserId != userId2 {
+	if at2.UserId != database.UserId(userId2) {
 		t.Fatalf("token2.UserId != userId2")
 	}
 	if token1 == token2 {

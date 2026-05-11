@@ -61,30 +61,30 @@ func (id PhotoId) UnmarshalJSON(data []byte) error {
 
 type Photo struct {
 	ID       PhotoId
-	Owner    UserId
+	Owner    database.UserId
 	AltText  string
 	Contents []byte
 	FileType PhotoType
 }
 
-func (p *Photo) GetOwner() database.RecordId {
-	return p.Owner.RecordId()
+func (p *Photo) GetOwner() database.UserId {
+	return p.Owner
 }
 
 func NewPhoto() *Photo {
 	return &Photo{}
 }
 
-func (p *Photo) SetOwner(recordId database.RecordId) {
-	p.Owner = UserId(recordId)
+func (p *Photo) SetOwner(userId database.UserId) {
+	p.Owner = userId
 }
 
-func (p *Photo) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{p.Owner.RecordId(), database.SysAdminRecordId}
+func (p *Photo) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{p.Owner, database.SysAdminUserId}
 }
 
-func (p *Photo) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{database.EveryoneRecordId}
+func (p *Photo) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{database.EveryoneUserId}
 }
 
 func (p *Photo) StaticallyValid() error {

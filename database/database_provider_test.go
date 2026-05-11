@@ -9,12 +9,12 @@ import (
 
 type testRecord struct {
 	ID        RecordId
-	Owner     RecordId
+	Owner     UserId
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
-func (t *testRecord) GetOwner() RecordId {
+func (t *testRecord) GetOwner() UserId {
 	return t.Owner
 }
 
@@ -45,16 +45,16 @@ func (t *testRecord) SetId(id RecordId) {
 	t.ID = id
 }
 
-func (t *testRecord) EditableBy(_ context.Context, db DatabaseProvider) []RecordId {
-	return []RecordId{t.Owner}
+func (t *testRecord) EditableBy(_ context.Context, db DatabaseProvider) []UserId {
+	return []UserId{t.Owner}
 }
 
-func (t *testRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []RecordId {
+func (t *testRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []UserId {
 	return AccessibleToEveryone
 }
 
-func (t *testRecord) SetOwner(recordId RecordId) {
-	t.Owner = recordId
+func (t *testRecord) SetOwner(userId UserId) {
+	t.Owner = userId
 }
 
 func (t *testRecord) StaticallyValid() error {
@@ -239,8 +239,8 @@ func TestGetAllWithRecords(t *testing.T) {
 func TestGetAllWhereWithFilter(t *testing.T) {
 	db := NewUnitTestDBProvider()
 
-	ownerId1 := NewRecordId()
-	ownerId2 := NewRecordId()
+	ownerId1 := UserId(NewRecordId())
+	ownerId2 := UserId(NewRecordId())
 
 	v1 := newTestRecord()
 	v1.Owner = ownerId1
@@ -380,7 +380,7 @@ func TestDeleteOneByIdDoubleDelete(t *testing.T) {
 func TestUpdateOneBasic(t *testing.T) {
 	db := NewUnitTestDBProvider()
 	v := newTestRecord()
-	v.Owner = NewRecordId()
+	v.Owner = UserId(NewRecordId())
 	created, err := CreateOne(context.Background(), db, v)
 	if err != nil {
 		t.Fatal(err)
@@ -388,7 +388,7 @@ func TestUpdateOneBasic(t *testing.T) {
 
 	updated := &testRecord{
 		ID:    created.ID,
-		Owner: NewRecordId(),
+		Owner: UserId(NewRecordId()),
 	}
 	err = UpdateOne(context.Background(), db, updated)
 	if err != nil {
@@ -412,7 +412,7 @@ func TestUpdateOneNotFound(t *testing.T) {
 
 	nonExistent := &testRecord{
 		ID:    NewRecordId(),
-		Owner: NewRecordId(),
+		Owner: UserId(NewRecordId()),
 	}
 	err := UpdateOne(context.Background(), db, nonExistent)
 	if err == nil {

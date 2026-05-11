@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newValidBlurb(owner UserId, season SeasonId) *Blurb {
+func newValidBlurb(owner database.UserId, season SeasonId) *Blurb {
 	b := NewBlurb()
 	b.Owner = owner
 	b.Season = season
@@ -23,7 +23,7 @@ func newDefaultBlurb(t *testing.T, db database.DatabaseProvider) (*Blurb, *Seaso
 	return b, season
 }
 
-func newStoredBlurb(t *testing.T, db database.DatabaseProvider, owner UserId, season SeasonId) *Blurb {
+func newStoredBlurb(t *testing.T, db database.DatabaseProvider, owner database.UserId, season SeasonId) *Blurb {
 	b := newValidBlurb(owner, season)
 	v, err := database.CreateOne(context.Background(), db, b)
 	if err != nil {
@@ -74,7 +74,7 @@ func TestBlurbContentIsOnlyWhitespace(t *testing.T) {
 
 func TestBlurbUserIdDoesNotExist(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	b := newValidBlurb(UserId(database.InvalidRecordId), SeasonId(0))
+	b := newValidBlurb(database.InvalidUserId, SeasonId(0))
 	err := b.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("expected error on invalid user ID")

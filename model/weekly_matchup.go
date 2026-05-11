@@ -59,8 +59,8 @@ type WeeklyMatchup struct {
 	Matchups []*TeamMatchup // List of TeamMatchup s for this WeeklyMatchup, e.g. team 1 playing team 2, team 3 on bye, etc.
 }
 
-func (w *WeeklyMatchup) GetOwner() database.RecordId {
-	return database.InvalidRecordId
+func (w *WeeklyMatchup) GetOwner() database.UserId {
+	return database.InvalidUserId
 }
 
 func (w *WeeklyMatchup) UniquenessEquivalent(other *WeeklyMatchup) error {
@@ -86,15 +86,15 @@ func (w *WeeklyMatchup) SetId(id database.RecordId) {
 	w.ID = WeeklyMatchupId(id)
 }
 
-func (w *WeeklyMatchup) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (w *WeeklyMatchup) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return EditableBySeason(ctx, db, w.SeasonId)
 }
 
-func (w *WeeklyMatchup) AccessibleTo(_ context.Context, db database.DatabaseProvider) []database.RecordId {
+func (w *WeeklyMatchup) AccessibleTo(_ context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (w *WeeklyMatchup) SetOwner(recordId database.RecordId) {
+func (w *WeeklyMatchup) SetOwner(userId database.UserId) {
 	// don't need to do anything here as the ownership of the
 	// WeeklyMatchup record type is automatically inferred &
 	// enforced by the associated Season assigned to it

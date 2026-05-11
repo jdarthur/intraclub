@@ -12,26 +12,26 @@ import (
 type SeasonCommissioner struct {
 	ID        database.RecordId `json:"id"`
 	SeasonId  SeasonId          `json:"season_id"`
-	UserId    UserId            `json:"user_id"`
+	UserId    database.UserId            `json:"user_id"`
 	CreatedAt time.Time         `json:"created_at"`
 	UpdatedAt time.Time         `json:"updated_at"`
 }
 
 // GetOwner returns InvalidRecordId as SeasonCommissioner has no specific owner.
-func (s *SeasonCommissioner) GetOwner() database.RecordId {
-	return database.InvalidRecordId
+func (s *SeasonCommissioner) GetOwner() database.UserId {
+	return database.InvalidUserId
 }
 
 // SetOwner is a no-op as SeasonCommissioner has no specific owner.
-func (s *SeasonCommissioner) SetOwner(recordId database.RecordId) {}
+func (s *SeasonCommissioner) SetOwner(userId database.UserId) {}
 
 // AccessibleTo returns everyone as SeasonCommissioner records are public.
-func (s *SeasonCommissioner) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (s *SeasonCommissioner) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (s *SeasonCommissioner) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{database.SysAdminRecordId}
+func (s *SeasonCommissioner) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{database.SysAdminUserId}
 }
 
 // Type returns the record type identifier for SeasonCommissioner.

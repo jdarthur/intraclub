@@ -8,48 +8,15 @@ import (
 	"intraclub/database"
 )
 
-type UserId database.RecordId
-
-func (id UserId) MarshalJSON() ([]byte, error) {
-	return id.RecordId().MarshalJSON()
-}
-
-func (id UserId) RecordId() database.RecordId {
-	return database.RecordId(id)
-}
-
-func (id UserId) String() string {
-	return id.RecordId().String()
-}
-
-func UserIdListToRecordIdList(input []UserId) []database.RecordId {
-	output := make([]database.RecordId, 0, len(input))
-	for _, id := range input {
-		output = append(output, id.RecordId())
-	}
-	return output
-}
-
-func UserIdSliceToUserSlice(ctx context.Context, input []UserId, db database.DatabaseProvider) []*User {
-	output := make([]*User, 0, len(input))
-	for _, id := range input {
-		user, err := database.GetExistingRecordById(ctx, db, &User{}, id.RecordId())
-		if err == nil {
-			output = append(output, user)
-		}
-	}
-	return output
-}
-
 type User struct {
-	ID          UserId       `json:"id"`
-	FirstName   string       `json:"first_name"`
-	LastName    string       `json:"last_name"`
-	PhoneNumber PhoneNumber  `json:"phone_number"`
-	Email       EmailAddress `json:"email"`
+	ID          database.UserId `json:"id"`
+	FirstName   string          `json:"first_name"`
+	LastName    string          `json:"last_name"`
+	PhoneNumber PhoneNumber     `json:"phone_number"`
+	Email       EmailAddress    `json:"email"`
 }
 
-func (u *User) GetOwner() database.RecordId {
+func (u *User) GetOwner() database.UserId {
 	// TODO implement me
 	panic("implement me")
 }
@@ -67,16 +34,16 @@ func (u *User) UniquenessEquivalent(other *User) error {
 	return nil
 }
 
-func (u *User) SetOwner(recordId database.RecordId) {
+func (u *User) SetOwner(userId database.UserId) {
 	// don't need to do anything as User records are self-owned
 }
 
-func (u *User) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{u.ID.RecordId(), database.SysAdminRecordId}
+func (u *User) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{u.ID, database.SysAdminUserId}
 }
 
-func (u *User) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{database.EveryoneRecordId}
+func (u *User) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{database.EveryoneUserId}
 }
 
 func NewUser() *User {
@@ -92,7 +59,7 @@ func (u *User) GetId() database.RecordId {
 }
 
 func (u *User) SetId(id database.RecordId) {
-	u.ID = UserId(id)
+	u.ID = database.UserId(id)
 }
 
 func (u *User) TrimValues() {

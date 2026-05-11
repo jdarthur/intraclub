@@ -14,19 +14,19 @@ type DraftCaptain struct {
 	ID         database.RecordId `json:"id"`
 	DraftId    DraftId           `json:"draft_id"`
 	TeamId     TeamId            `json:"team_id"`
-	CaptainId  UserId            `json:"captain_id"`
+	CaptainId  database.UserId            `json:"captain_id"`
 	DraftOrder int               `json:"draft_order"`
 	CreatedAt  time.Time         `json:"created_at"`
 	UpdatedAt  time.Time         `json:"updated_at"`
 }
 
 // GetOwner returns InvalidRecordId as DraftCaptain has no specific owner.
-func (d *DraftCaptain) GetOwner() database.RecordId {
-	return database.InvalidRecordId
+func (d *DraftCaptain) GetOwner() database.UserId {
+	return database.InvalidUserId
 }
 
 // SetOwner is a no-op as DraftCaptain has no specific owner.
-func (d *DraftCaptain) SetOwner(recordId database.RecordId) {}
+func (d *DraftCaptain) SetOwner(userId database.UserId) {}
 
 // Type returns the record type identifier for DraftCaptain.
 func (d *DraftCaptain) Type() string {
@@ -79,12 +79,12 @@ func (d *DraftCaptain) DynamicallyValid(ctx context.Context, db database.Databas
 	return nil
 }
 
-func (d *DraftCaptain) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (d *DraftCaptain) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (d *DraftCaptain) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{database.SysAdminRecordId}
+func (d *DraftCaptain) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{database.SysAdminUserId}
 }
 
 // Timestamps returns the create and update timestamps for this DraftCaptain record.

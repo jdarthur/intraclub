@@ -87,7 +87,7 @@ var AllowedReactions = []reactionType{
 // directly in the database but are instead stored on a []Reaction in the
 // Blurb.Reactions and Comment.Reactions fields.
 type Reaction struct {
-	UserId UserId       `json:"user_id" bson:"user_id"`
+	UserId database.UserId       `json:"user_id" bson:"user_id"`
 	Type   reactionType `json:"reaction_type" bson:"reaction_type"`
 }
 

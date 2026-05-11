@@ -24,7 +24,7 @@ var BaseUrl = "https://localhost:5000"
 var UseDevTokenMode = false
 
 type LoginToken struct {
-	UserId   UserId    `json:"user_id"`
+	UserId   database.UserId    `json:"user_id"`
 	Expiry   time.Time `json:"expiry"`
 	UsedAt   time.Time `json:"used_at"`
 	Token    string    `json:"token"`
@@ -33,7 +33,7 @@ type LoginToken struct {
 
 // NewLoginToken creates a new one-time-use login token for a particular UserId with
 // a random token value and which expires LoginTokenDefaultExpirationTime from now
-func NewLoginToken(userId UserId) (*LoginToken, error) {
+func NewLoginToken(userId database.UserId) (*LoginToken, error) {
 	b := make([]byte, LoginTokenLength)
 	n, err := rand.Read(b)
 	if err != nil {
@@ -241,7 +241,7 @@ func (m *StartLoginTokenManager) GenerateTokenEmail(ctx context.Context, db data
 }
 
 type LoginResponse struct {
-	UserId   UserId `json:"user_id"`
+	UserId   database.UserId `json:"user_id"`
 	JWT      string `json:"jwt"`
 	ReturnTo string `json:"return_to"`
 	Error    error  `json:"error"`

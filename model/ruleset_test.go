@@ -33,7 +33,7 @@ func assertRulesetIsDynamicallyInvalid(t *testing.T, db database.DatabaseProvide
 	fmt.Println(err.Error())
 }
 
-func newValidRuleset(t *testing.T, owner UserId) *Ruleset {
+func newValidRuleset(t *testing.T, owner database.UserId) *Ruleset {
 	x := NewRuleset()
 	x.Name = fmt.Sprintf("test ruleset #%d", rand.Int())
 	x.Owner = owner

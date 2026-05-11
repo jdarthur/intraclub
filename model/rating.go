@@ -48,7 +48,7 @@ func (r *RatingList) UnmarshalJSON(bytes []byte) error {
 
 type Rating struct {
 	ID          RatingId `json:"id"`
-	UserId      UserId   `json:"user_id"`
+	UserId      database.UserId   `json:"user_id"`
 	Name        string   `json:"name"`
 	Description string   `json:"description"`
 }
@@ -60,8 +60,8 @@ func (r *Rating) UniquenessEquivalent(other *Rating) error {
 	return nil
 }
 
-func (r *Rating) GetOwner() database.RecordId {
-	return r.UserId.RecordId()
+func (r *Rating) GetOwner() database.UserId {
+	return r.UserId
 }
 
 func (r *Rating) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
@@ -77,19 +77,19 @@ func (r *Rating) PreDelete(ctx context.Context, db database.DatabaseProvider) er
 	return nil
 }
 
-func (r *Rating) SetOwner(recordId database.RecordId) {
-	r.UserId = UserId(recordId)
+func (r *Rating) SetOwner(userId database.UserId) {
+	r.UserId = userId
 }
 
 func NewRating() *Rating {
 	return &Rating{}
 }
 
-func (r *Rating) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return database.SysAdminAndUsers(r.UserId.RecordId())
+func (r *Rating) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return database.SysAdminAndUsers(r.UserId)
 }
 
-func (r *Rating) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (r *Rating) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 

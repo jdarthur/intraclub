@@ -109,14 +109,14 @@ func (id FormatId) String() string {
 //   - young guy / young guy.
 type Format struct {
 	ID              FormatId     `json:"id"`               // unique ID for the Format
-	UserId          UserId       `json:"user_id"`          // owner of the Format
+	UserId          database.UserId       `json:"user_id"`          // owner of the Format
 	Name            string       `json:"name"`             // name for the Format, e.g. "Men's Intraclub 1/2/3"
 	PossibleRatings RatingList   `json:"possible_ratings"` // list of possible Rating values for the lines, highest to lowest skill
 	Lines           []FormatLine `json:"lines"`            // Rating pairings that will play during a matchup
 }
 
-func (f *Format) GetOwner() database.RecordId {
-	return f.UserId.RecordId()
+func (f *Format) GetOwner() database.UserId {
+	return f.UserId
 }
 
 func (f *Format) PreUpdate(ctx context.Context, db database.DatabaseProvider, existingValues database.CrudRecord) error {
@@ -127,19 +127,19 @@ func (f *Format) PreDelete(ctx context.Context, db database.DatabaseProvider) er
 	return f.CheckHasAssignedDrafts(ctx, db, false)
 }
 
-func (f *Format) SetOwner(recordId database.RecordId) {
-	f.UserId = UserId(recordId)
+func (f *Format) SetOwner(userId database.UserId) {
+	f.UserId = userId
 }
 
 func NewFormat() *Format {
 	return &Format{}
 }
 
-func (f *Format) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{f.UserId.RecordId()}
+func (f *Format) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+	return []database.UserId{f.UserId}
 }
 
-func (f *Format) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (f *Format) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 

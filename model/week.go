@@ -27,8 +27,8 @@ type Week struct {
 	Note    string
 }
 
-func (w *Week) GetOwner() database.RecordId {
-	return database.InvalidRecordId
+func (w *Week) GetOwner() database.UserId {
+	return database.InvalidUserId
 }
 
 func (w *Week) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
@@ -78,7 +78,7 @@ func (w *Week) PreUpdate(_ context.Context, db database.DatabaseProvider, existi
 	return nil
 }
 
-func (w *Week) SetOwner(recordId database.RecordId) {
+func (w *Week) SetOwner(userId database.UserId) {
 	// don't need to do anything as Week records have
 	// ownership automatically inferred / enforced by the
 	// values of the SeasonId field
@@ -88,7 +88,7 @@ func NewWeek() *Week {
 	return &Week{}
 }
 
-func (w *Week) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+func (w *Week) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
 
 	draft, err := database.GetExistingRecordById(ctx, db, &Draft{}, w.DraftId.RecordId())
 	if err != nil {
@@ -107,11 +107,11 @@ func (w *Week) EditableBy(ctx context.Context, db database.DatabaseProvider) []d
 	if season != nil {
 		EditableBySeason(ctx, db, season.ID)
 	}
-	return []database.RecordId{draft.Owner.RecordId()}
+	return []database.UserId{draft.Owner}
 }
 
-func (w *Week) AccessibleTo(_ context.Context, _ database.DatabaseProvider) []database.RecordId {
-	return []database.RecordId{database.EveryoneRecordId}
+func (w *Week) AccessibleTo(_ context.Context, _ database.DatabaseProvider) []database.UserId {
+	return []database.UserId{database.EveryoneUserId}
 }
 
 func (w *Week) StaticallyValid() error {
