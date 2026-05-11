@@ -3,8 +3,9 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
 	"testing"
+
+	"intraclub/database"
 )
 
 func newValidComment(u UserId, blurb BlurbId) *Comment {
@@ -15,7 +16,7 @@ func newValidComment(u UserId, blurb BlurbId) *Comment {
 	return c
 }
 
-func getAnyTeamCaptain(t *testing.T, db common.DatabaseProvider, season *Season) UserId {
+func getAnyTeamCaptain(t *testing.T, db database.DatabaseProvider, season *Season) UserId {
 	teams, err := season.GetTeams(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
@@ -40,10 +41,10 @@ func copyComment(c *Comment) *Comment {
 	}
 }
 
-func newStoredComment(t *testing.T, db common.DatabaseProvider, user UserId, blurb *Blurb) *Comment {
+func newStoredComment(t *testing.T, db database.DatabaseProvider, user UserId, blurb *Blurb) *Comment {
 	c := newValidComment(user, blurb.ID)
 
-	v, err := common.CreateOne(context.Background(), db, c)
+	v, err := database.CreateOne(context.Background(), db, c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,7 +73,7 @@ func TestCommentContentIsWhitespace(t *testing.T) {
 
 func TestCommentReferencesSelf(t *testing.T) {
 	c := NewComment()
-	c.ID = CommentId(common.NewRecordId())
+	c.ID = CommentId(database.NewRecordId())
 	c.ReplyTo = c.ID
 	c.Content = "test"
 	err := c.StaticallyValid()
@@ -84,7 +85,7 @@ func TestCommentReferencesSelf(t *testing.T) {
 
 func TestCommentCreateDateIsEmpty(t *testing.T) {
 	c := NewComment()
-	c.ID = CommentId(common.NewRecordId())
+	c.ID = CommentId(database.NewRecordId())
 	c.Content = "content"
 	err := c.StaticallyValid()
 	if err == nil {
@@ -94,9 +95,9 @@ func TestCommentCreateDateIsEmpty(t *testing.T) {
 }
 
 func TestCommentUserIdIsInvalid(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	blurb, _ := newDefaultBlurb(t, db)
-	c := newValidComment(UserId(common.InvalidRecordId), blurb.ID)
+	c := newValidComment(UserId(database.InvalidRecordId), blurb.ID)
 	err := c.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Error("Invalid user id should produce error")
@@ -105,7 +106,7 @@ func TestCommentUserIdIsInvalid(t *testing.T) {
 }
 
 func TestEditBySysAdmin(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	blurb, _ := newDefaultBlurb(t, db)
 	c := newStoredComment(t, db, blurb.Owner, blurb)
 
@@ -114,7 +115,7 @@ func TestEditBySysAdmin(t *testing.T) {
 	copied := copyComment(c)
 	copied.Content = "new content"
 
-	wac := common.WithAccessControl[*Comment]{Database: db, AccessControlUser: sysAdmin.ID.RecordId()}
+	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: sysAdmin.ID.RecordId()}
 	err := wac.UpdateOneById(context.Background(), copied)
 	if err == nil {
 		t.Error("Edit by privileged non-owner should produce error")
@@ -124,7 +125,7 @@ func TestEditBySysAdmin(t *testing.T) {
 }
 
 func TestEditByCommissioner(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	blurb, season := newDefaultBlurb(t, db)
 	teamCaptain := getAnyTeamCaptain(t, db, season)
 	c := newStoredComment(t, db, teamCaptain, blurb)
@@ -135,7 +136,7 @@ func TestEditByCommissioner(t *testing.T) {
 	copied := copyComment(c)
 	copied.Content = "new content"
 
-	wac := common.WithAccessControl[*Comment]{Database: db, AccessControlUser: commissioner.RecordId()}
+	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: commissioner.RecordId()}
 	err := wac.UpdateOneById(context.Background(), copied)
 	if err == nil {
 		t.Error("Edit by commissioner should produce error")
@@ -144,7 +145,7 @@ func TestEditByCommissioner(t *testing.T) {
 }
 
 func TestEditByOwner(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	blurb, _ := newDefaultBlurb(t, db)
 	c := newStoredComment(t, db, blurb.Owner, blurb)
 
@@ -153,13 +154,13 @@ func TestEditByOwner(t *testing.T) {
 	copied := copyComment(c)
 	copied.Content = "new content"
 
-	wac := common.WithAccessControl[*Comment]{Database: db, AccessControlUser: c.Owner.RecordId()}
+	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: c.Owner.RecordId()}
 	err := wac.UpdateOneById(context.Background(), copied)
 	if err != nil {
 		t.Error("Edit by owner should not produce error")
 	}
 
-	v, err := common.GetExistingRecordById(context.Background(), db, &Comment{}, c.ID.RecordId())
+	v, err := database.GetExistingRecordById(context.Background(), db, &Comment{}, c.ID.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,13 +176,13 @@ func TestEditByOwner(t *testing.T) {
 }
 
 func TestDeleteBySysAdmin(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	blurb, _ := newDefaultBlurb(t, db)
 
 	c := newStoredComment(t, db, blurb.Owner, blurb)
 	sysAdmin := newSysAdmin(t, db)
 
-	wac := common.WithAccessControl[*Comment]{Database: db, AccessControlUser: sysAdmin.ID.RecordId()}
+	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: sysAdmin.ID.RecordId()}
 	_, _, err := wac.DeleteOneById(context.Background(), c, c.ID.RecordId())
 	if err != nil {
 		t.Fatal(err)
@@ -189,7 +190,7 @@ func TestDeleteBySysAdmin(t *testing.T) {
 }
 
 func TestDeleteByCommissioner(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	blurb, season := newDefaultBlurb(t, db)
 	teamCaptain := getAnyTeamCaptain(t, db, season)
 	c := newStoredComment(t, db, teamCaptain, blurb)
@@ -200,7 +201,7 @@ func TestDeleteByCommissioner(t *testing.T) {
 	copied := copyComment(c)
 	copied.Content = "new content"
 
-	wac := common.WithAccessControl[*Comment]{Database: db, AccessControlUser: commissioner.RecordId()}
+	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: commissioner.RecordId()}
 	err := wac.UpdateOneById(context.Background(), copied)
 	if err == nil {
 		t.Error("Edit by commissioner should produce error")
@@ -209,12 +210,12 @@ func TestDeleteByCommissioner(t *testing.T) {
 }
 
 func TestDeleteByOwner(t *testing.T) {
-	common.SysAdminCheck = IsUserSystemAdministrator
-	db := common.NewUnitTestDBProvider()
+	database.SysAdminCheck = IsUserSystemAdministrator
+	db := database.NewUnitTestDBProvider()
 	blurb, _ := newDefaultBlurb(t, db)
 	c := newStoredComment(t, db, blurb.Owner, blurb)
 
-	wac := common.WithAccessControl[*Comment]{Database: db, AccessControlUser: c.Owner.RecordId()}
+	wac := database.WithAccessControl[*Comment]{Database: db, AccessControlUser: c.Owner.RecordId()}
 	_, _, err := wac.DeleteOneById(context.Background(), c, c.ID.RecordId())
 	if err != nil {
 		t.Fatal(err)
@@ -222,7 +223,7 @@ func TestDeleteByOwner(t *testing.T) {
 }
 
 func TestCommentByNonSeasonParticipant(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	blurb, _ := newDefaultBlurb(t, db)
 	otherUser := newStoredUser(t, db)
 

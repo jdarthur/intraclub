@@ -3,13 +3,14 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
+
+	"intraclub/database"
 )
 
-type LineupPairingId common.RecordId
+type LineupPairingId database.RecordId
 
-func (id LineupPairingId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id LineupPairingId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id LineupPairingId) String() string {
@@ -37,31 +38,31 @@ func (l *LineupPairing) UniquenessEquivalent(other *LineupPairing) error {
 	return nil
 }
 
-func (l *LineupPairing) GetOwner() common.RecordId {
-	return common.InvalidRecordId
+func (l *LineupPairing) GetOwner() database.RecordId {
+	return database.InvalidRecordId
 }
 
 func (l *LineupPairing) Type() string {
 	return "lineup_pairing"
 }
 
-func (l *LineupPairing) GetId() common.RecordId {
+func (l *LineupPairing) GetId() database.RecordId {
 	return l.ID.RecordId()
 }
 
-func (l *LineupPairing) SetId(id common.RecordId) {
+func (l *LineupPairing) SetId(id database.RecordId) {
 	l.ID = LineupPairingId(id)
 }
 
-func (l *LineupPairing) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+func (l *LineupPairing) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
 	return EditableByTeamCaptainOrCoCaptains(ctx, db, l.TeamId)
 }
 
-func (l *LineupPairing) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+func (l *LineupPairing) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
 	return AccessibleByTeamMembers(ctx, db, l.TeamId)
 }
 
-func (l *LineupPairing) SetOwner(recordId common.RecordId) {
+func (l *LineupPairing) SetOwner(recordId database.RecordId) {
 	// don't need to do anything here as editable-by rights
 	// are enforced via the team ID
 }
@@ -73,10 +74,10 @@ func (l *LineupPairing) StaticallyValid() error {
 	return nil
 }
 
-func (l *LineupPairing) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+func (l *LineupPairing) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
 
 	// get team
-	team, err := common.GetExistingRecordById(ctx, db, &Team{}, l.TeamId.RecordId())
+	team, err := database.GetExistingRecordById(ctx, db, &Team{}, l.TeamId.RecordId())
 	if err != nil {
 		return err
 	}
@@ -109,9 +110,9 @@ func (l *LineupPairing) DynamicallyValid(ctx context.Context, db common.Database
 	return nil
 }
 
-func (l *LineupPairing) GetFormat(ctx context.Context, db common.DatabaseProvider) (*Format, error) {
+func (l *LineupPairing) GetFormat(ctx context.Context, db database.DatabaseProvider) (*Format, error) {
 	// get lineup so that we can get the format
-	lineup, err := common.GetExistingRecordById(ctx, db, &Lineup{}, l.LineupId.RecordId())
+	lineup, err := database.GetExistingRecordById(ctx, db, &Lineup{}, l.LineupId.RecordId())
 	if err != nil {
 		return nil, err
 	}
@@ -121,12 +122,12 @@ func (l *LineupPairing) GetFormat(ctx context.Context, db common.DatabaseProvide
 	return lineup.GetFormat(ctx, db)
 }
 
-func (l *LineupPairing) ValidatePlayerRatings(ctx context.Context, db common.DatabaseProvider) error {
+func (l *LineupPairing) ValidatePlayerRatings(ctx context.Context, db database.DatabaseProvider) error {
 	format, err := l.GetFormat(ctx, db)
 	if err != nil {
 		return err
 	}
-	team, err := common.GetExistingRecordById(ctx, db, &Team{}, l.TeamId.RecordId())
+	team, err := database.GetExistingRecordById(ctx, db, &Team{}, l.TeamId.RecordId())
 	if err != nil {
 		return err
 	}
@@ -148,6 +149,6 @@ func (l *LineupPairing) _validatePlayerRatings(format *Format, team *Team) error
 	return nil
 }
 
-func (l *LineupPairing) BlankRecord() common.CrudRecord {
+func (l *LineupPairing) BlankRecord() database.CrudRecord {
 	return new(LineupPairing)
 }

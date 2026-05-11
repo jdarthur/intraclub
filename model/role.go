@@ -3,7 +3,8 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
+
+	"intraclub/database"
 )
 
 type Role int
@@ -37,7 +38,7 @@ func (r Role) String() string {
 	}
 }
 
-func (r Role) GetReferenceType() common.CrudRecord {
+func (r Role) GetReferenceType() database.CrudRecord {
 	switch r {
 	case SystemAdministrator:
 		return nil
@@ -59,27 +60,27 @@ func (r Role) Valid() bool {
 }
 
 type UserRoleAssignment struct {
-	ID          common.RecordId // ID of this assignment
-	UserId      UserId          // ID of the User being assigned a role
-	Role        Role            // Role being assigned to this user
-	ReferenceId common.RecordId // ID of referenced record base on role, e.g. Team ID for a TeamMember role
+	ID          database.RecordId // ID of this assignment
+	UserId      UserId            // ID of the User being assigned a role
+	Role        Role              // Role being assigned to this user
+	ReferenceId database.RecordId // ID of referenced record base on role, e.g. Team ID for a TeamMember role
 }
 
-func (u *UserRoleAssignment) GetOwner() common.RecordId {
-	return common.InvalidRecordId
+func (u *UserRoleAssignment) GetOwner() database.RecordId {
+	return database.InvalidRecordId
 }
 
-func (u *UserRoleAssignment) SetOwner(recordId common.RecordId) {
+func (u *UserRoleAssignment) SetOwner(recordId database.RecordId) {
 	// don't need to do anything as the Owner field this record type
 	// will necessarily be present in the Create request
 }
 
-func (u *UserRoleAssignment) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.SysAdminAndUsers() // only changeable by system administrator
+func (u *UserRoleAssignment) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.SysAdminAndUsers() // only changeable by system administrator
 }
 
-func (u *UserRoleAssignment) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	//TODO implement me
+func (u *UserRoleAssignment) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -87,11 +88,11 @@ func (u *UserRoleAssignment) Type() string {
 	return "user_role_assignment"
 }
 
-func (u *UserRoleAssignment) GetId() common.RecordId {
+func (u *UserRoleAssignment) GetId() database.RecordId {
 	return u.ID
 }
 
-func (u *UserRoleAssignment) SetId(id common.RecordId) {
+func (u *UserRoleAssignment) SetId(id database.RecordId) {
 	u.ID = id
 }
 
@@ -102,31 +103,31 @@ func (u *UserRoleAssignment) StaticallyValid() error {
 	return nil
 }
 
-func (u *UserRoleAssignment) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	err := common.ExistsById(ctx, db, &User{}, u.UserId.RecordId())
+func (u *UserRoleAssignment) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	err := database.ExistsById(ctx, db, &User{}, u.UserId.RecordId())
 	if err != nil {
 		return err
 	}
 
 	referenceType := u.Role.GetReferenceType()
 	if referenceType != nil {
-		return common.ExistsById(ctx, db, referenceType, u.ReferenceId)
+		return database.ExistsById(ctx, db, referenceType, u.ReferenceId)
 	}
 
 	return nil
 }
 
-func (u *UserRoleAssignment) BlankRecord() common.CrudRecord {
+func (u *UserRoleAssignment) BlankRecord() database.CrudRecord {
 	return new(UserRoleAssignment)
 }
 
-func IsUserAssignedToTeam(ctx context.Context, db common.DatabaseProvider, userId UserId, teamId TeamId) (bool, error) {
-	err := common.ExistsById(ctx, db, &User{}, userId.RecordId())
+func IsUserAssignedToTeam(ctx context.Context, db database.DatabaseProvider, userId UserId, teamId TeamId) (bool, error) {
+	err := database.ExistsById(ctx, db, &User{}, userId.RecordId())
 	if err != nil {
 		return false, err
 	}
 
-	team, exists, err := common.GetOneById(ctx, db, &Team{}, teamId.RecordId())
+	team, exists, err := database.GetOneById(ctx, db, &Team{}, teamId.RecordId())
 	if err != nil {
 		return false, err
 	}
@@ -136,13 +137,13 @@ func IsUserAssignedToTeam(ctx context.Context, db common.DatabaseProvider, userI
 	return team.IsTeamMember(ctx, db, userId)
 }
 
-func IsUserAssignedToSeason(ctx context.Context, db common.DatabaseProvider, userId UserId, seasonId common.RecordId) (bool, error) {
-	err := common.ExistsById(ctx, db, &User{}, userId.RecordId())
+func IsUserAssignedToSeason(ctx context.Context, db database.DatabaseProvider, userId UserId, seasonId database.RecordId) (bool, error) {
+	err := database.ExistsById(ctx, db, &User{}, userId.RecordId())
 	if err != nil {
 		return false, err
 	}
 
-	season, exists, err := common.GetOneById(ctx, db, &Season{}, seasonId)
+	season, exists, err := database.GetOneById(ctx, db, &Season{}, seasonId)
 	if err != nil {
 		return false, err
 	}
@@ -153,8 +154,8 @@ func IsUserAssignedToSeason(ctx context.Context, db common.DatabaseProvider, use
 	return season.IsUserIdASeasonParticipant(ctx, db, userId)
 }
 
-func IsUserSystemAdministrator(ctx context.Context, db common.DatabaseProvider, userId common.RecordId) (bool, error) {
-	user, exists, err := common.GetOneById(ctx, db, &User{}, userId)
+func IsUserSystemAdministrator(ctx context.Context, db database.DatabaseProvider, userId database.RecordId) (bool, error) {
+	user, exists, err := database.GetOneById(ctx, db, &User{}, userId)
 	if err != nil {
 		return false, err
 	}
@@ -165,13 +166,13 @@ func IsUserSystemAdministrator(ctx context.Context, db common.DatabaseProvider, 
 	return user.HasRole(ctx, db, SystemAdministrator)
 }
 
-func (u *User) HasRole(ctx context.Context, db common.DatabaseProvider, role Role) (bool, error) {
+func (u *User) HasRole(ctx context.Context, db database.DatabaseProvider, role Role) (bool, error) {
 
 	filter := func(_ context.Context, c *UserRoleAssignment) bool {
 		return c.UserId == u.ID
 	}
 
-	roles, err := common.GetAllWhere[*UserRoleAssignment](ctx, db, filter)
+	roles, err := database.GetAllWhere[*UserRoleAssignment](ctx, db, filter)
 
 	if err != nil {
 		return false, err
@@ -184,11 +185,11 @@ func (u *User) HasRole(ctx context.Context, db common.DatabaseProvider, role Rol
 	return false, nil
 }
 
-func (u *User) AssignRole(ctx context.Context, db common.DatabaseProvider, r Role) error {
-	return u.AssignRoleWithReference(ctx, db, r, common.InvalidRecordId)
+func (u *User) AssignRole(ctx context.Context, db database.DatabaseProvider, r Role) error {
+	return u.AssignRoleWithReference(ctx, db, r, database.InvalidRecordId)
 }
 
-func (u *User) AssignRoleWithReference(ctx context.Context, db common.DatabaseProvider, r Role, referenceId common.RecordId) error {
+func (u *User) AssignRoleWithReference(ctx context.Context, db database.DatabaseProvider, r Role, referenceId database.RecordId) error {
 	hasRole, err := u.HasRole(ctx, db, r)
 	if err != nil {
 		return err
@@ -197,8 +198,8 @@ func (u *User) AssignRoleWithReference(ctx context.Context, db common.DatabasePr
 		return nil
 	}
 
-	if r != SystemAdministrator && referenceId != common.InvalidRecordId {
-		err = common.ExistsById(ctx, db, r.GetReferenceType(), referenceId)
+	if r != SystemAdministrator && referenceId != database.InvalidRecordId {
+		err = database.ExistsById(ctx, db, r.GetReferenceType(), referenceId)
 		if err != nil {
 			return err
 		}
@@ -210,6 +211,6 @@ func (u *User) AssignRoleWithReference(ctx context.Context, db common.DatabasePr
 		ReferenceId: referenceId,
 	}
 
-	_, err = common.CreateOne(ctx, db, &assignment)
+	_, err = database.CreateOne(ctx, db, &assignment)
 	return err
 }

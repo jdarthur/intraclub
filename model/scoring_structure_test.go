@@ -3,8 +3,9 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
 	"testing"
+
+	"intraclub/database"
 )
 
 // TennisMatchScoringStructure is a default
@@ -35,7 +36,7 @@ var TennisTiebreakThirdSet = ScoringStructure{
 	},
 }
 
-func newDefaultStoredScoringStructure(t *testing.T, db common.DatabaseProvider) *ScoringStructure {
+func newDefaultStoredScoringStructure(t *testing.T, db database.DatabaseProvider) *ScoringStructure {
 
 	s := newDefaultStoredSetScoringStructure(t, db)
 	matchScoringStructure := &TennisMatchScoringStructure
@@ -47,14 +48,14 @@ func newDefaultStoredScoringStructure(t *testing.T, db common.DatabaseProvider) 
 		s.ID,
 	}
 
-	m, err := common.CreateOne(context.Background(), db, matchScoringStructure)
+	m, err := database.CreateOne(context.Background(), db, matchScoringStructure)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return m
 }
 
-func newThirdSetTiebreakScoringStructure(t *testing.T, db common.DatabaseProvider) *ScoringStructure {
+func newThirdSetTiebreakScoringStructure(t *testing.T, db database.DatabaseProvider) *ScoringStructure {
 
 	s := newDefaultStoredSetScoringStructure(t, db)
 	s2 := newTenPointTiebreakSetScoringStructure(t, db)
@@ -68,33 +69,33 @@ func newThirdSetTiebreakScoringStructure(t *testing.T, db common.DatabaseProvide
 		s2.ID,
 	}
 
-	m, err := common.CreateOne(context.Background(), db, matchScoringStructure)
+	m, err := database.CreateOne(context.Background(), db, matchScoringStructure)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return m
 }
 
-func newDefaultStoredSetScoringStructure(t *testing.T, db common.DatabaseProvider) *ScoringStructure {
+func newDefaultStoredSetScoringStructure(t *testing.T, db database.DatabaseProvider) *ScoringStructure {
 	owner := newStoredUser(t, db)
 
 	setScoringStructure := &TennisSetScoringStructure
 	setScoringStructure.Owner = owner.ID
 	setScoringStructure.Name = "test-set-scoring"
-	s, err := common.CreateOne(context.Background(), db, setScoringStructure)
+	s, err := database.CreateOne(context.Background(), db, setScoringStructure)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return s
 }
 
-func newTenPointTiebreakSetScoringStructure(t *testing.T, db common.DatabaseProvider) *ScoringStructure {
+func newTenPointTiebreakSetScoringStructure(t *testing.T, db database.DatabaseProvider) *ScoringStructure {
 	owner := newStoredUser(t, db)
 
 	setScoringStructure := &TennisTiebreakThirdSet
 	setScoringStructure.Owner = owner.ID
 	setScoringStructure.Name = "test-tiebreak-set-scoring"
-	s, err := common.CreateOne(context.Background(), db, setScoringStructure)
+	s, err := database.CreateOne(context.Background(), db, setScoringStructure)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,7 +174,7 @@ func TestWinByConstraintIsZero(t *testing.T) {
 }
 
 func TestIncorrectAmountOfSecondaryScoringStructures(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ref := newDefaultStoredSetScoringStructure(t, db)
 
 	s := ScoringStructure{}
@@ -192,7 +193,7 @@ func TestIncorrectAmountOfSecondaryScoringStructures(t *testing.T) {
 }
 
 func TestIndeterminateWinConditionWithSecondaryScoringStructures(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ref := newDefaultStoredSetScoringStructure(t, db)
 
 	s := ScoringStructure{}
@@ -211,14 +212,14 @@ func TestIndeterminateWinConditionWithSecondaryScoringStructures(t *testing.T) {
 }
 
 func TestInvalidSecondaryScoreReference(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	s := ScoringStructure{}
 	s.WinConditionCountingType = Set
 	s.WinCondition = WinCondition{
 		WinThreshold: 6,
 		MustWinBy:    2,
 	}
-	s.SecondaryScoringStructures = []ScoringStructureId{ScoringStructureId(common.InvalidRecordId)}
+	s.SecondaryScoringStructures = []ScoringStructureId{ScoringStructureId(database.InvalidRecordId)}
 
 	err := s.DynamicallyValid(context.Background(), db)
 	if err == nil {
@@ -228,7 +229,7 @@ func TestInvalidSecondaryScoreReference(t *testing.T) {
 }
 
 func TestInvalidOwnerId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	s := ScoringStructure{}
 	s.WinConditionCountingType = Set
 	s.WinCondition = WinCondition{

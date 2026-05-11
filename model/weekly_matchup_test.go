@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"testing"
 
-	"intraclub/common"
+	"intraclub/database"
 )
 
-func newStoredWeeklyMatchup(t *testing.T, db common.DatabaseProvider) (*Season, *WeeklyMatchup) {
+func newStoredWeeklyMatchup(t *testing.T, db database.DatabaseProvider) (*Season, *WeeklyMatchup) {
 	season, _ := newDefaultSeasonWithTeams(t, db, 4)
 	week := newStoredWeek(t, db, season)
 
@@ -32,7 +32,7 @@ func newStoredWeeklyMatchup(t *testing.T, db common.DatabaseProvider) (*Season, 
 
 	w.Matchups = []*TeamMatchup{&matchup, &matchup2}
 
-	v, err := common.CreateOne(context.Background(), db, w)
+	v, err := database.CreateOne(context.Background(), db, w)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,9 +48,9 @@ func copyWeeklyMatchup(w *WeeklyMatchup) *WeeklyMatchup {
 }
 
 func TestWeeklyMatchupInvalidHomeTeamId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
-	w.Matchups[0].HomeTeam = TeamId(common.InvalidRecordId)
+	w.Matchups[0].HomeTeam = TeamId(database.InvalidRecordId)
 	err := w.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("InvalidScoreCountingType home team ID should produce error")
@@ -59,9 +59,9 @@ func TestWeeklyMatchupInvalidHomeTeamId(t *testing.T) {
 }
 
 func TestWeeklyMatchupInvalidAwayTeamId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
-	w.Matchups[0].AwayTeam = TeamId(common.InvalidRecordId)
+	w.Matchups[0].AwayTeam = TeamId(database.InvalidRecordId)
 	err := w.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("InvalidScoreCountingType away team ID should produce error")
@@ -70,9 +70,9 @@ func TestWeeklyMatchupInvalidAwayTeamId(t *testing.T) {
 }
 
 func TestWeeklyMatchupInvalidSeasonId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
-	w.SeasonId = SeasonId(common.InvalidRecordId)
+	w.SeasonId = SeasonId(database.InvalidRecordId)
 	err := w.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("InvalidScoreCountingType season ID should produce error")
@@ -81,9 +81,9 @@ func TestWeeklyMatchupInvalidSeasonId(t *testing.T) {
 }
 
 func TestWeeklyMatchupInvalidWeekId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
-	w.WeekId = WeekId(common.InvalidRecordId)
+	w.WeekId = WeekId(database.InvalidRecordId)
 	err := w.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("InvalidScoreCountingType week ID should produce error")
@@ -92,7 +92,7 @@ func TestWeeklyMatchupInvalidWeekId(t *testing.T) {
 }
 
 func TestWeeklyMatchupWeekDoesNotBelongToSeason(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
 
 	otherSeason, _ := newDefaultSeason(t, db)
@@ -107,7 +107,7 @@ func TestWeeklyMatchupWeekDoesNotBelongToSeason(t *testing.T) {
 }
 
 func TestWeeklyMatchupHomeTeamDoesNotBelongToSeason(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
 
 	otherTeam := newStoredTeam(t, db, newStoredUser(t, db).ID)
@@ -121,7 +121,7 @@ func TestWeeklyMatchupHomeTeamDoesNotBelongToSeason(t *testing.T) {
 }
 
 func TestWeeklyMatchupAwayTeamDoesNotBelongToSeason(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
 
 	otherTeam := newStoredTeam(t, db, newStoredUser(t, db).ID)
@@ -135,7 +135,7 @@ func TestWeeklyMatchupAwayTeamDoesNotBelongToSeason(t *testing.T) {
 }
 
 func TestWeeklyMatchupTeamPlayingInMultipleMatchups(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, w := newStoredWeeklyMatchup(t, db)
 
 	teams, err := season.GetTeams(context.Background(), db)
@@ -157,13 +157,13 @@ func TestWeeklyMatchupTeamPlayingInMultipleMatchups(t *testing.T) {
 }
 
 func TestWeeklyMatchupTeamDoesNotHaveAnyMatchups(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
 
 	w.Matchups[1].Bye = true
-	w.Matchups[1].AwayTeam = TeamId(common.InvalidRecordId)
+	w.Matchups[1].AwayTeam = TeamId(database.InvalidRecordId)
 
-	err := common.Validate(context.Background(), db, w)
+	err := database.Validate(context.Background(), db, w)
 	if err == nil {
 		t.Fatal("Team 4 without matchup or bye should produce error")
 	}
@@ -172,7 +172,7 @@ func TestWeeklyMatchupTeamDoesNotHaveAnyMatchups(t *testing.T) {
 }
 
 func TestWeeklyMatchupTeamHasBye(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, _ := newDefaultSeasonWithTeams(t, db, 4)
 	week := newStoredWeek(t, db, season)
 
@@ -200,18 +200,18 @@ func TestWeeklyMatchupTeamHasBye(t *testing.T) {
 
 	w.Matchups = []*TeamMatchup{&matchup, &bye1, &bye2}
 
-	err = common.Validate(context.Background(), db, w)
+	err = database.Validate(context.Background(), db, w)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestWeeklyMatchupHomeTeamByeButAwayTeamIsSet(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
 
 	w.Matchups[0].Bye = true
-	err := common.Validate(context.Background(), db, w)
+	err := database.Validate(context.Background(), db, w)
 	if err == nil {
 		t.Fatal("Bye with away team set should produce error")
 	}
@@ -219,11 +219,11 @@ func TestWeeklyMatchupHomeTeamByeButAwayTeamIsSet(t *testing.T) {
 }
 
 func TestDuplicateWeeklyMatchup(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	_, w := newStoredWeeklyMatchup(t, db)
 
 	w2 := copyWeeklyMatchup(w)
-	_, err := common.CreateOne(context.Background(), db, w2)
+	_, err := database.CreateOne(context.Background(), db, w2)
 	if err == nil {
 		t.Fatal("Expected error on duplicate weekly matchup")
 	}

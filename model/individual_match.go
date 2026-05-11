@@ -3,13 +3,14 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
+
+	"intraclub/database"
 )
 
-type IndividualMatchId common.RecordId
+type IndividualMatchId database.RecordId
 
-func (id IndividualMatchId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id IndividualMatchId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id IndividualMatchId) String() string {
@@ -70,7 +71,7 @@ type IndividualMatch struct {
 	_completed     []CompletedSecondary
 }
 
-func (s *IndividualMatch) GetOwner() common.RecordId {
+func (s *IndividualMatch) GetOwner() database.RecordId {
 	return s.Editors[0].RecordId()
 }
 
@@ -82,23 +83,23 @@ func (s *IndividualMatch) Type() string {
 	return "match"
 }
 
-func (s *IndividualMatch) GetId() common.RecordId {
+func (s *IndividualMatch) GetId() database.RecordId {
 	return s.ID.RecordId()
 }
 
-func (s *IndividualMatch) SetId(id common.RecordId) {
+func (s *IndividualMatch) SetId(id database.RecordId) {
 	s.ID = IndividualMatchId(id)
 }
 
-func (s *IndividualMatch) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+func (s *IndividualMatch) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
 	return UserIdListToRecordIdList(s.Editors)
 }
 
-func (s *IndividualMatch) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (s *IndividualMatch) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
-func (s *IndividualMatch) SetOwner(recordId common.RecordId) {
+func (s *IndividualMatch) SetOwner(recordId database.RecordId) {
 	s.Editors = append(s.Editors, UserId(recordId))
 }
 
@@ -115,27 +116,27 @@ func (s *IndividualMatch) StaticallyValid() error {
 	return nil
 }
 
-func (s *IndividualMatch) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	err := common.ExistsById(ctx, db, &ScoringStructure{}, s.Structure.RecordId())
+func (s *IndividualMatch) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	err := database.ExistsById(ctx, db, &ScoringStructure{}, s.Structure.RecordId())
 	if err != nil {
 		return err
 	}
 
-	if s.Opponent != IndividualMatchId(common.InvalidRecordId) {
+	if s.Opponent != IndividualMatchId(database.InvalidRecordId) {
 		// check if we have a set value first, so that we can
 		// create one score pointing to nothing successfully,
 		// then create a second score pointing to the first
-		opp, err := common.GetExistingRecordById(ctx, db, &IndividualMatch{}, s.Opponent.RecordId())
+		opp, err := database.GetExistingRecordById(ctx, db, &IndividualMatch{}, s.Opponent.RecordId())
 		if err != nil {
 			return err
 		}
-		if opp.Opponent != IndividualMatchId(common.InvalidRecordId) && opp.Opponent != s.ID {
+		if opp.Opponent != IndividualMatchId(database.InvalidRecordId) && opp.Opponent != s.ID {
 			return fmt.Errorf("this record's opponent %s is pointing to a different opponent than this record (%s)", s.Opponent, opp.Opponent)
 		}
 	}
 
 	for _, editor := range s.Editors {
-		err = common.ExistsById(ctx, db, &User{}, editor.RecordId())
+		err = database.ExistsById(ctx, db, &User{}, editor.RecordId())
 		if err != nil {
 			return err
 		}
@@ -143,9 +144,9 @@ func (s *IndividualMatch) DynamicallyValid(ctx context.Context, db common.Databa
 	return nil
 }
 
-func (s *IndividualMatch) Initialize(ctx context.Context, db common.DatabaseProvider) error {
+func (s *IndividualMatch) Initialize(ctx context.Context, db database.DatabaseProvider) error {
 	if s._structure == nil {
-		v, err := common.GetExistingRecordById(ctx, db, &ScoringStructure{}, s.Structure.RecordId())
+		v, err := database.GetExistingRecordById(ctx, db, &ScoringStructure{}, s.Structure.RecordId())
 		if err != nil {
 			return err
 		}
@@ -155,7 +156,7 @@ func (s *IndividualMatch) Initialize(ctx context.Context, db common.DatabaseProv
 		// the sub-structures referenced by it as well
 		if v.IsComposite() {
 			for _, id := range v.SecondaryScoringStructures {
-				sub, err := common.GetExistingRecordById(ctx, db, &ScoringStructure{}, id.RecordId())
+				sub, err := database.GetExistingRecordById(ctx, db, &ScoringStructure{}, id.RecordId())
 				if err != nil {
 					return err
 				}
@@ -196,7 +197,7 @@ func (s *IndividualMatch) WonSecondary(opp *IndividualMatch) bool {
 	return currentSubstructure.WinningScore(s.SecondaryValue, opp.SecondaryValue)
 }
 
-func (s *IndividualMatch) MarkStatus(ctx context.Context, db common.DatabaseProvider, newStatus IndividualMatchStatus, opp *IndividualMatch) error {
+func (s *IndividualMatch) MarkStatus(ctx context.Context, db database.DatabaseProvider, newStatus IndividualMatchStatus, opp *IndividualMatch) error {
 	s.Status = newStatus
 
 	oppStatus := MatchInProgress
@@ -205,15 +206,15 @@ func (s *IndividualMatch) MarkStatus(ctx context.Context, db common.DatabaseProv
 	}
 
 	opp.Status = oppStatus
-	return common.UpdateOne(ctx, db, opp)
+	return database.UpdateOne(ctx, db, opp)
 }
 
-func (s *IndividualMatch) AddCompletedSecondary(ctx context.Context, db common.DatabaseProvider) error {
+func (s *IndividualMatch) AddCompletedSecondary(ctx context.Context, db database.DatabaseProvider) error {
 	completedValue := CompletedSecondary{
 		UsValue: s.SecondaryValue,
 	}
 
-	opp, err := common.GetExistingRecordById(ctx, db, &IndividualMatch{}, s.Opponent.RecordId())
+	opp, err := database.GetExistingRecordById(ctx, db, &IndividualMatch{}, s.Opponent.RecordId())
 	if err != nil {
 		return err
 	}
@@ -221,15 +222,15 @@ func (s *IndividualMatch) AddCompletedSecondary(ctx context.Context, db common.D
 	s._completed = append(s._completed, completedValue)
 
 	opp._completed = append(opp._completed, completedValue.Reverse())
-	err = common.UpdateOne(ctx, db, opp)
+	err = database.UpdateOne(ctx, db, opp)
 	if err != nil {
 		return err
 	}
 
-	return common.UpdateOne(ctx, db, s)
+	return database.UpdateOne(ctx, db, s)
 }
 
-func (s *IndividualMatch) IncrementSecondary(ctx context.Context, db common.DatabaseProvider) error {
+func (s *IndividualMatch) IncrementSecondary(ctx context.Context, db database.DatabaseProvider) error {
 	s.SecondaryValue += 1
 
 	if s.Status != MatchUnstarted {
@@ -260,16 +261,16 @@ func (s *IndividualMatch) IncrementSecondary(ctx context.Context, db common.Data
 			return err
 		}
 	}
-	return common.UpdateOne(ctx, db, s)
+	return database.UpdateOne(ctx, db, s)
 }
 
-func (s *IndividualMatch) ResetSecondaryForOpponent(ctx context.Context, db common.DatabaseProvider, opp *IndividualMatch) error {
+func (s *IndividualMatch) ResetSecondaryForOpponent(ctx context.Context, db database.DatabaseProvider, opp *IndividualMatch) error {
 	opp.SecondaryValue = 0
-	return common.UpdateOne(ctx, db, opp)
+	return database.UpdateOne(ctx, db, opp)
 }
 
-func (s *IndividualMatch) GetOpponent(ctx context.Context, db common.DatabaseProvider) (*IndividualMatch, error) {
-	return common.GetExistingRecordById(ctx, db, &IndividualMatch{}, s.Opponent.RecordId())
+func (s *IndividualMatch) GetOpponent(ctx context.Context, db database.DatabaseProvider) (*IndividualMatch, error) {
+	return database.GetExistingRecordById(ctx, db, &IndividualMatch{}, s.Opponent.RecordId())
 }
 
 func (s *IndividualMatch) String(opp *IndividualMatch) string {
@@ -310,6 +311,6 @@ func (s *IndividualMatch) GetSecondaryPointTotal() int {
 	return output
 }
 
-func (s *IndividualMatch) BlankRecord() common.CrudRecord {
+func (s *IndividualMatch) BlankRecord() database.CrudRecord {
 	return new(IndividualMatch)
 }

@@ -1,11 +1,13 @@
 package model
 
-import "intraclub/common"
+import (
+	"intraclub/database"
+)
 
-type TeamMatchId common.RecordId
+type TeamMatchId database.RecordId
 
-func (id TeamMatchId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id TeamMatchId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id TeamMatchId) String() string {
@@ -21,7 +23,7 @@ type TeamMatch struct {
 	IndividualMatches map[LineupPairingId]IndividualMatchId
 }
 
-//func (t *TeamMatch) ValidateMatchesVsLineup(db common.DatabaseProvider) error {
+// func (t *TeamMatch) ValidateMatchesVsLineup(db common.DatabaseProvider) error {
 //
 //	lineup, err := common.GetExistingRecordById(ctx, db, &Lineup{}, t.Lineup.RecordId())
 //	if err != nil {
@@ -43,4 +45,4 @@ type TeamMatch struct {
 //
 //	}
 //
-//}
+// }

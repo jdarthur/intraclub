@@ -4,7 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"intraclub/common"
+
+	"intraclub/database"
 )
 
 type PhotoType int
@@ -39,10 +40,10 @@ func (t PhotoType) Valid() bool {
 	return t < PhotoTypeInvalid
 }
 
-type PhotoId common.RecordId
+type PhotoId database.RecordId
 
-func (id PhotoId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id PhotoId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id PhotoId) String() string {
@@ -55,7 +56,7 @@ func (id PhotoId) MarshalJSON() ([]byte, error) {
 
 func (id PhotoId) UnmarshalJSON(data []byte) error {
 	rid := id.RecordId()
-	return (*common.RecordId)(&rid).UnmarshalJSON(data)
+	return (*database.RecordId)(&rid).UnmarshalJSON(data)
 }
 
 type Photo struct {
@@ -66,7 +67,7 @@ type Photo struct {
 	FileType PhotoType
 }
 
-func (p *Photo) GetOwner() common.RecordId {
+func (p *Photo) GetOwner() database.RecordId {
 	return p.Owner.RecordId()
 }
 
@@ -74,16 +75,16 @@ func NewPhoto() *Photo {
 	return &Photo{}
 }
 
-func (p *Photo) SetOwner(recordId common.RecordId) {
+func (p *Photo) SetOwner(recordId database.RecordId) {
 	p.Owner = UserId(recordId)
 }
 
-func (p *Photo) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{p.Owner.RecordId(), common.SysAdminRecordId}
+func (p *Photo) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{p.Owner.RecordId(), database.SysAdminRecordId}
 }
 
-func (p *Photo) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{common.EveryoneRecordId}
+func (p *Photo) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{database.EveryoneRecordId}
 }
 
 func (p *Photo) StaticallyValid() error {
@@ -97,8 +98,8 @@ func (p *Photo) StaticallyValid() error {
 	return nil
 }
 
-func (p *Photo) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	err := common.ExistsById(ctx, db, &User{}, p.Owner.RecordId())
+func (p *Photo) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	err := database.ExistsById(ctx, db, &User{}, p.Owner.RecordId())
 	if err != nil {
 		return err
 	}
@@ -109,14 +110,14 @@ func (p *Photo) Type() string {
 	return "photo"
 }
 
-func (p *Photo) GetId() common.RecordId {
+func (p *Photo) GetId() database.RecordId {
 	return p.ID.RecordId()
 }
 
-func (p *Photo) SetId(id common.RecordId) {
+func (p *Photo) SetId(id database.RecordId) {
 	p.ID = PhotoId(id)
 }
 
-func (p *Photo) BlankRecord() common.CrudRecord {
+func (p *Photo) BlankRecord() database.CrudRecord {
 	return new(Photo)
 }

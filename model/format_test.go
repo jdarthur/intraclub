@@ -3,29 +3,30 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
 	"testing"
+
+	"intraclub/database"
 )
 
-func newStoredFormat(t *testing.T, db common.DatabaseProvider, lines []FormatLine) *Format {
+func newStoredFormat(t *testing.T, db database.DatabaseProvider, lines []FormatLine) *Format {
 	f := NewFormat()
 	f.Lines = lines
 
-	v, err := common.CreateOne(context.Background(), db, f)
+	v, err := database.CreateOne(context.Background(), db, f)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return v
 }
 
-func newLine(t *testing.T, db common.DatabaseProvider) FormatLine {
+func newLine(t *testing.T, db database.DatabaseProvider) FormatLine {
 	return FormatLine{
 		Player1Rating: newStoredRating(t, db).ID,
 		Player2Rating: newStoredRating(t, db).ID,
 	}
 }
 
-func newDefaultFormat(t *testing.T, db common.DatabaseProvider) *Format {
+func newDefaultFormat(t *testing.T, db database.DatabaseProvider) *Format {
 	user := newStoredUser(t, db)
 	f := NewFormat()
 	f.UserId = user.ID
@@ -45,9 +46,9 @@ func newDefaultFormat(t *testing.T, db common.DatabaseProvider) *Format {
 	return f
 }
 
-func newDefaultStoredFormat(t *testing.T, db common.DatabaseProvider) *Format {
+func newDefaultStoredFormat(t *testing.T, db database.DatabaseProvider) *Format {
 	f := newDefaultFormat(t, db)
-	v, err := common.CreateOne(context.Background(), db, f)
+	v, err := database.CreateOne(context.Background(), db, f)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +56,7 @@ func newDefaultStoredFormat(t *testing.T, db common.DatabaseProvider) *Format {
 }
 
 func TestFormatDuplicateLine(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 
 	format := newDefaultFormat(t, db)
 	format.Lines = []FormatLine{format.Lines[0], format.Lines[0]}
@@ -67,7 +68,7 @@ func TestFormatDuplicateLine(t *testing.T) {
 }
 
 func TestFormatReversedValueDuplicateLine(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	format := newDefaultFormat(t, db)
 
 	line1 := format.Lines[0]
@@ -82,7 +83,7 @@ func TestFormatReversedValueDuplicateLine(t *testing.T) {
 }
 
 func TestFormatNameEmpty(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	format := newDefaultStoredFormat(t, db)
 	format.Name = ""
 	err := format.StaticallyValid()
@@ -93,7 +94,7 @@ func TestFormatNameEmpty(t *testing.T) {
 }
 
 func TestFormatNameWhitespace(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	format := newDefaultStoredFormat(t, db)
 	format.Name = "   "
 	err := format.StaticallyValid()
@@ -104,7 +105,7 @@ func TestFormatNameWhitespace(t *testing.T) {
 }
 
 func TestFormatHasEmptyPossibleRatings(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	format := newDefaultStoredFormat(t, db)
 	format.PossibleRatings = []RatingId{}
 	err := format.StaticallyValid()
@@ -115,10 +116,10 @@ func TestFormatHasEmptyPossibleRatings(t *testing.T) {
 }
 
 func TestFormatHasInvalidUserId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	format := newDefaultFormat(t, db)
 
-	format.UserId = UserId(common.InvalidRecordId)
+	format.UserId = UserId(database.InvalidRecordId)
 	err := format.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Expected invalid user id to fail")
@@ -127,7 +128,7 @@ func TestFormatHasInvalidUserId(t *testing.T) {
 }
 
 func TestFormatHasEmptyLines(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	format := newDefaultStoredFormat(t, db)
 	format.Lines = []FormatLine{}
 	err := format.StaticallyValid()
@@ -138,7 +139,7 @@ func TestFormatHasEmptyLines(t *testing.T) {
 }
 
 func TestFormatHasLineRatingsNotInPossibleLinesList(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	format := newDefaultStoredFormat(t, db)
 	format.Lines = []FormatLine{
 		newLine(t, db),
@@ -151,10 +152,10 @@ func TestFormatHasLineRatingsNotInPossibleLinesList(t *testing.T) {
 }
 
 func TestFormatCannotBeDeletedWhenInUse(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	draft := newDefaultStoredDraft(t, db)
 
-	_, _, err := common.DeleteOneById(context.Background(), db, &Format{}, draft.Format.RecordId())
+	_, _, err := database.DeleteOneById(context.Background(), db, &Format{}, draft.Format.RecordId())
 	if err == nil {
 		t.Fatal("Expected in-use format delete to fail")
 	}
@@ -162,16 +163,16 @@ func TestFormatCannotBeDeletedWhenInUse(t *testing.T) {
 }
 
 func TestFormatCannotBeEditedWhenInUse(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	draft := newDefaultStoredDraft(t, db)
 
-	format, err := common.GetExistingRecordById(context.Background(), db, &Format{}, draft.Format.RecordId())
+	format, err := database.GetExistingRecordById(context.Background(), db, &Format{}, draft.Format.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
 	newRating := newStoredRating(t, db)
 	format.PossibleRatings = append(format.PossibleRatings, newRating.ID)
-	err = common.UpdateOne(context.Background(), db, format)
+	err = database.UpdateOne(context.Background(), db, format)
 	if err == nil {
 		t.Fatal("Expected in-use format edit to fail")
 	}
@@ -179,13 +180,13 @@ func TestFormatCannotBeEditedWhenInUse(t *testing.T) {
 }
 
 func TestFormatCanBeEditedWhenNotInUse(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	f := newDefaultStoredFormat(t, db)
 
 	newRating := newStoredRating(t, db)
 	f.PossibleRatings = append(f.PossibleRatings, newRating.ID)
 
-	err := common.UpdateOne(context.Background(), db, f)
+	err := database.UpdateOne(context.Background(), db, f)
 	if err != nil {
 		t.Fatal(err)
 	}

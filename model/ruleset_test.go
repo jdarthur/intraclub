@@ -3,11 +3,12 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
 	"math/rand/v2"
 	"strings"
 	"testing"
 	"time"
+
+	"intraclub/database"
 )
 
 func assertRulesetIsStaticallyInvalid(t *testing.T, r *Ruleset, textContains string) {
@@ -21,7 +22,7 @@ func assertRulesetIsStaticallyInvalid(t *testing.T, r *Ruleset, textContains str
 	fmt.Println(err.Error())
 }
 
-func assertRulesetIsDynamicallyInvalid(t *testing.T, db common.DatabaseProvider, r *Ruleset, textContains string) {
+func assertRulesetIsDynamicallyInvalid(t *testing.T, db database.DatabaseProvider, r *Ruleset, textContains string) {
 	err := r.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("expected error on DynamicallyValid, but got nil")
@@ -39,23 +40,23 @@ func newValidRuleset(t *testing.T, owner UserId) *Ruleset {
 	return x
 }
 
-func newValidStoredRuleset(t *testing.T, db common.DatabaseProvider) *Ruleset {
+func newValidStoredRuleset(t *testing.T, db database.DatabaseProvider) *Ruleset {
 	user := newStoredUser(t, db)
 	x := newValidRuleset(t, user.ID)
-	v, err := common.CreateOne(context.Background(), db, x)
+	v, err := database.CreateOne(context.Background(), db, x)
 	if err != nil {
 		t.Fatalf("Error creating ruleset: %s\n", err)
 	}
 	return v
 }
 
-func newValidStoredRulesetWithOneSection(t *testing.T, db common.DatabaseProvider) *Ruleset {
+func newValidStoredRulesetWithOneSection(t *testing.T, db database.DatabaseProvider) *Ruleset {
 	ruleset := newValidStoredRuleset(t, db)
 	amended := addSectionRevisionToEndOfExistingRuleset(t, db, ruleset)
 	return amended
 }
 
-func newValidStoredRulesetWithXSections(t *testing.T, db common.DatabaseProvider, count int) *Ruleset {
+func newValidStoredRulesetWithXSections(t *testing.T, db database.DatabaseProvider, count int) *Ruleset {
 	ruleset := newValidStoredRuleset(t, db)
 	for i := 0; i < count; i++ {
 		ruleset = addSectionRevisionToEndOfExistingRuleset(t, db, ruleset)
@@ -63,8 +64,8 @@ func newValidStoredRulesetWithXSections(t *testing.T, db common.DatabaseProvider
 	return ruleset
 }
 
-func addSectionRevisionToEndOfExistingRuleset(t *testing.T, db common.DatabaseProvider, existing *Ruleset) *Ruleset {
-	afterSectionId := RuleSectionId(common.InvalidRecordId)
+func addSectionRevisionToEndOfExistingRuleset(t *testing.T, db database.DatabaseProvider, existing *Ruleset) *Ruleset {
+	afterSectionId := RuleSectionId(database.InvalidRecordId)
 
 	sections, err := existing.GetSections(context.Background(), db)
 	if err != nil {
@@ -112,11 +113,11 @@ func TestSectionsNonEmptyWhenRevisionIsZero(t *testing.T) {
 }
 
 func TestRulesetCannotBeUpdatedWithoutAmendment(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ruleset := newValidStoredRuleset(t, db)
 
 	ruleset.Name = "new name"
-	err := common.UpdateOne(context.Background(), db, ruleset)
+	err := database.UpdateOne(context.Background(), db, ruleset)
 	if err == nil {
 		t.Fatal("expected error updating existing ruleset")
 	}
@@ -126,7 +127,7 @@ func TestRulesetDateIsAfterSupersedingRuleset(t *testing.T) {
 	// Date value for this Ruleset must be before the Date value
 	// for the superseding Ruleset (date value isn't very meaningful
 	// otherwise. shouldn't be a user-settable value anyway)
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	r := newValidStoredRuleset(t, db)
 
 	_ = addSectionRevisionToEndOfExistingRuleset(t, db, r)
@@ -141,7 +142,7 @@ func TestRulesetDuplicateSections(t *testing.T) {
 }
 
 func TestRulesetForkEmpty(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	user2 := newStoredUser(t, db)
 	v := newValidStoredRuleset(t, db)
 	_, err := v.Fork(context.Background(), db, user2.ID)
@@ -152,7 +153,7 @@ func TestRulesetForkEmpty(t *testing.T) {
 }
 
 func TestSupersededByRevisionMustBeOneHigher(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	r := newValidStoredRuleset(t, db)
 
 	v2 := addSectionRevisionToEndOfExistingRuleset(t, db, r)
@@ -165,7 +166,7 @@ func TestSupersededByOwnerMustBeIdentical(t *testing.T) {
 	// ruleset cannot be superseded by a ruleset that this not
 	// owned by the same user ID
 
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	user2 := newStoredUser(t, db)
 	r := newValidStoredRuleset(t, db)
 

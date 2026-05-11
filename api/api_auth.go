@@ -1,4 +1,4 @@
-package common
+package api
 
 import (
 	"crypto/ecdsa"
@@ -8,11 +8,14 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"io"
 	"os"
 	"time"
+
+	"intraclub/database"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 var AuthTokenHeaderValue = "X-INTRACLUB-TOKEN"
@@ -24,10 +27,10 @@ var JwtPublicKey *ecdsa.PublicKey
 var JwtPrivateKey *ecdsa.PrivateKey
 
 type AuthToken struct {
-	UserId RecordId
+	UserId database.RecordId
 }
 
-func GenerateToken(userId RecordId) (string, error) {
+func GenerateToken(userId database.RecordId) (string, error) {
 	token := jwt.New(jwt.SigningMethodES512)
 	token.Claims = jwt.RegisteredClaims{
 		Subject:   userId.String(),
@@ -61,7 +64,7 @@ func ValidateToken(token string) (*AuthToken, error) {
 		return nil, err
 	}
 
-	userId, err := RecordIdFromString(subject)
+	userId, err := database.RecordIdFromString(subject)
 	if err != nil {
 		return nil, err
 	}
@@ -71,9 +74,9 @@ func ValidateToken(token string) (*AuthToken, error) {
 	}, nil
 }
 
-var UserType CrudRecord
+var UserType database.CrudRecord
 
-func GetToken(c *gin.Context, db DatabaseProvider) (*AuthToken, error) {
+func GetToken(c *gin.Context, db database.DatabaseProvider) (*AuthToken, error) {
 	token := c.Request.Header.Get(AuthTokenHeaderValue)
 	if token == "" {
 		return nil, nil
@@ -85,7 +88,7 @@ func GetToken(c *gin.Context, db DatabaseProvider) (*AuthToken, error) {
 
 	userId := valid.UserId
 	if db != nil && UserType != nil {
-		err := ExistsById(c.Request.Context(), db, UserType, userId)
+		err := database.ExistsById(c.Request.Context(), db, UserType, userId)
 		if err != nil {
 			return nil, err
 		}

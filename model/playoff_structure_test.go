@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"testing"
 
-	"intraclub/common"
+	"intraclub/database"
 )
 
-func newStoredPlayoffStructure(t *testing.T, db common.DatabaseProvider) *PlayoffStructure {
+func newStoredPlayoffStructure(t *testing.T, db database.DatabaseProvider) *PlayoffStructure {
 	user := newStoredUser(t, db)
 	s := NewPlayoffStructure()
 	s.UserId = user.ID
 	s.Byes = 1
 	s.NumberOfTeams = 3
-	v, err := common.CreateOne(context.Background(), db, s)
+	v, err := database.CreateOne(context.Background(), db, s)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +31,7 @@ func copyPlayoffStructure(p *PlayoffStructure) *PlayoffStructure {
 }
 
 func TestUserIdIsValid(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	s := NewPlayoffStructure()
 	err := s.DynamicallyValid(context.Background(), db)
 	if err == nil {
@@ -107,16 +107,16 @@ func TestTwoWildCards(t *testing.T) {
 }
 
 func TestPlayoffStructureCannotBeDeletedAfterUsage(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	s := newStoredPlayoffStructure(t, db)
 	season, _ := newDefaultSeason(t, db)
 	season.PlayoffStructure = s.ID
-	err := common.UpdateOne(context.Background(), db, season)
+	err := database.UpdateOne(context.Background(), db, season)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, _, err = common.DeleteOneById(context.Background(), db, &PlayoffStructure{}, s.ID.RecordId())
+	_, _, err = database.DeleteOneById(context.Background(), db, &PlayoffStructure{}, s.ID.RecordId())
 	if err == nil {
 		t.Fatal(err)
 	}
@@ -124,18 +124,18 @@ func TestPlayoffStructureCannotBeDeletedAfterUsage(t *testing.T) {
 }
 
 func TestPlayoffStructureCannotBeEditedAfterUsage(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	s := newStoredPlayoffStructure(t, db)
 	season, _ := newDefaultSeason(t, db)
 	season.PlayoffStructure = s.ID
-	err := common.UpdateOne(context.Background(), db, season)
+	err := database.UpdateOne(context.Background(), db, season)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	copied := copyPlayoffStructure(s)
 
-	err = common.UpdateOne(context.Background(), db, copied)
+	err = database.UpdateOne(context.Background(), db, copied)
 	if err == nil {
 		t.Fatal("expected error when updating in-use playoff structure")
 	}

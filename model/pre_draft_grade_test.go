@@ -3,19 +3,20 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
 	"math/rand"
 	"testing"
+
+	"intraclub/database"
 )
 
-func generateRandomPreDraftGrades(t *testing.T, db common.DatabaseProvider, playerCount, teamCount int) *Draft {
+func generateRandomPreDraftGrades(t *testing.T, db database.DatabaseProvider, playerCount, teamCount int) *Draft {
 	randomDraft := newRandomDraft(t, db, playerCount, teamCount)
 	gradeCount := 10
 	if playerCount < 10 {
 		gradeCount = playerCount
 	}
 
-	format, err := common.GetExistingRecordById(context.Background(), db, &Format{}, randomDraft.Format.RecordId())
+	format, err := database.GetExistingRecordById(context.Background(), db, &Format{}, randomDraft.Format.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +44,7 @@ func generateRandomPreDraftGrades(t *testing.T, db common.DatabaseProvider, play
 			grade.Modifier = modifier
 
 			// create the grade
-			_, err := common.CreateOne(context.Background(), db, grade)
+			_, err := database.CreateOne(context.Background(), db, grade)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -52,9 +53,9 @@ func generateRandomPreDraftGrades(t *testing.T, db common.DatabaseProvider, play
 	return randomDraft
 }
 
-func newValidGrade(t *testing.T, db common.DatabaseProvider) *PreDraftGrade {
+func newValidGrade(t *testing.T, db database.DatabaseProvider) *PreDraftGrade {
 	randomDraft := newRandomDraft(t, db, 4, 4)
-	format, err := common.GetExistingRecordById(context.Background(), db, &Format{}, randomDraft.Format.RecordId())
+	format, err := database.GetExistingRecordById(context.Background(), db, &Format{}, randomDraft.Format.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,9 +73,9 @@ func newValidGrade(t *testing.T, db common.DatabaseProvider) *PreDraftGrade {
 	return grade
 }
 
-func newStoredGrade(t *testing.T, db common.DatabaseProvider) *PreDraftGrade {
+func newStoredGrade(t *testing.T, db database.DatabaseProvider) *PreDraftGrade {
 	grade := newValidGrade(t, db)
-	v, err := common.CreateOne(context.Background(), db, grade)
+	v, err := database.CreateOne(context.Background(), db, grade)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +95,7 @@ func copyGrade(g *PreDraftGrade) *PreDraftGrade {
 
 func TestPreDraftInvalidRating(t *testing.T) {
 
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	rating := newStoredRating(t, db)
 	draft := newRandomDraft(t, db, 5, 2)
 
@@ -120,9 +121,9 @@ func TestPreDraftInvalidRating(t *testing.T) {
 }
 
 func TestPreDraftInvalidPlayerId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	grade := newValidGrade(t, db)
-	grade.PlayerId = UserId(common.InvalidRecordId)
+	grade.PlayerId = UserId(database.InvalidRecordId)
 	err := grade.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Expected error, got nil")
@@ -131,9 +132,9 @@ func TestPreDraftInvalidPlayerId(t *testing.T) {
 }
 
 func TestPreDraftInvalidGraderId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	grade := newValidGrade(t, db)
-	grade.GraderId = UserId(common.InvalidRecordId)
+	grade.GraderId = UserId(database.InvalidRecordId)
 	err := grade.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Expected error, got nil")
@@ -142,9 +143,9 @@ func TestPreDraftInvalidGraderId(t *testing.T) {
 }
 
 func TestPreDraftInvalidDraftId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	grade := newValidGrade(t, db)
-	grade.DraftId = DraftId(common.InvalidRecordId)
+	grade.DraftId = DraftId(database.InvalidRecordId)
 	err := grade.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Expected error, got nil")
@@ -154,7 +155,7 @@ func TestPreDraftInvalidDraftId(t *testing.T) {
 
 func TestPreDraftInvalidRatingId(t *testing.T) {
 
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	rating := newStoredRating(t, db)
 	draft := newRandomDraft(t, db, 5, 2)
 
@@ -180,7 +181,7 @@ func TestPreDraftInvalidRatingId(t *testing.T) {
 }
 
 func TestPreDraftPlayerIsNotAvailableToDraft(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	grade := newValidGrade(t, db)
 	someOtherUser := newStoredUser(t, db)
 	grade.PlayerId = someOtherUser.ID
@@ -192,7 +193,7 @@ func TestPreDraftPlayerIsNotAvailableToDraft(t *testing.T) {
 }
 
 func TestPreDraftRatingIsNotPresentInDraftFormat(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	grade := newValidGrade(t, db)
 	someOtherRating := newStoredRating(t, db)
 	grade.Rating = someOtherRating.ID
@@ -204,7 +205,7 @@ func TestPreDraftRatingIsNotPresentInDraftFormat(t *testing.T) {
 }
 
 func TestModifierIsOutsideRange(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	grade := newValidGrade(t, db)
 	grade.Modifier = PreDraftRatingModifier(-1)
 	err := grade.StaticallyValid()
@@ -215,7 +216,7 @@ func TestModifierIsOutsideRange(t *testing.T) {
 }
 
 func TestGetRatingAggregate(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	draft := generateRandomPreDraftGrades(t, db, 20, 4)
 
 	aggregates, err := GetSortedListOfAllPreDraftGradesDescending(context.Background(), db, draft)
@@ -228,7 +229,7 @@ func TestGetRatingAggregate(t *testing.T) {
 }
 
 func TestCalculateNumericGrades(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	draft := newRandomDraft(t, db, 4, 4)
 
 	availablePlayers, err := draft.GetAvailablePlayers(context.Background(), db)
@@ -236,7 +237,7 @@ func TestCalculateNumericGrades(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	format, err := common.GetExistingRecordById(context.Background(), db, &Format{}, draft.Format.RecordId())
+	format, err := database.GetExistingRecordById(context.Background(), db, &Format{}, draft.Format.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,9 +275,9 @@ func TestCalculateNumericGrades(t *testing.T) {
 }
 
 func TestGradeWhenDraftIsCompleted(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	draft := newRandomDraft(t, db, 20, 4)
-	format, err := common.GetExistingRecordById(context.Background(), db, &Format{}, draft.Format.RecordId())
+	format, err := database.GetExistingRecordById(context.Background(), db, &Format{}, draft.Format.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -301,11 +302,11 @@ func TestGradeWhenDraftIsCompleted(t *testing.T) {
 }
 
 func TestDuplicateGrade(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	grade := newStoredGrade(t, db)
 	grade2 := copyGrade(grade)
 
-	_, err := common.CreateOne(context.Background(), db, grade2)
+	_, err := database.CreateOne(context.Background(), db, grade2)
 	if err == nil {
 		t.Fatal("Expected error, got nil")
 	}

@@ -2,12 +2,13 @@ package model
 
 import (
 	"context"
-	"intraclub/common"
 	"sort"
 	"time"
+
+	"intraclub/database"
 )
 
-func SeedDevData(db common.DatabaseProvider) {
+func SeedDevData(db database.DatabaseProvider) {
 	user := seedDevUsers(db)
 	seedDevScoringStructures(db, user.ID)
 	seedDevRatings(db, user.ID)
@@ -20,7 +21,7 @@ func getDevContext() context.Context {
 	return ctx
 }
 
-func seedDevUsers(db common.DatabaseProvider) *User {
+func seedDevUsers(db database.DatabaseProvider) *User {
 	user1 := NewUser()
 	user1.FirstName = "JD"
 	user1.LastName = "Arthur"
@@ -29,14 +30,14 @@ func seedDevUsers(db common.DatabaseProvider) *User {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	v, err := common.CreateOne(ctx, db, user1)
+	v, err := database.CreateOne(ctx, db, user1)
 	if err != nil {
 		panic(err)
 	}
 	return v
 }
 
-func seedDevScoringStructures(db common.DatabaseProvider, u UserId) {
+func seedDevScoringStructures(db database.DatabaseProvider, u UserId) {
 	ctx := getDevContext()
 	scoringStructure := NewScoringStructure()
 	scoringStructure.Name = "Tennis standard set"
@@ -48,7 +49,7 @@ func seedDevScoringStructures(db common.DatabaseProvider, u UserId) {
 		InstantWinThreshold: 7,
 	}
 
-	v, err := common.CreateOne(ctx, db, scoringStructure)
+	v, err := database.CreateOne(ctx, db, scoringStructure)
 	if err != nil {
 		panic(err)
 	}
@@ -65,7 +66,7 @@ func seedDevScoringStructures(db common.DatabaseProvider, u UserId) {
 		v.ID, v.ID, v.ID,
 	}
 
-	_, err = common.CreateOne(ctx, db, scoringStructure2)
+	_, err = database.CreateOne(ctx, db, scoringStructure2)
 	if err != nil {
 		panic(err)
 	}
@@ -75,14 +76,14 @@ var MensOne = "Men's 1"
 var MensTwo = "Men's 2"
 var MensThree = "Men's 3"
 
-func seedDevRatings(db common.DatabaseProvider, u UserId) {
+func seedDevRatings(db database.DatabaseProvider, u UserId) {
 	ctx := getDevContext()
 	r := NewRating()
 	r.UserId = u
 	r.Name = MensOne
 	r.Description = RatingOne
 
-	_, err := common.CreateOne(ctx, db, r)
+	_, err := database.CreateOne(ctx, db, r)
 	if err != nil {
 		panic(err)
 	}
@@ -92,7 +93,7 @@ func seedDevRatings(db common.DatabaseProvider, u UserId) {
 	r.Name = MensTwo
 	r.Description = RatingTwo
 
-	_, err = common.CreateOne(ctx, db, r)
+	_, err = database.CreateOne(ctx, db, r)
 	if err != nil {
 		panic(err)
 	}
@@ -102,15 +103,15 @@ func seedDevRatings(db common.DatabaseProvider, u UserId) {
 	r.Name = MensThree
 	r.Description = RatingThree
 
-	_, err = common.CreateOne(ctx, db, r)
+	_, err = database.CreateOne(ctx, db, r)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func seedDevFormat(db common.DatabaseProvider, u UserId) {
+func seedDevFormat(db database.DatabaseProvider, u UserId) {
 	ctx := getDevContext()
-	ratings, err := common.GetAll[*Rating](ctx, db)
+	ratings, err := database.GetAll[*Rating](ctx, db)
 	if err != nil {
 		panic(err)
 	}
@@ -137,7 +138,7 @@ func seedDevFormat(db common.DatabaseProvider, u UserId) {
 
 	}
 
-	_, err = common.CreateOne(ctx, db, format)
+	_, err = database.CreateOne(ctx, db, format)
 	if err != nil {
 		panic(err)
 	}

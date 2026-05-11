@@ -1,7 +1,9 @@
-package common
+package database
 
-import "context"
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 type UniquenessConstraint[T CrudRecord] interface {
 	UniquenessEquivalent(other T) error

@@ -3,9 +3,10 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
 	"strings"
 	"time"
+
+	"intraclub/database"
 )
 
 func getRuleAmendmentContext() context.Context {
@@ -31,7 +32,7 @@ func (r RuleAmendmentType) StaticallyValid() error {
 	return nil
 }
 
-func (r *Ruleset) Amend(ctx context.Context, db common.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
+func (r *Ruleset) Amend(ctx context.Context, db database.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
 	err = r.ValidateAmendment(ctx, db, a)
 	if err != nil {
 		return nil, err
@@ -50,13 +51,13 @@ func (r *Ruleset) Amend(ctx context.Context, db common.DatabaseProvider, a *Rule
 	return nil, fmt.Errorf("unhandled rule amendment type: %d", a.Type)
 }
 
-func (r *Ruleset) HandleAddSection(ctx context.Context, db common.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
+func (r *Ruleset) HandleAddSection(ctx context.Context, db database.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
 	// update the parent and the owner in the new section to add
 	a.NewSection.Parent = r.ID
 	a.NewSection.Owner = r.Owner
 
 	// create a new section
-	v, err := common.CreateOne(ctx, db, &a.NewSection)
+	v, err := database.CreateOne(ctx, db, &a.NewSection)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +106,7 @@ func (r *Ruleset) HandleAddSection(ctx context.Context, db common.DatabaseProvid
 			SectionId:    v.ID,
 			SectionIndex: targetIndex + 1,
 		}
-		_, err = common.CreateOne(ctx, db, newSectionRelation)
+		_, err = database.CreateOne(ctx, db, newSectionRelation)
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +123,7 @@ func (r *Ruleset) HandleAddSection(ctx context.Context, db common.DatabaseProvid
 	if err != nil {
 		fmt.Printf("Error handling amendment: %s\n", err)
 		fmt.Printf("Deleting newly-created section after failed amendment %s\n", v.ID)
-		_, _, err = common.DeleteOneById(ctx, db, &RuleSection{}, v.ID.RecordId())
+		_, _, err = database.DeleteOneById(ctx, db, &RuleSection{}, v.ID.RecordId())
 		if err != nil {
 			return nil, fmt.Errorf("error deleting newly-created section %s after amendment: %s", v.ID, err.Error())
 		}
@@ -130,7 +131,7 @@ func (r *Ruleset) HandleAddSection(ctx context.Context, db common.DatabaseProvid
 	return newRuleset, nil
 }
 
-func (r *Ruleset) HandleRemoveSection(ctx context.Context, db common.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
+func (r *Ruleset) HandleRemoveSection(ctx context.Context, db database.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
 	// Get existing section relations
 	existingRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
@@ -150,7 +151,7 @@ func (r *Ruleset) HandleRemoveSection(ctx context.Context, db common.DatabasePro
 	}
 
 	// Delete the target section relation
-	_, _, err = common.DeleteOneById(ctx, db, &RulesetSection{}, a.TargetSection.RecordId())
+	_, _, err = database.DeleteOneById(ctx, db, &RulesetSection{}, a.TargetSection.RecordId())
 	if err != nil {
 		return nil, err
 	}
@@ -160,9 +161,9 @@ func (r *Ruleset) HandleRemoveSection(ctx context.Context, db common.DatabasePro
 	return newRuleset, err
 }
 
-func (r *Ruleset) HandleModifySection(ctx context.Context, db common.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
+func (r *Ruleset) HandleModifySection(ctx context.Context, db database.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
 
-	existing, err := common.GetExistingRecordById(ctx, db, &RuleSection{}, a.TargetSection.RecordId())
+	existing, err := database.GetExistingRecordById(ctx, db, &RuleSection{}, a.TargetSection.RecordId())
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +198,7 @@ func (r *Ruleset) HandleModifySection(ctx context.Context, db common.DatabasePro
 	return r, nil
 }
 
-func (r *Ruleset) HandleReorderSection(ctx context.Context, db common.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
+func (r *Ruleset) HandleReorderSection(ctx context.Context, db database.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
 	// Get existing section relations
 	existingRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
@@ -242,7 +243,7 @@ func (r *Ruleset) HandleReorderSection(ctx context.Context, db common.DatabasePr
 	return r, nil
 }
 
-func (r *Ruleset) HandleAmendment(ctx context.Context, db common.DatabaseProvider, newRelations []*RulesetSection) (newRuleset *Ruleset, err error) {
+func (r *Ruleset) HandleAmendment(ctx context.Context, db database.DatabaseProvider, newRelations []*RulesetSection) (newRuleset *Ruleset, err error) {
 	// Build section ID list from relations
 	newSectionIds := make([]RuleSectionId, 0, len(newRelations))
 	for _, sr := range newRelations {
@@ -257,7 +258,7 @@ func (r *Ruleset) HandleAmendment(ctx context.Context, db common.DatabaseProvide
 	copied.Revision += 1
 
 	// create a new ruleset with the updated values
-	newRuleset, err = common.CreateOne(ctx, db, copied)
+	newRuleset, err = database.CreateOne(ctx, db, copied)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +278,7 @@ func (r *Ruleset) HandleAmendment(ctx context.Context, db common.DatabaseProvide
 
 		// If we failed to update this current ruleset, we need to revert the
 		// creation of the superseding ruleset
-		_, _, err = common.DeleteOneById(ctx, db, &Ruleset{}, newRuleset.ID.RecordId())
+		_, _, err = database.DeleteOneById(ctx, db, &Ruleset{}, newRuleset.ID.RecordId())
 		if err != nil {
 			return nil, fmt.Errorf("error deleting superseding ruleset %s: %s", newRuleset.ID, err)
 		}
@@ -290,7 +291,7 @@ func (r *Ruleset) HandleAmendment(ctx context.Context, db common.DatabaseProvide
 	oldRelations, _ := r.GetSectionRelations(ctx, db)
 	for _, oldRel := range oldRelations {
 		if oldRel.RulesetId == r.ID {
-			_, _, _ = common.DeleteOneById(ctx, db, &RulesetSection{}, oldRel.ID)
+			_, _, _ = database.DeleteOneById(ctx, db, &RulesetSection{}, oldRel.ID)
 		}
 	}
 
@@ -301,7 +302,7 @@ func (r *Ruleset) HandleAmendment(ctx context.Context, db common.DatabaseProvide
 			SectionId:    sr.SectionId,
 			SectionIndex: i,
 		}
-		_, err = common.CreateOne(ctx, db, newRuleSectionRelation)
+		_, err = database.CreateOne(ctx, db, newRuleSectionRelation)
 		if err != nil {
 			return nil, err
 		}
@@ -337,18 +338,18 @@ type RuleAmendment struct {
 	After         RuleSectionId     `json:"after"`
 }
 
-func (r *RuleAmendment) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+func (r *RuleAmendment) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
 	if r.Type == RuleAmendmentTypeAddSection {
 		if r.After.Empty() {
 			// if After section ID is empty, we are adding this new section to
 			// the beginning of the Ruleset's sections list
 			return nil
 		}
-		return common.ExistsById(ctx, db, &RuleSection{}, r.After.RecordId())
+		return database.ExistsById(ctx, db, &RuleSection{}, r.After.RecordId())
 	} else if r.Type == RuleAmendmentTypeRemoveSection {
-		return common.ExistsById(ctx, db, &RuleSection{}, r.TargetSection.RecordId())
+		return database.ExistsById(ctx, db, &RuleSection{}, r.TargetSection.RecordId())
 	} else if r.Type == RuleAmendmentTypeModifySection {
-		return common.ExistsById(ctx, db, &RuleSection{}, r.TargetSection.RecordId())
+		return database.ExistsById(ctx, db, &RuleSection{}, r.TargetSection.RecordId())
 	} else if r.Type == RuleAmendmentTypeReorderSection {
 
 		if r.After.Empty() {
@@ -356,13 +357,13 @@ func (r *RuleAmendment) DynamicallyValid(ctx context.Context, db common.Database
 			// front of the Ruleset's sections list
 			return nil
 		} else {
-			err := common.ExistsById(ctx, db, &RuleSection{}, r.After.RecordId())
+			err := database.ExistsById(ctx, db, &RuleSection{}, r.After.RecordId())
 			if err != nil {
 				return err
 			}
 		}
 
-		return common.ExistsById(ctx, db, &RuleSection{}, r.TargetSection.RecordId())
+		return database.ExistsById(ctx, db, &RuleSection{}, r.TargetSection.RecordId())
 	}
 	return nil
 }
@@ -429,7 +430,7 @@ func (r *RuleAmendment) StaticallyValid() error {
 	return nil
 }
 
-func (r *Ruleset) GetAmendmentBefore(ctx context.Context, db common.DatabaseProvider, id RuleSectionId) (RuleSectionId, error) {
+func (r *Ruleset) GetAmendmentBefore(ctx context.Context, db database.DatabaseProvider, id RuleSectionId) (RuleSectionId, error) {
 	sectionRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
 		return 0, err
@@ -438,7 +439,7 @@ func (r *Ruleset) GetAmendmentBefore(ctx context.Context, db common.DatabaseProv
 	for i, sr := range sectionRelations {
 		if sr.SectionId == id {
 			if i == 0 {
-				return RuleSectionId(common.InvalidRecordId), nil
+				return RuleSectionId(database.InvalidRecordId), nil
 			} else {
 				return sectionRelations[i-1].SectionId, nil
 			}
@@ -447,8 +448,8 @@ func (r *Ruleset) GetAmendmentBefore(ctx context.Context, db common.DatabaseProv
 	return 0, fmt.Errorf("rule section ID %s was not found in ruleset %s", id, r.ID)
 }
 
-func (r *Ruleset) ValidateAmendment(ctx context.Context, db common.DatabaseProvider, a *RuleAmendment) error {
-	err := common.Validate(ctx, db, a)
+func (r *Ruleset) ValidateAmendment(ctx context.Context, db database.DatabaseProvider, a *RuleAmendment) error {
+	err := database.Validate(ctx, db, a)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,7 @@ import (
 	"sort"
 	"time"
 
-	"intraclub/common"
+	"intraclub/database"
 )
 
 // TeamCaptainAssignment is a struct which binds a TeamId to its captain
@@ -32,8 +32,8 @@ func (t TeamCaptainAssignment) StaticallyValid() error {
 // DynamicallyValid validates that the TeamCaptainAssignment has a real TeamId and a
 // captain corresponding to a valid UserId, and that the UserId is actually the captain on
 // the Team record corresponding to the TeamId
-func (t TeamCaptainAssignment) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	team, err := common.GetExistingRecordById(ctx, db, &Team{}, t.TeamId.RecordId())
+func (t TeamCaptainAssignment) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	team, err := database.GetExistingRecordById(ctx, db, &Team{}, t.TeamId.RecordId())
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func (t TeamCaptainAssignment) DynamicallyValid(ctx context.Context, db common.D
 		return fmt.Errorf("team/captain assignment (%s/%s) in draft does not match captain set on team record (%s)", t.TeamId, t.CaptainId, captain)
 	}
 
-	return common.ExistsById(ctx, db, &User{}, t.CaptainId.RecordId())
+	return database.ExistsById(ctx, db, &User{}, t.CaptainId.RecordId())
 }
 
 // DraftSelection is a struct which stores the results of the Draft.
@@ -61,10 +61,10 @@ type DraftSelection struct {
 	Rating RatingId
 }
 
-type DraftId common.RecordId
+type DraftId database.RecordId
 
-func (id DraftId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id DraftId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id DraftId) String() string {
@@ -81,11 +81,11 @@ type Draft struct {
 	DraftOrderPattern DraftOrderPattern `json:"draft_order_pattern"` // draft order pattern, e.g. snake, straight-up, etc.
 }
 
-func (d *Draft) SetOwner(recordId common.RecordId) {
+func (d *Draft) SetOwner(recordId database.RecordId) {
 	d.Owner = UserId(recordId)
 }
 
-func (d *Draft) GetOwner() common.RecordId {
+func (d *Draft) GetOwner() database.RecordId {
 	return d.Owner.RecordId()
 }
 
@@ -95,12 +95,12 @@ func NewDraft() *Draft {
 	}
 }
 
-func (d *Draft) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{d.Owner.RecordId()}
+func (d *Draft) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{d.Owner.RecordId()}
 }
 
-func (d *Draft) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (d *Draft) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
 func (d *Draft) StaticallyValid() error {
@@ -108,16 +108,16 @@ func (d *Draft) StaticallyValid() error {
 	return nil
 }
 
-func (d *Draft) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+func (d *Draft) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
 
 	// validate that the owner exists
-	err := common.ExistsById(ctx, db, &User{}, d.Owner.RecordId())
+	err := database.ExistsById(ctx, db, &User{}, d.Owner.RecordId())
 	if err != nil {
 		return err
 	}
 
 	// validate that the format exists
-	format, err := common.GetExistingRecordById(ctx, db, &Format{}, d.Format.RecordId())
+	format, err := database.GetExistingRecordById(ctx, db, &Format{}, d.Format.RecordId())
 	if err != nil {
 		return err
 	}
@@ -168,17 +168,17 @@ func (d *Draft) Type() string {
 	return "draft"
 }
 
-func (d *Draft) GetId() common.RecordId {
+func (d *Draft) GetId() database.RecordId {
 	return d.ID.RecordId()
 }
 
-func (d *Draft) SetId(id common.RecordId) {
+func (d *Draft) SetId(id database.RecordId) {
 	d.ID = DraftId(id)
 }
 
 // IsInDraftList returns true if a particular UserId is present in
 // the available-to-draft list for this Draft
-func (d *Draft) IsInDraftList(ctx context.Context, db common.DatabaseProvider, userId UserId) bool {
+func (d *Draft) IsInDraftList(ctx context.Context, db database.DatabaseProvider, userId UserId) bool {
 	availablePlayers, err := d.GetAvailablePlayers(ctx, db)
 	if err != nil {
 		return false
@@ -192,7 +192,7 @@ func (d *Draft) IsInDraftList(ctx context.Context, db common.DatabaseProvider, u
 }
 
 // IsSelected returns true if this particular User has been selected
-func (d *Draft) IsSelected(ctx context.Context, db common.DatabaseProvider, userId UserId) bool {
+func (d *Draft) IsSelected(ctx context.Context, db database.DatabaseProvider, userId UserId) bool {
 	picks, err := d.GetPicks(ctx, db)
 	if err != nil {
 		return false
@@ -206,8 +206,8 @@ func (d *Draft) IsSelected(ctx context.Context, db common.DatabaseProvider, user
 }
 
 // GetAvailablePlayers returns all userIds who are available to be drafted
-func (d *Draft) GetAvailablePlayers(ctx context.Context, db common.DatabaseProvider) ([]UserId, error) {
-	availablePlayers, err := common.GetAllWhere[*DraftAvailablePlayer](ctx, db, func(_ context.Context, dap *DraftAvailablePlayer) bool {
+func (d *Draft) GetAvailablePlayers(ctx context.Context, db database.DatabaseProvider) ([]UserId, error) {
+	availablePlayers, err := database.GetAllWhere[*DraftAvailablePlayer](ctx, db, func(_ context.Context, dap *DraftAvailablePlayer) bool {
 		return dap.DraftId == d.ID
 	})
 	if err != nil {
@@ -221,15 +221,15 @@ func (d *Draft) GetAvailablePlayers(ctx context.Context, db common.DatabaseProvi
 }
 
 // GetPicks returns all draft picks ordered by their creation
-func (d *Draft) GetPicks(ctx context.Context, db common.DatabaseProvider) ([]*DraftPick, error) {
-	return common.GetAllWhere[*DraftPick](ctx, db, func(_ context.Context, dp *DraftPick) bool {
+func (d *Draft) GetPicks(ctx context.Context, db database.DatabaseProvider) ([]*DraftPick, error) {
+	return database.GetAllWhere[*DraftPick](ctx, db, func(_ context.Context, dp *DraftPick) bool {
 		return dp.DraftId == d.ID
 	})
 }
 
 // GetCaptains retrieves all team captain assignments for this draft from the DraftCaptain join table.
-func (d *Draft) GetCaptains(ctx context.Context, db common.DatabaseProvider) ([]*DraftCaptain, error) {
-	captains, err := common.GetAllWhere[*DraftCaptain](ctx, db, func(_ context.Context, dc *DraftCaptain) bool {
+func (d *Draft) GetCaptains(ctx context.Context, db database.DatabaseProvider) ([]*DraftCaptain, error) {
+	captains, err := database.GetAllWhere[*DraftCaptain](ctx, db, func(_ context.Context, dc *DraftCaptain) bool {
 		return dc.DraftId == d.ID
 	})
 	if err != nil {
@@ -245,7 +245,7 @@ func (d *Draft) GetCaptains(ctx context.Context, db common.DatabaseProvider) ([]
 
 // GetAllAvailableToSelect returns a list of all UserId values which the provided captain
 // is allowed to select. This excludes captains (except themselves) and already-selected players.
-func (d *Draft) GetAllAvailableToSelect(captainId UserId, db common.DatabaseProvider) []UserId {
+func (d *Draft) GetAllAvailableToSelect(captainId UserId, db database.DatabaseProvider) []UserId {
 	ctx := getDraftContext()
 	output := make([]UserId, 0)
 	availablePlayers, _ := d.GetAvailablePlayers(ctx, db)
@@ -264,7 +264,7 @@ func (d *Draft) GetAllAvailableToSelect(captainId UserId, db common.DatabaseProv
 
 // GetCaptainOnTheClock determines which captain is currently on the clock to make a selection,
 // based on the draft order pattern and the current round/pick count.
-func (d *Draft) GetCaptainOnTheClock(ctx context.Context, db common.DatabaseProvider) (UserId, error) {
+func (d *Draft) GetCaptainOnTheClock(ctx context.Context, db database.DatabaseProvider) (UserId, error) {
 	captains, err := d.GetCaptains(ctx, db)
 	if err != nil {
 		return 0, fmt.Errorf("no captains set for draft")
@@ -285,7 +285,7 @@ func (d *Draft) GetCaptainOnTheClock(ctx context.Context, db common.DatabaseProv
 // IsADifferentCaptainId checks if the given player ID belongs to a different captain
 // assigned to this Draft. Returns an error if the player is a different captain,
 // which prevents a captain from drafting another captain.
-func (d *Draft) IsADifferentCaptainId(ctx context.Context, player, captain UserId, db common.DatabaseProvider) error {
+func (d *Draft) IsADifferentCaptainId(ctx context.Context, player, captain UserId, db database.DatabaseProvider) error {
 	captains, err := d.GetCaptains(ctx, db)
 	if err != nil {
 		return nil
@@ -304,7 +304,7 @@ func (d *Draft) IsADifferentCaptainId(ctx context.Context, player, captain UserI
 // 2. The player is not another captain
 // 3. The player is in the available-to-draft list
 // 4. The player has not already been selected
-func (d *Draft) SelectByCaptain(ctx context.Context, player, captain UserId, db common.DatabaseProvider) error {
+func (d *Draft) SelectByCaptain(ctx context.Context, player, captain UserId, db database.DatabaseProvider) error {
 	// get the captain who is currently on the clock. If the
 	// captains have not yet been set, this will return an error
 	onTheClock, err := d.GetCaptainOnTheClock(ctx, db)
@@ -331,7 +331,7 @@ func (d *Draft) SelectByCaptain(ctx context.Context, player, captain UserId, db 
 // 1. The player is in the available-to-draft list
 // 2. The player has not already been selected
 // The round, pick number, and rating are automatically calculated based on the draft state.
-func (d *Draft) Select(ctx context.Context, player UserId, db common.DatabaseProvider) error {
+func (d *Draft) Select(ctx context.Context, player UserId, db database.DatabaseProvider) error {
 	if !d.IsInDraftList(getDraftContext(), db, player) {
 		return fmt.Errorf("user with id %s is not in the available-to-draft list", player)
 	}
@@ -354,7 +354,7 @@ func (d *Draft) Select(ctx context.Context, player UserId, db common.DatabasePro
 	}
 
 	// Get the rating for this pick
-	format, _ := common.GetExistingRecordById(getDraftContext(), db, &Format{}, d.Format.RecordId())
+	format, _ := database.GetExistingRecordById(getDraftContext(), db, &Format{}, d.Format.RecordId())
 	rating := d.GetRatingForPick(format.PossibleRatings, len(picks))
 
 	// Create the pick record
@@ -366,13 +366,13 @@ func (d *Draft) Select(ctx context.Context, player UserId, db common.DatabasePro
 		Pick:    pick,
 		Rating:  rating,
 	}
-	_, err := common.CreateOne(ctx, db, draftPick)
+	_, err := database.CreateOne(ctx, db, draftPick)
 	return err
 }
 
 // GetTeamIndexByTeam returns the 0-based index for a team in the draft captain assignment order.
 // This index is used to determine the team's draft position in each round.
-func (d *Draft) GetTeamIndexByTeam(ctx context.Context, db common.DatabaseProvider, teamId TeamId) (int, error) {
+func (d *Draft) GetTeamIndexByTeam(ctx context.Context, db database.DatabaseProvider, teamId TeamId) (int, error) {
 	captains, err := d.GetCaptains(ctx, db)
 	if err != nil {
 		return -1, err
@@ -387,7 +387,7 @@ func (d *Draft) GetTeamIndexByTeam(ctx context.Context, db common.DatabaseProvid
 
 // GetTeamIndexByCaptain returns the 0-based index for a team captain in the draft order.
 // This is used to retrieve draft results for a particular captain.
-func (d *Draft) GetTeamIndexByCaptain(ctx context.Context, db common.DatabaseProvider, captainId UserId) (int, error) {
+func (d *Draft) GetTeamIndexByCaptain(ctx context.Context, db database.DatabaseProvider, captainId UserId) (int, error) {
 	captains, err := d.GetCaptains(ctx, db)
 	if err != nil {
 		return -1, err
@@ -402,21 +402,21 @@ func (d *Draft) GetTeamIndexByCaptain(ctx context.Context, db common.DatabasePro
 
 // GetRoundAndPick returns the round and pick number for the next selection,
 // based on the current number of picks already made.
-func (d *Draft) GetRoundAndPick(ctx context.Context, db common.DatabaseProvider) (round int, pick int) {
+func (d *Draft) GetRoundAndPick(ctx context.Context, db database.DatabaseProvider) (round int, pick int) {
 	picks, _ := d.GetPicks(getDraftContext(), db)
 	return d.GetRoundAndPickFromPicks(getDraftContext(), db, len(picks))
 }
 
 // GetRoundAndPickFromPicks calculates the round and pick number from a selection index.
 // For example, index 8 with 4 teams returns round 3, pick 1.
-func (d *Draft) GetRoundAndPickFromPicks(ctx context.Context, db common.DatabaseProvider, selectionIndex int) (round int, pick int) {
+func (d *Draft) GetRoundAndPickFromPicks(ctx context.Context, db database.DatabaseProvider, selectionIndex int) (round int, pick int) {
 	captains, _ := d.GetCaptains(getDraftContext(), db)
 	return (selectionIndex / len(captains)) + 1, (selectionIndex % len(captains)) + 1
 }
 
 // GetDraftSelections returns the list of DraftSelection results for a particular team,
 // ordered by pick number within each round.
-func (d *Draft) GetDraftSelections(db common.DatabaseProvider, teamId TeamId) ([]DraftSelection, error) {
+func (d *Draft) GetDraftSelections(db database.DatabaseProvider, teamId TeamId) ([]DraftSelection, error) {
 	teamIndex, err := d.GetTeamIndexByTeam(getDraftContext(), db, teamId)
 	if err != nil {
 		return nil, err
@@ -426,7 +426,7 @@ func (d *Draft) GetDraftSelections(db common.DatabaseProvider, teamId TeamId) ([
 
 // GetDraftSelectionsByCaptainId returns the list of DraftSelection results for a particular captain.
 // This is a convenience method that looks up the captain's team and retrieves their selections.
-func (d *Draft) GetDraftSelectionsByCaptainId(ctx context.Context, db common.DatabaseProvider, captainId UserId) ([]DraftSelection, error) {
+func (d *Draft) GetDraftSelectionsByCaptainId(ctx context.Context, db database.DatabaseProvider, captainId UserId) ([]DraftSelection, error) {
 	teamIndex, err := d.GetTeamIndexByCaptain(getDraftContext(), db, captainId)
 	if err != nil {
 		return nil, err
@@ -476,7 +476,7 @@ func (d *Draft) ValidateRatingsCutoff(ratings []RatingId) error {
 	return nil
 }
 
-func (d *Draft) getDraftSelectionsByTeamIndex(ctx context.Context, db common.DatabaseProvider, teamIndex int) ([]DraftSelection, error) {
+func (d *Draft) getDraftSelectionsByTeamIndex(ctx context.Context, db database.DatabaseProvider, teamIndex int) ([]DraftSelection, error) {
 	selections := make([]DraftSelection, 0)
 
 	picks, err := d.GetPicks(getDraftContext(), db)
@@ -493,7 +493,7 @@ func (d *Draft) getDraftSelectionsByTeamIndex(ctx context.Context, db common.Dat
 
 	for _, pick := range picks {
 		if pick.TeamId == targetTeamId {
-			user, err := common.GetExistingRecordById(ctx, db, &User{}, pick.UserId.RecordId())
+			user, err := database.GetExistingRecordById(ctx, db, &User{}, pick.UserId.RecordId())
 			if err != nil {
 				return nil, err
 			}
@@ -504,15 +504,15 @@ func (d *Draft) getDraftSelectionsByTeamIndex(ctx context.Context, db common.Dat
 	return selections, nil
 }
 
-func (d *Draft) GetAvailableRatings(ctx context.Context, db common.DatabaseProvider) ([]RatingId, error) {
-	format, err := common.GetExistingRecordById(ctx, db, &Format{}, d.Format.RecordId())
+func (d *Draft) GetAvailableRatings(ctx context.Context, db database.DatabaseProvider) ([]RatingId, error) {
+	format, err := database.GetExistingRecordById(ctx, db, &Format{}, d.Format.RecordId())
 	if err != nil {
 		return nil, err
 	}
 	return format.PossibleRatings, nil
 }
 
-func (d *Draft) Initialize(ctx context.Context, db common.DatabaseProvider, captains []UserId) error {
+func (d *Draft) Initialize(ctx context.Context, db database.DatabaseProvider, captains []UserId) error {
 	captainsList, err := d.GetCaptains(getDraftContext(), db)
 	if err != nil || len(captainsList) != 0 {
 		return errors.New("draft is already initialized")
@@ -524,13 +524,13 @@ func (d *Draft) Initialize(ctx context.Context, db common.DatabaseProvider, capt
 	}
 
 	for i, captain := range captains {
-		err = common.ExistsById(ctx, db, &User{}, captain.RecordId())
+		err = database.ExistsById(ctx, db, &User{}, captain.RecordId())
 		if err != nil {
 			return err
 		}
 		name := fmt.Sprintf("Team %d", i+1)
 		team := NewDefaultTeam(captain, name)
-		team, err = common.CreateOne(ctx, db, team)
+		team, err = database.CreateOne(ctx, db, team)
 		if err != nil {
 			return err
 		}
@@ -542,7 +542,7 @@ func (d *Draft) Initialize(ctx context.Context, db common.DatabaseProvider, capt
 			CaptainId:  captain,
 			DraftOrder: i,
 		}
-		_, err = common.CreateOne(ctx, db, draftCaptain)
+		_, err = database.CreateOne(ctx, db, draftCaptain)
 		if err != nil {
 			return err
 		}
@@ -553,16 +553,16 @@ func (d *Draft) Initialize(ctx context.Context, db common.DatabaseProvider, capt
 				DraftId:  d.ID,
 				PlayerId: captain,
 			}
-			_, err = common.CreateOne(ctx, db, availablePlayer)
+			_, err = database.CreateOne(ctx, db, availablePlayer)
 			if err != nil {
 				return err
 			}
 		}
 	}
-	return common.UpdateOne(ctx, db, d)
+	return database.UpdateOne(ctx, db, d)
 }
 
-func (d *Draft) AssignDraftablePlayers(ctx context.Context, db common.DatabaseProvider, players []UserId) error {
+func (d *Draft) AssignDraftablePlayers(ctx context.Context, db database.DatabaseProvider, players []UserId) error {
 	if d.IsDraftCompleted(ctx, db) {
 		return errors.New("draft is already completed")
 	}
@@ -573,16 +573,16 @@ func (d *Draft) AssignDraftablePlayers(ctx context.Context, db common.DatabasePr
 				DraftId:  d.ID,
 				PlayerId: player,
 			}
-			_, err := common.CreateOne(getDraftContext(), db, availablePlayer)
+			_, err := database.CreateOne(getDraftContext(), db, availablePlayer)
 			if err != nil {
 				return err
 			}
 		}
 	}
-	return common.UpdateOne(getDraftContext(), db, d)
+	return database.UpdateOne(getDraftContext(), db, d)
 }
 
-func (d *Draft) AssignDraftedPlayersToTeams(ctx context.Context, db common.DatabaseProvider) error {
+func (d *Draft) AssignDraftedPlayersToTeams(ctx context.Context, db database.DatabaseProvider) error {
 	if !d.IsDraftCompleted(ctx, db) {
 		return errors.New("draft is not yet completed")
 	}
@@ -594,7 +594,7 @@ func (d *Draft) AssignDraftedPlayersToTeams(ctx context.Context, db common.Datab
 
 	for _, assignment := range captains {
 		// get the team record corresponding to the assignment
-		team, err := common.GetExistingRecordById(getDraftContext(), db, &Team{}, assignment.TeamId.RecordId())
+		team, err := database.GetExistingRecordById(getDraftContext(), db, &Team{}, assignment.TeamId.RecordId())
 		if err != nil {
 			return err
 		}
@@ -619,7 +619,7 @@ func (d *Draft) AssignDraftedPlayersToTeams(ctx context.Context, db common.Datab
 					UserId: result.User.ID,
 					Role:   TeamRoleMember,
 				}
-				_, err = common.CreateOne(ctx, db, teamAssignment)
+				_, err = database.CreateOne(ctx, db, teamAssignment)
 				if err != nil {
 					return err
 				}
@@ -629,7 +629,7 @@ func (d *Draft) AssignDraftedPlayersToTeams(ctx context.Context, db common.Datab
 		}
 
 		// update the team in the database
-		err = common.UpdateOne(ctx, db, team)
+		err = database.UpdateOne(ctx, db, team)
 		if err != nil {
 			return err
 		}
@@ -637,14 +637,14 @@ func (d *Draft) AssignDraftedPlayersToTeams(ctx context.Context, db common.Datab
 	return nil
 }
 
-func (d *Draft) CreateSeason(ctx context.Context, db common.DatabaseProvider, name string, facility FacilityId, t StartTime) (*Season, error) {
+func (d *Draft) CreateSeason(ctx context.Context, db database.DatabaseProvider, name string, facility FacilityId, t StartTime) (*Season, error) {
 	if !d.IsDraftCompleted(ctx, db) {
 		return nil, errors.New("draft is not completed")
 	}
 
 	// update the completed-at timestamp for this draft
 	d.CompletedAt = time.Now()
-	err := common.UpdateOne(ctx, db, d)
+	err := database.UpdateOne(ctx, db, d)
 	if err != nil {
 		return nil, err
 	}
@@ -658,7 +658,7 @@ func (d *Draft) CreateSeason(ctx context.Context, db common.DatabaseProvider, na
 	s.DraftId = d.ID
 
 	// create a new Season record first
-	s, err = common.CreateOne(ctx, db, s)
+	s, err = database.CreateOne(ctx, db, s)
 	if err != nil {
 		return nil, err
 	}
@@ -684,7 +684,7 @@ func (d *Draft) CreateSeason(ctx context.Context, db common.DatabaseProvider, na
 	return s, nil
 }
 
-func (d *Draft) IsDraftCompleted(ctx context.Context, db common.DatabaseProvider) bool {
+func (d *Draft) IsDraftCompleted(ctx context.Context, db database.DatabaseProvider) bool {
 	availablePlayers, err := d.GetAvailablePlayers(getDraftContext(), db)
 	if err != nil {
 		return false
@@ -700,8 +700,8 @@ func (d *Draft) IsDraftCompleted(ctx context.Context, db common.DatabaseProvider
 	return len(availablePlayers) == len(picks)
 }
 
-func (d *Draft) GetSeason(ctx context.Context, db common.DatabaseProvider) (*Season, error) {
-	seasons, err := common.GetAllWhere[*Season](ctx, db, func(_ context.Context, c *Season) bool {
+func (d *Draft) GetSeason(ctx context.Context, db database.DatabaseProvider) (*Season, error) {
+	seasons, err := database.GetAllWhere[*Season](ctx, db, func(_ context.Context, c *Season) bool {
 		return c.DraftId == d.ID
 	})
 	if err != nil {
@@ -713,6 +713,6 @@ func (d *Draft) GetSeason(ctx context.Context, db common.DatabaseProvider) (*Sea
 	return seasons[0], nil
 }
 
-func (d *Draft) BlankRecord() common.CrudRecord {
+func (d *Draft) BlankRecord() database.CrudRecord {
 	return new(Draft)
 }

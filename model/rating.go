@@ -4,27 +4,28 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"intraclub/common"
 	"strings"
+
+	"intraclub/database"
 )
 
 var RatingOne = "Well-developed overall game, strong fundamentals, and skilled against many types of opponent play styles"
 var RatingTwo = "Moderate overall game, perhaps lacking in some fundamentals but makes up for weaknesses through strengths such as finesse, quickness, or strategy"
 var RatingThree = "Lower-skilled player who might be prone to mistakes or beatable due to lack of quickness or weakness to particular shot styles"
 
-type RatingId common.RecordId
+type RatingId database.RecordId
 
 func (id RatingId) UnmarshalJSON(bytes []byte) error {
 	rid := id.RecordId()
-	return (*common.RecordId)(&rid).UnmarshalJSON(bytes)
+	return (*database.RecordId)(&rid).UnmarshalJSON(bytes)
 }
 
 func (id RatingId) MarshalJSON() ([]byte, error) {
 	return id.RecordId().MarshalJSON()
 }
 
-func (id RatingId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id RatingId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id RatingId) String() string {
@@ -34,7 +35,7 @@ func (id RatingId) String() string {
 type RatingList []RatingId
 
 func (r *RatingList) UnmarshalJSON(bytes []byte) error {
-	idList, err := common.UnmarshalStringIdList(bytes)
+	idList, err := database.UnmarshalStringIdList(bytes)
 	if err != nil {
 		return err
 	}
@@ -59,12 +60,12 @@ func (r *Rating) UniquenessEquivalent(other *Rating) error {
 	return nil
 }
 
-func (r *Rating) GetOwner() common.RecordId {
+func (r *Rating) GetOwner() database.RecordId {
 	return r.UserId.RecordId()
 }
 
-func (r *Rating) PreDelete(ctx context.Context, db common.DatabaseProvider) error {
-	formats, err := common.GetAllWhere[*Format](ctx, db, func(_ context.Context, c *Format) bool {
+func (r *Rating) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
+	formats, err := database.GetAllWhere[*Format](ctx, db, func(_ context.Context, c *Format) bool {
 		return c.IsRatingInOptionsList(r.ID)
 	})
 	if err != nil {
@@ -76,7 +77,7 @@ func (r *Rating) PreDelete(ctx context.Context, db common.DatabaseProvider) erro
 	return nil
 }
 
-func (r *Rating) SetOwner(recordId common.RecordId) {
+func (r *Rating) SetOwner(recordId database.RecordId) {
 	r.UserId = UserId(recordId)
 }
 
@@ -84,23 +85,23 @@ func NewRating() *Rating {
 	return &Rating{}
 }
 
-func (r *Rating) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.SysAdminAndUsers(r.UserId.RecordId())
+func (r *Rating) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.SysAdminAndUsers(r.UserId.RecordId())
 }
 
-func (r *Rating) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (r *Rating) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
 func (r *Rating) Type() string {
 	return "rating"
 }
 
-func (r *Rating) GetId() common.RecordId {
+func (r *Rating) GetId() database.RecordId {
 	return r.ID.RecordId()
 }
 
-func (r *Rating) SetId(id common.RecordId) {
+func (r *Rating) SetId(id database.RecordId) {
 	r.ID = RatingId(id)
 }
 
@@ -117,10 +118,10 @@ func (r *Rating) StaticallyValid() error {
 	return nil
 }
 
-func (r *Rating) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	return common.ExistsById(ctx, db, &User{}, r.UserId.RecordId())
+func (r *Rating) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	return database.ExistsById(ctx, db, &User{}, r.UserId.RecordId())
 }
 
-func (r *Rating) BlankRecord() common.CrudRecord {
+func (r *Rating) BlankRecord() database.CrudRecord {
 	return new(Rating)
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"intraclub/common"
+	"intraclub/api"
 
 	"github.com/gin-gonic/gin"
 )
@@ -50,7 +50,7 @@ func GetDraftOrderPatternExample(d DraftOrderPattern, numberOfCaptains, numberOf
 }
 
 func GetDraftOrderPatterns(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{common.ResourceKey: getDraftOrderPatterns()})
+	c.JSON(http.StatusOK, gin.H{api.ResourceKey: getDraftOrderPatterns()})
 }
 
 func getDraftOrderPatterns() []DraftOrderPatternSerial {

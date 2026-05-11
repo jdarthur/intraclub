@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	"intraclub/common"
+	"intraclub/database"
 )
 
-func newDefaultSeason(t *testing.T, db common.DatabaseProvider) (s *Season, commish *User) {
+func newDefaultSeason(t *testing.T, db database.DatabaseProvider) (s *Season, commish *User) {
 	return newDefaultSeasonWithTeams(t, db, 1)
 }
 
-func newDefaultSeasonWithTeams(t *testing.T, db common.DatabaseProvider, teamCount int) (s *Season, commish *User) {
+func newDefaultSeasonWithTeams(t *testing.T, db database.DatabaseProvider, teamCount int) (s *Season, commish *User) {
 	commissioner := newStoredUser(t, db)
 
 	teams := make([]*Team, 0)
@@ -24,7 +24,7 @@ func newDefaultSeasonWithTeams(t *testing.T, db common.DatabaseProvider, teamCou
 	return newStoredSeason(t, db, commissioner.ID, teams), commissioner
 }
 
-func newStoredSeason(t *testing.T, db common.DatabaseProvider, commissioner UserId, teams []*Team) *Season {
+func newStoredSeason(t *testing.T, db database.DatabaseProvider, commissioner UserId, teams []*Team) *Season {
 	draft := newStoredDraft(t, db, commissioner)
 	facility := newStoredFacility(t, db, commissioner)
 	playoffStructure := newStoredPlayoffStructure(t, db)
@@ -36,7 +36,7 @@ func newStoredSeason(t *testing.T, db common.DatabaseProvider, commissioner User
 	season.Facility = facility.ID
 	season.PlayoffStructure = playoffStructure.ID
 
-	v, err := common.CreateOne(context.Background(), db, season)
+	v, err := database.CreateOne(context.Background(), db, season)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +57,7 @@ func newStoredSeason(t *testing.T, db common.DatabaseProvider, commissioner User
 }
 
 func TestCreateSeasonAfterDraft(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	draft := doRandomDraft(t, db, 100, 4)
 	facility := newStoredFacility(t, db, draft.Owner)
 	season, err := draft.CreateSeason(context.Background(), db, "Test season", facility.ID, NewStartTime(8, 30))

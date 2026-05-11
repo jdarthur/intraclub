@@ -2,35 +2,36 @@ package model
 
 import (
 	"context"
-	"intraclub/common"
 	"time"
+
+	"intraclub/database"
 )
 
 // SeasonTeam is a join table record that links a Season to its participating Teams.
 // This allows multiple teams per season and supports tracking creation/modification timestamps.
 type SeasonTeam struct {
-	ID        common.RecordId `json:"id"`
-	SeasonId  SeasonId        `json:"season_id"`
-	TeamId    TeamId          `json:"team_id"`
-	CreatedAt time.Time       `json:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at"`
+	ID        database.RecordId `json:"id"`
+	SeasonId  SeasonId          `json:"season_id"`
+	TeamId    TeamId            `json:"team_id"`
+	CreatedAt time.Time         `json:"created_at"`
+	UpdatedAt time.Time         `json:"updated_at"`
 }
 
 // GetOwner returns InvalidRecordId as SeasonTeam has no specific owner.
-func (s *SeasonTeam) GetOwner() common.RecordId {
-	return common.InvalidRecordId
+func (s *SeasonTeam) GetOwner() database.RecordId {
+	return database.InvalidRecordId
 }
 
 // SetOwner is a no-op as SeasonTeam has no specific owner.
-func (s *SeasonTeam) SetOwner(recordId common.RecordId) {}
+func (s *SeasonTeam) SetOwner(recordId database.RecordId) {}
 
 // AccessibleTo returns everyone as SeasonTeam records are public.
-func (s *SeasonTeam) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (s *SeasonTeam) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
-func (s *SeasonTeam) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{common.SysAdminRecordId}
+func (s *SeasonTeam) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{database.SysAdminRecordId}
 }
 
 // Type returns the record type identifier for SeasonTeam.
@@ -39,12 +40,12 @@ func (s *SeasonTeam) Type() string {
 }
 
 // GetId returns the unique identifier for this SeasonTeam record.
-func (s *SeasonTeam) GetId() common.RecordId {
+func (s *SeasonTeam) GetId() database.RecordId {
 	return s.ID
 }
 
 // SetId sets the unique identifier for this SeasonTeam record.
-func (s *SeasonTeam) SetId(id common.RecordId) {
+func (s *SeasonTeam) SetId(id database.RecordId) {
 	s.ID = id
 }
 
@@ -54,11 +55,11 @@ func (s *SeasonTeam) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that both the referenced Season and Team records exist.
-func (s *SeasonTeam) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	if err := common.ExistsById(ctx, db, &Season{}, s.SeasonId.RecordId()); err != nil {
+func (s *SeasonTeam) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	if err := database.ExistsById(ctx, db, &Season{}, s.SeasonId.RecordId()); err != nil {
 		return err
 	}
-	if err := common.ExistsById(ctx, db, &Team{}, s.TeamId.RecordId()); err != nil {
+	if err := database.ExistsById(ctx, db, &Team{}, s.TeamId.RecordId()); err != nil {
 		return err
 	}
 	return nil
@@ -79,6 +80,6 @@ func (s *SeasonTeam) SetUpdatedAt(updatedAt time.Time) {
 	s.UpdatedAt = updatedAt
 }
 
-func (s *SeasonTeam) BlankRecord() common.CrudRecord {
+func (s *SeasonTeam) BlankRecord() database.CrudRecord {
 	return new(SeasonTeam)
 }

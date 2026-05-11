@@ -1,9 +1,11 @@
-package common
+package api
 
 import (
 	"fmt"
 	"os"
 	"testing"
+
+	"intraclub/database"
 )
 
 func deleteIfExists(t *testing.T, filename string) {
@@ -38,7 +40,7 @@ func TestCreateToken(t *testing.T) {
 		t.Fatalf("GenerateJwtKeyPairIfNotExists failed: %v", err)
 	}
 
-	userId := NewRecordId()
+	userId := database.NewRecordId()
 	token, err := GenerateToken(userId)
 	if err != nil {
 		t.Fatalf("GenerateToken failed: %v", err)
@@ -63,7 +65,7 @@ func TestValidateTokenTampered(t *testing.T) {
 		t.Fatalf("GenerateJwtKeyPairIfNotExists failed: %v", err)
 	}
 
-	userId := NewRecordId()
+	userId := database.NewRecordId()
 	token, err := GenerateToken(userId)
 	if err != nil {
 		t.Fatalf("GenerateToken failed: %v", err)
@@ -98,8 +100,8 @@ func TestGenerateTokenDifferentUsers(t *testing.T) {
 		t.Fatalf("GenerateJwtKeyPairIfNotExists failed: %v", err)
 	}
 
-	userId1 := NewRecordId()
-	userId2 := NewRecordId()
+	userId1 := database.NewRecordId()
+	userId2 := database.NewRecordId()
 
 	token1, err := GenerateToken(userId1)
 	if err != nil {

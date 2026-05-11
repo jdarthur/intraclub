@@ -1,11 +1,14 @@
-package common
+package api
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"intraclub/database"
+
+	"github.com/gin-gonic/gin"
 )
 
 // PathIdField is the field in a request to an ApiRoute
@@ -50,7 +53,7 @@ func (m HttpMethod) Valid() bool {
 // at a particular path, with an optional request body and with a
 // handler function which returns a response value, an HTTP response
 // code, and an error if the request was invalid or something went wrong
-type ApiRoute[T Validatable] interface {
+type ApiRoute[T database.Validatable] interface {
 
 	// Path returns the HttpMethod and route for this ApiRout
 	Path() (method HttpMethod, route string)
@@ -71,9 +74,9 @@ type ApiRoute[T Validatable] interface {
 }
 
 // ApiRequest is a typed struct used to pass in a defined set of parameters to an ApiRoute
-type ApiRequest[T Validatable] struct {
+type ApiRequest[T database.Validatable] struct {
 	// PathId is the RecordId parsed out of the path e.g. the `id` from `/user/:id`
-	PathId RecordId
+	PathId database.RecordId
 
 	// Body is the request body from the gin.Context, if applicable to the ApiRoute.
 	// This can be validated using the Validatable functions defined for the type
@@ -90,7 +93,7 @@ type ApiRequest[T Validatable] struct {
 	// DatabaseProvider is a DatabaseProvider interface passed to the
 	// ApiRoute if it needs to do something in the database. This will not be
 	// used unless the route is manually using the RouteFamily struct
-	DatabaseProvider DatabaseProvider
+	DatabaseProvider database.DatabaseProvider
 
 	request *http.Request
 }
@@ -115,12 +118,12 @@ func (a ApiRequest[T]) ParseQuery(v any) error {
 // API endpoints. Most API routes should use common helpers such as CrudCommon,
 // but this helper can be used for, e.g., special one-off routes or routes
 // which don't conform to the normal constraints around CRUD access/edit rights
-type RouteFamily[T Validatable] struct {
+type RouteFamily[T database.Validatable] struct {
 	// UseAuth requires all requests to this RouteFamily to be sent with a valid JWT (if true)
 	UseAuth bool
 
 	// DatabaseProvider is the DatabaseProvider that the Handler functions will use
-	DatabaseProvider DatabaseProvider
+	DatabaseProvider database.DatabaseProvider
 
 	// Middleware is a list of gin.HandlerFunc functions that will be
 	// run before the wrapper's handler functions are run for each request
@@ -170,9 +173,9 @@ func (r *RouteFamily[T]) addToEngine(e *gin.RouterGroup) {
 // routeWrapper is an internal struct that wraps an ApiRoute with a DatabaseProvider
 // and stores whether the given ApiRoute will need authentication. This is used inside
 // the RouteFamily helper functions and applies common DB and auth logic to an ApiRoute
-type routeWrapper[T Validatable] struct {
+type routeWrapper[T database.Validatable] struct {
 	Route    ApiRoute[T]
-	Database DatabaseProvider
+	Database database.DatabaseProvider
 	UseAuth  bool
 }
 
@@ -231,21 +234,21 @@ func (r *routeWrapper[T]) Handle(c *gin.Context) {
 // getPathId parses the PathIdField from the raw request (if present) and converts
 // it into a RecordId which will be passed into the ApiRequest provided to the
 // ApiRoute Handler function which processes the request
-func (r *routeWrapper[T]) getPathId(c *gin.Context) (RecordId, error) {
+func (r *routeWrapper[T]) getPathId(c *gin.Context) (database.RecordId, error) {
 	// get the :id field from the request path
 	v, ok := c.Params.Get(PathIdField)
 	if ok {
 
 		// parse the record ID into a base-10 uint64
-		id, err := RecordIdFromString(v)
+		id, err := database.RecordIdFromString(v)
 		if err != nil {
-			return InvalidRecordId, fmt.Errorf("invalid field for :%s path parameter: %s", PathIdField, v)
+			return database.InvalidRecordId, fmt.Errorf("invalid field for :%s path parameter: %s", PathIdField, v)
 		}
 
 		// convert the uint64 into a RecordId (which is a uint64 wrapper type)
-		return RecordId(id), nil
+		return database.RecordId(id), nil
 	}
 
 	// return default value if not present not all ApiRoutes will use a path ID
-	return InvalidRecordId, nil
+	return database.InvalidRecordId, nil
 }

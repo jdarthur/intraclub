@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"intraclub/common"
 	"strings"
+
+	"intraclub/database"
 )
 
 // FormatLine is a pairing of two players that have a particular Rating.
@@ -25,11 +26,11 @@ func (l *FormatLine) UnmarshalJSON(bytes []byte) error {
 	if err != nil {
 		return err
 	}
-	rating1, err := common.RecordIdFromString(m["player_1_rating"])
+	rating1, err := database.RecordIdFromString(m["player_1_rating"])
 	if err != nil {
 		return err
 	}
-	rating2, err := common.RecordIdFromString(m["player_2_rating"])
+	rating2, err := database.RecordIdFromString(m["player_2_rating"])
 	if err != nil {
 		return err
 	}
@@ -55,31 +56,31 @@ func (l *FormatLine) StaticallyValid() error {
 	return nil
 }
 
-func (l *FormatLine) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	err := common.ExistsById(ctx, db, &Rating{}, l.Player1Rating.RecordId())
+func (l *FormatLine) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	err := database.ExistsById(ctx, db, &Rating{}, l.Player1Rating.RecordId())
 	if err != nil {
 		return err
 	}
-	return common.ExistsById(ctx, db, &Rating{}, l.Player2Rating.RecordId())
+	return database.ExistsById(ctx, db, &Rating{}, l.Player2Rating.RecordId())
 }
 
 func (l *FormatLine) String() string {
 	return fmt.Sprintf("%s / %s", l.Player1Rating, l.Player2Rating)
 }
 
-type FormatId common.RecordId
+type FormatId database.RecordId
 
 func (id FormatId) UnmarshalJSON(bytes []byte) error {
 	rid := id.RecordId()
-	return (*common.RecordId)(&rid).UnmarshalJSON(bytes)
+	return (*database.RecordId)(&rid).UnmarshalJSON(bytes)
 }
 
 func (id FormatId) MarshalJSON() ([]byte, error) {
 	return id.RecordId().MarshalJSON()
 }
 
-func (id FormatId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id FormatId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id FormatId) String() string {
@@ -114,19 +115,19 @@ type Format struct {
 	Lines           []FormatLine `json:"lines"`            // Rating pairings that will play during a matchup
 }
 
-func (f *Format) GetOwner() common.RecordId {
+func (f *Format) GetOwner() database.RecordId {
 	return f.UserId.RecordId()
 }
 
-func (f *Format) PreUpdate(ctx context.Context, db common.DatabaseProvider, existingValues common.CrudRecord) error {
+func (f *Format) PreUpdate(ctx context.Context, db database.DatabaseProvider, existingValues database.CrudRecord) error {
 	return f.CheckHasAssignedDrafts(ctx, db, true)
 }
 
-func (f *Format) PreDelete(ctx context.Context, db common.DatabaseProvider) error {
+func (f *Format) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
 	return f.CheckHasAssignedDrafts(ctx, db, false)
 }
 
-func (f *Format) SetOwner(recordId common.RecordId) {
+func (f *Format) SetOwner(recordId database.RecordId) {
 	f.UserId = UserId(recordId)
 }
 
@@ -134,23 +135,23 @@ func NewFormat() *Format {
 	return &Format{}
 }
 
-func (f *Format) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{f.UserId.RecordId()}
+func (f *Format) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{f.UserId.RecordId()}
 }
 
-func (f *Format) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (f *Format) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
 func (f *Format) Type() string {
 	return "format"
 }
 
-func (f *Format) GetId() common.RecordId {
+func (f *Format) GetId() database.RecordId {
 	return f.ID.RecordId()
 }
 
-func (f *Format) SetId(id common.RecordId) {
+func (f *Format) SetId(id database.RecordId) {
 	f.ID = FormatId(id)
 }
 
@@ -196,8 +197,8 @@ func (f *Format) IsRatingInOptionsList(r RatingId) bool {
 	return false
 }
 
-func (f *Format) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	err := common.ExistsById(ctx, db, &User{}, f.UserId.RecordId())
+func (f *Format) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	err := database.ExistsById(ctx, db, &User{}, f.UserId.RecordId())
 	if err != nil {
 		return err
 	}
@@ -220,13 +221,13 @@ func (f *Format) IsRatingValidForFormat(r RatingId) bool {
 	return false
 }
 
-func (f *Format) GetAssignedDrafts(ctx context.Context, db common.DatabaseProvider) ([]*Draft, error) {
-	return common.GetAllWhere[*Draft](ctx, db, func(_ context.Context, c *Draft) bool {
+func (f *Format) GetAssignedDrafts(ctx context.Context, db database.DatabaseProvider) ([]*Draft, error) {
+	return database.GetAllWhere[*Draft](ctx, db, func(_ context.Context, c *Draft) bool {
 		return c.Format == f.ID
 	})
 }
 
-func (f *Format) CheckHasAssignedDrafts(ctx context.Context, db common.DatabaseProvider, isUpdate bool) error {
+func (f *Format) CheckHasAssignedDrafts(ctx context.Context, db database.DatabaseProvider, isUpdate bool) error {
 	drafts, err := f.GetAssignedDrafts(ctx, db)
 	if err != nil {
 		return err
@@ -243,6 +244,6 @@ func (f *Format) CheckHasAssignedDrafts(ctx context.Context, db common.DatabaseP
 	return nil
 }
 
-func (f *Format) BlankRecord() common.CrudRecord {
+func (f *Format) BlankRecord() database.CrudRecord {
 	return new(Format)
 }

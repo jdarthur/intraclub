@@ -1,11 +1,13 @@
 package model
 
-import "intraclub/common"
+import (
+	"intraclub/database"
+)
 
 type Matchup struct {
-	ID             common.RecordId
+	ID             database.RecordId
 	HomeTeam       TeamId
-	HomeTeamLineup common.RecordId
+	HomeTeamLineup database.RecordId
 	AwayTeam       TeamId
-	AwayTeamLineup common.RecordId
+	AwayTeamLineup database.RecordId
 }

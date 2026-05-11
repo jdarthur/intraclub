@@ -1,7 +1,9 @@
-package common
+package database
 
-import "context"
-import "fmt"
+import (
+	"context"
+	"fmt"
+)
 
 type RecordCache map[RecordId]CrudRecord // Map from a RecordId to the CrudRecord with that ID
 type UnitTestDBProvider struct {
@@ -42,7 +44,7 @@ func (u *UnitTestDBProvider) GetAllWhere(ctx context.Context, recordType CrudRec
 			output = append(output, record)
 		}
 	}
-	//u.Dump()
+	// u.Dump()
 	return output, nil
 }
 

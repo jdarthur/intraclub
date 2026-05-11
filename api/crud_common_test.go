@@ -1,4 +1,4 @@
-package common
+package api
 
 import (
 	"context"
@@ -7,28 +7,30 @@ import (
 	"testing"
 	"time"
 
+	"intraclub/database"
+
 	"github.com/gin-gonic/gin"
 )
 
 type testCrudRecord struct {
-	ID        RecordId
-	Owner     RecordId
+	ID        database.RecordId
+	Owner     database.RecordId
 	Value     string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
 
-func (t *testCrudRecord) GetOwner() RecordId {
+func (t *testCrudRecord) GetOwner() database.RecordId {
 	return t.Owner
 }
 
-func (t *testCrudRecord) SetOwner(recordId RecordId) {
+func (t *testCrudRecord) SetOwner(recordId database.RecordId) {
 	t.Owner = recordId
 }
 
 func newTestCrudRecord() *testCrudRecord {
 	return &testCrudRecord{
-		ID:    NewRecordId(),
+		ID:    database.NewRecordId(),
 		Value: "default",
 	}
 }
@@ -37,20 +39,20 @@ func (t *testCrudRecord) Type() string {
 	return "test_crud"
 }
 
-func (t *testCrudRecord) GetId() RecordId {
+func (t *testCrudRecord) GetId() database.RecordId {
 	return t.ID
 }
 
-func (t *testCrudRecord) SetId(id RecordId) {
+func (t *testCrudRecord) SetId(id database.RecordId) {
 	t.ID = id
 }
 
-func (t *testCrudRecord) EditableBy(_ context.Context, db DatabaseProvider) []RecordId {
-	return []RecordId{t.Owner, SysAdminRecordId}
+func (t *testCrudRecord) EditableBy(_ context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{t.Owner, database.SysAdminRecordId}
 }
 
-func (t *testCrudRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []RecordId {
-	return AccessibleToEveryone
+func (t *testCrudRecord) AccessibleTo(_ context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
 func (t *testCrudRecord) StaticallyValid() error {
@@ -60,7 +62,7 @@ func (t *testCrudRecord) StaticallyValid() error {
 	return nil
 }
 
-func (t *testCrudRecord) DynamicallyValid(_ context.Context, db DatabaseProvider) error {
+func (t *testCrudRecord) DynamicallyValid(_ context.Context, db database.DatabaseProvider) error {
 	return nil
 }
 
@@ -80,12 +82,12 @@ func (t *testCrudRecord) SetUpdateTimestamp(tm time.Time) time.Time {
 	return oldValue
 }
 
-func (t *testCrudRecord) BlankRecord() CrudRecord {
+func (t *testCrudRecord) BlankRecord() database.CrudRecord {
 	return new(testCrudRecord)
 }
 
 func TestNewCrudCommon(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
 	if cc.CreateRecord == nil {
@@ -103,7 +105,7 @@ func TestNewCrudCommon(t *testing.T) {
 }
 
 func TestNewCrudCommonNoAuth(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	if cc.UseAuth {
@@ -112,7 +114,7 @@ func TestNewCrudCommonNoAuth(t *testing.T) {
 }
 
 func TestCrudCommonCreateMissingToken(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
 	route := genericApiRoute[*testCrudRecord]{
@@ -138,7 +140,7 @@ func TestCrudCommonCreateMissingToken(t *testing.T) {
 }
 
 func TestCrudCommonCreateSuccess(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
 	route := genericApiRoute[*testCrudRecord]{
@@ -147,7 +149,7 @@ func TestCrudCommonCreateSuccess(t *testing.T) {
 		handle:         cc.createCrudRecord,
 	}
 
-	ownerId := NewRecordId()
+	ownerId := database.NewRecordId()
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
@@ -168,20 +170,20 @@ func TestCrudCommonCreateSuccess(t *testing.T) {
 	if resource.(*testCrudRecord).Owner != ownerId {
 		t.Fatal("Owner should be set from token")
 	}
-	if resource.(*testCrudRecord).ID == InvalidRecordId {
+	if resource.(*testCrudRecord).ID == database.InvalidRecordId {
 		t.Fatal("ID should be set")
 	}
 }
 
 func TestCrudCommonGetOneSuccess(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
 	// Create a record first
-	ownerId := NewRecordId()
+	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
 	v.Owner = ownerId
-	created, err := CreateOne(context.Background(), db, v)
+	created, err := database.CreateOne(context.Background(), db, v)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +216,7 @@ func TestCrudCommonGetOneSuccess(t *testing.T) {
 }
 
 func TestCrudCommonGetOneNotFound(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
 	route := genericApiRoute[*testCrudRecord]{
@@ -225,8 +227,8 @@ func TestCrudCommonGetOneNotFound(t *testing.T) {
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
-		Token:            &AuthToken{UserId: NewRecordId()},
-		PathId:           NewRecordId(),
+		Token:            &AuthToken{UserId: database.NewRecordId()},
+		PathId:           database.NewRecordId(),
 	}
 
 	_, status, err := route.Handler(req)
@@ -239,14 +241,14 @@ func TestCrudCommonGetOneNotFound(t *testing.T) {
 }
 
 func TestCrudCommonGetAllSuccess(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
-	ownerId := NewRecordId()
+	ownerId := database.NewRecordId()
 	for i := 0; i < 3; i++ {
 		v := newTestCrudRecord()
 		v.Owner = ownerId
-		_, err := CreateOne(context.Background(), db, v)
+		_, err := database.CreateOne(context.Background(), db, v)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -279,13 +281,13 @@ func TestCrudCommonGetAllSuccess(t *testing.T) {
 }
 
 func TestCrudCommonDeleteSuccess(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
-	ownerId := NewRecordId()
+	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
 	v.Owner = ownerId
-	created, err := CreateOne(context.Background(), db, v)
+	created, err := database.CreateOne(context.Background(), db, v)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +320,7 @@ func TestCrudCommonDeleteSuccess(t *testing.T) {
 }
 
 func TestCrudCommonDeleteMissingToken(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
 	route := genericApiRoute[*testCrudRecord]{
@@ -330,7 +332,7 @@ func TestCrudCommonDeleteMissingToken(t *testing.T) {
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            nil,
-		PathId:           NewRecordId(),
+		PathId:           database.NewRecordId(),
 	}
 
 	_, status, err := route.Handler(req)
@@ -343,10 +345,10 @@ func TestCrudCommonDeleteMissingToken(t *testing.T) {
 }
 
 func TestCrudCommonDeleteNotFound(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
-	ownerId := NewRecordId()
+	ownerId := database.NewRecordId()
 	route := genericApiRoute[*testCrudRecord]{
 		requestBody: newTestCrudRecord,
 		handle:      cc.deleteCrudRecordById,
@@ -356,7 +358,7 @@ func TestCrudCommonDeleteNotFound(t *testing.T) {
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            &AuthToken{UserId: ownerId},
-		PathId:           NewRecordId(),
+		PathId:           database.NewRecordId(),
 	}
 
 	_, status, err := route.Handler(req)
@@ -369,13 +371,13 @@ func TestCrudCommonDeleteNotFound(t *testing.T) {
 }
 
 func TestCrudCommonUpdateSuccess(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
-	ownerId := NewRecordId()
+	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
 	v.Owner = ownerId
-	created, err := CreateOne(context.Background(), db, v)
+	created, err := database.CreateOne(context.Background(), db, v)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -414,7 +416,7 @@ func TestCrudCommonUpdateSuccess(t *testing.T) {
 }
 
 func TestCrudCommonUpdateMissingToken(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
 	route := genericApiRoute[*testCrudRecord]{
@@ -427,7 +429,7 @@ func TestCrudCommonUpdateMissingToken(t *testing.T) {
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            nil,
-		PathId:           NewRecordId(),
+		PathId:           database.NewRecordId(),
 		Body:             newTestCrudRecord(),
 	}
 
@@ -441,7 +443,7 @@ func TestCrudCommonUpdateMissingToken(t *testing.T) {
 }
 
 func TestCrudCommonCreateEmptyValue(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
 	route := genericApiRoute[*testCrudRecord]{
@@ -450,7 +452,7 @@ func TestCrudCommonCreateEmptyValue(t *testing.T) {
 		handle:         cc.createCrudRecord,
 	}
 
-	ownerId := NewRecordId()
+	ownerId := database.NewRecordId()
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
@@ -468,13 +470,13 @@ func TestCrudCommonCreateEmptyValue(t *testing.T) {
 }
 
 func TestCrudCommonGetOneAccessibleToEveryone(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
-	ownerId := NewRecordId()
+	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
 	v.Owner = ownerId
-	created, err := CreateOne(context.Background(), db, v)
+	created, err := database.CreateOne(context.Background(), db, v)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -485,7 +487,7 @@ func TestCrudCommonGetOneAccessibleToEveryone(t *testing.T) {
 	}
 
 	// Even a "non-owner" user can access it because AccessibleTo returns AccessibleToEveryone
-	nonOwnerId := NewRecordId()
+	nonOwnerId := database.NewRecordId()
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
@@ -503,13 +505,13 @@ func TestCrudCommonGetOneAccessibleToEveryone(t *testing.T) {
 }
 
 func TestCrudCommonDeleteUnauthorized(t *testing.T) {
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
-	ownerId := NewRecordId()
+	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
 	v.Owner = ownerId
-	created, err := CreateOne(context.Background(), db, v)
+	created, err := database.CreateOne(context.Background(), db, v)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -519,7 +521,7 @@ func TestCrudCommonDeleteUnauthorized(t *testing.T) {
 		handle:      cc.deleteCrudRecordById,
 	}
 
-	unauthorizedId := NewRecordId()
+	unauthorizedId := database.NewRecordId()
 	req := ApiRequest[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
@@ -543,7 +545,7 @@ func TestCrudCommonHandleRouteTypesPanicOnNilCreateRecord(t *testing.T) {
 		}
 	}()
 
-	db := NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	cc := &CrudCommon[*testCrudRecord]{
 		CreateRecord:     nil,
 		UseAuth:          true,

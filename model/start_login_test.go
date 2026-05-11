@@ -3,24 +3,26 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
 	"testing"
 	"time"
+
+	"intraclub/api"
+	"intraclub/database"
 )
 
 func init() {
-	err := common.DeleteKeyPair()
+	err := api.DeleteKeyPair()
 	if err != nil {
 		panic(err)
 	}
-	err = common.GenerateJwtKeyPairIfNotExists()
+	err = api.GenerateJwtKeyPairIfNotExists()
 	if err != nil {
 		panic(err)
 	}
 }
 
 func TestInvalidUserId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	m := &StartLoginTokenManager{}
 	email := "fake@email.com"
 
@@ -36,7 +38,7 @@ func TestInvalidUserId(t *testing.T) {
 }
 
 func TestValidUserId(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	m := &StartLoginTokenManager{}
 	user := newStoredUser(t, db)
 
@@ -55,7 +57,7 @@ func TestValidUserId(t *testing.T) {
 }
 
 func TestGetLoginResponse(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	m := &StartLoginTokenManager{}
 	user := newStoredUser(t, db)
 
@@ -76,7 +78,7 @@ func TestGetLoginResponse(t *testing.T) {
 }
 
 func TestDoubleLogin(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	m := &StartLoginTokenManager{}
 	user := newStoredUser(t, db)
 
@@ -98,7 +100,7 @@ func TestDoubleLogin(t *testing.T) {
 }
 
 func TestTokenExpired(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	m := &StartLoginTokenManager{}
 	user := newStoredUser(t, db)
 

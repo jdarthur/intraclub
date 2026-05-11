@@ -3,11 +3,12 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
 	"testing"
+
+	"intraclub/database"
 )
 
-func newReaction(t *testing.T, db common.DatabaseProvider) *Reaction {
+func newReaction(t *testing.T, db database.DatabaseProvider) *Reaction {
 	user := newStoredUser(t, db)
 	reaction := &Reaction{
 		UserId: user.ID,
@@ -17,7 +18,7 @@ func newReaction(t *testing.T, db common.DatabaseProvider) *Reaction {
 }
 
 func TestReactionAlreadyPresent(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	reaction := newReaction(t, db)
 
 	r := make(ReactionList, 0)
@@ -35,7 +36,7 @@ func TestReactionAlreadyPresent(t *testing.T) {
 }
 
 func TestDuplicateReactionNotStaticallyValid(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	reaction := newReaction(t, db)
 	reaction2 := newReaction(t, db)
 
@@ -50,7 +51,7 @@ func TestDuplicateReactionNotStaticallyValid(t *testing.T) {
 }
 
 func TestReactionUserIdDoesNotExist(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	reaction := &Reaction{
 		UserId: 0,
 		Type:   ThumbsUp,

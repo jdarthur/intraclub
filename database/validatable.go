@@ -1,6 +1,8 @@
-package common
+package database
 
-import "context"
+import (
+	"context"
+)
 
 type Validatable interface {
 	StaticallyValid() error

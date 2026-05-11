@@ -3,36 +3,37 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
 	"strings"
+
+	"intraclub/database"
 )
 
-type UserId common.RecordId
+type UserId database.RecordId
 
 func (id UserId) MarshalJSON() ([]byte, error) {
 	return id.RecordId().MarshalJSON()
 }
 
-func (id UserId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id UserId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id UserId) String() string {
 	return id.RecordId().String()
 }
 
-func UserIdListToRecordIdList(input []UserId) []common.RecordId {
-	output := make([]common.RecordId, 0, len(input))
+func UserIdListToRecordIdList(input []UserId) []database.RecordId {
+	output := make([]database.RecordId, 0, len(input))
 	for _, id := range input {
 		output = append(output, id.RecordId())
 	}
 	return output
 }
 
-func UserIdSliceToUserSlice(ctx context.Context, input []UserId, db common.DatabaseProvider) []*User {
+func UserIdSliceToUserSlice(ctx context.Context, input []UserId, db database.DatabaseProvider) []*User {
 	output := make([]*User, 0, len(input))
 	for _, id := range input {
-		user, err := common.GetExistingRecordById(ctx, db, &User{}, id.RecordId())
+		user, err := database.GetExistingRecordById(ctx, db, &User{}, id.RecordId())
 		if err == nil {
 			output = append(output, user)
 		}
@@ -48,8 +49,8 @@ type User struct {
 	Email       EmailAddress `json:"email"`
 }
 
-func (u *User) GetOwner() common.RecordId {
-	//TODO implement me
+func (u *User) GetOwner() database.RecordId {
+	// TODO implement me
 	panic("implement me")
 }
 
@@ -66,16 +67,16 @@ func (u *User) UniquenessEquivalent(other *User) error {
 	return nil
 }
 
-func (u *User) SetOwner(recordId common.RecordId) {
+func (u *User) SetOwner(recordId database.RecordId) {
 	// don't need to do anything as User records are self-owned
 }
 
-func (u *User) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{u.ID.RecordId(), common.SysAdminRecordId}
+func (u *User) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{u.ID.RecordId(), database.SysAdminRecordId}
 }
 
-func (u *User) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{common.EveryoneRecordId}
+func (u *User) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{database.EveryoneRecordId}
 }
 
 func NewUser() *User {
@@ -86,11 +87,11 @@ func (u *User) Type() string {
 	return "user"
 }
 
-func (u *User) GetId() common.RecordId {
+func (u *User) GetId() database.RecordId {
 	return u.ID.RecordId()
 }
 
-func (u *User) SetId(id common.RecordId) {
+func (u *User) SetId(id database.RecordId) {
 	u.ID = UserId(id)
 }
 
@@ -130,10 +131,10 @@ func (u *User) StaticallyValid() error {
 	return nil
 }
 
-func (u *User) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+func (u *User) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
 	return nil
 }
 
-func (u *User) BlankRecord() common.CrudRecord {
+func (u *User) BlankRecord() database.CrudRecord {
 	return new(User)
 }

@@ -3,18 +3,21 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"intraclub/common"
+
+	"intraclub/api"
+	"intraclub/database"
 	"intraclub/model"
 	"intraclub/route"
+
+	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	common.SysAdminCheck = model.IsUserSystemAdministrator
-	common.UserType = &model.User{}
+	database.SysAdminCheck = model.IsUserSystemAdministrator
+	api.UserType = &model.User{}
 
 	// set up the default database provider
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 
 	// parse command-line flags
 	parseFlags()
@@ -25,54 +28,54 @@ func main() {
 	}
 
 	// generate or load JWT key pair
-	err := common.GenerateJwtKeyPairIfNotExists()
+	err := api.GenerateJwtKeyPairIfNotExists()
 	if err != nil {
 		panic(err)
 	}
 
 	r := gin.Default()
-	api := r.Group("/api")
+	rg := r.Group("/api")
 
 	// noAuth for self-register
-	createUser := common.RouteFamily[*model.User]{DatabaseProvider: db}
-	createUser.Handle(api, route.SelfRegister{})
+	createUser := api.RouteFamily[*model.User]{DatabaseProvider: db}
+	createUser.Handle(rg, route.SelfRegister{})
 
-	whoAmI := common.RouteFamily[*model.User]{UseAuth: true, DatabaseProvider: db}
-	whoAmI.Handle(api, route.WhoAmI{})
+	whoAmI := api.RouteFamily[*model.User]{UseAuth: true, DatabaseProvider: db}
+	whoAmI.Handle(rg, route.WhoAmI{})
 
 	importHandler := &route.CsvImportHandler{DatabaseProvider: db}
-	api.Handle(common.HttpMethodPost.String(), "/import_users_from_csv", importHandler.HandleCsvImport)
+	rg.Handle(api.HttpMethodPost.String(), "/import_users_from_csv", importHandler.HandleCsvImport)
 
 	startTokenMgr := &model.StartLoginTokenManager{DatabaseProvider: db}
-	api.POST("/one_time_password", startTokenMgr.OneTimePassword)
-	api.POST("/token", startTokenMgr.CreateJwtFromOneTimePassword)
+	rg.POST("/one_time_password", startTokenMgr.OneTimePassword)
+	rg.POST("/token", startTokenMgr.CreateJwtFromOneTimePassword)
 
 	// no auth for get user by ID / get all users functions
 
-	getUsers := common.NewCrudCommon(model.NewUser, false, db)
-	getUsers.HandleRouteTypes(api, common.CrudWrapperFunctionGetOne, common.CrudWrapperFunctionGetMany)
+	getUsers := api.NewCrudCommon(model.NewUser, false, db)
+	getUsers.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
 
 	// use auth for user deletion / update endpoints
-	updateOrDeleteUsers := common.NewCrudCommon(model.NewUser, true, db)
-	updateOrDeleteUsers.HandleRouteTypes(api, common.CrudWrapperFunctionDelete, common.CrudWrapperFunctionUpdate)
+	updateOrDeleteUsers := api.NewCrudCommon(model.NewUser, true, db)
+	updateOrDeleteUsers.HandleRouteTypes(rg, api.CrudWrapperFunctionDelete, api.CrudWrapperFunctionUpdate)
 
-	facilities := common.NewCrudCommon(model.NewFacility, true, db)
-	facilities.HandleRouteTypes(api, common.CrudWrapperFunctionAll...)
+	facilities := api.NewCrudCommon(model.NewFacility, true, db)
+	facilities.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
 
-	api.GET("/score_counting_types", model.GetScoreCountingTypes)
-	scoringStructures := common.NewCrudCommon(model.NewScoringStructure, true, db)
-	scoringStructures.HandleRouteTypes(api, common.CrudWrapperFunctionAll...)
+	rg.GET("/score_counting_types", model.GetScoreCountingTypes)
+	scoringStructures := api.NewCrudCommon(model.NewScoringStructure, true, db)
+	scoringStructures.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
 
-	ratings := common.NewCrudCommon(model.NewRating, true, db)
-	ratings.HandleRouteTypes(api, common.CrudWrapperFunctionAll...)
+	ratings := api.NewCrudCommon(model.NewRating, true, db)
+	ratings.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
 
-	formats := common.NewCrudCommon(model.NewFormat, true, db)
-	formats.HandleRouteTypes(api, common.CrudWrapperFunctionAll...)
+	formats := api.NewCrudCommon(model.NewFormat, true, db)
+	formats.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
 
-	api.GET("/draft_order_patterns", model.GetDraftOrderPatterns)
+	rg.GET("/draft_order_patterns", model.GetDraftOrderPatterns)
 
-	seasonComposite := common.RouteFamily[*model.SeasonComposite]{UseAuth: true, DatabaseProvider: db}
-	seasonComposite.Handle(api, route.GetMySeasons{})
+	seasonComposite := api.RouteFamily[*model.SeasonComposite]{UseAuth: true, DatabaseProvider: db}
+	seasonComposite.Handle(rg, route.GetMySeasons{})
 
 	err = r.Run("127.0.0.1:8080")
 	if err != nil {

@@ -3,11 +3,12 @@ package model
 import (
 	"context"
 	"crypto/rand"
-	"intraclub/common"
 	"testing"
+
+	"intraclub/database"
 )
 
-func newStoredPhoto(t *testing.T, db common.DatabaseProvider, owner UserId) *Photo {
+func newStoredPhoto(t *testing.T, db database.DatabaseProvider, owner UserId) *Photo {
 	b := make([]byte, 64)
 	n, err := rand.Read(b)
 	if n != 64 {
@@ -20,7 +21,7 @@ func newStoredPhoto(t *testing.T, db common.DatabaseProvider, owner UserId) *Pho
 	photo.Owner = owner
 	photo.Contents = b
 	photo.FileType = PhotoTypeJpeg
-	v, err := common.CreateOne(context.Background(), db, photo)
+	v, err := database.CreateOne(context.Background(), db, photo)
 	if err != nil {
 		t.Fatal(err)
 	}

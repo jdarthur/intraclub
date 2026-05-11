@@ -2,28 +2,29 @@ package model
 
 import (
 	"context"
-	"intraclub/common"
 	"time"
+
+	"intraclub/database"
 )
 
 // RulesetSection is a join table record that links a Ruleset to its RuleSections.
 // The SectionIndex field maintains the ordering of sections within a ruleset.
 type RulesetSection struct {
-	ID           common.RecordId `json:"id"`
-	RulesetId    RulesetId       `json:"ruleset_id"`
-	SectionId    RuleSectionId   `json:"section_id"`
-	SectionIndex int             `json:"section_index"`
-	CreatedAt    time.Time       `json:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at"`
+	ID           database.RecordId `json:"id"`
+	RulesetId    RulesetId         `json:"ruleset_id"`
+	SectionId    RuleSectionId     `json:"section_id"`
+	SectionIndex int               `json:"section_index"`
+	CreatedAt    time.Time         `json:"created_at"`
+	UpdatedAt    time.Time         `json:"updated_at"`
 }
 
 // GetOwner returns InvalidRecordId as RulesetSection has no specific owner.
-func (r *RulesetSection) GetOwner() common.RecordId {
-	return common.InvalidRecordId
+func (r *RulesetSection) GetOwner() database.RecordId {
+	return database.InvalidRecordId
 }
 
 // SetOwner is a no-op as RulesetSection has no specific owner.
-func (r *RulesetSection) SetOwner(recordId common.RecordId) {}
+func (r *RulesetSection) SetOwner(recordId database.RecordId) {}
 
 // Type returns the record type identifier for RulesetSection.
 func (r *RulesetSection) Type() string {
@@ -31,12 +32,12 @@ func (r *RulesetSection) Type() string {
 }
 
 // GetId returns the unique identifier for this RulesetSection record.
-func (r *RulesetSection) GetId() common.RecordId {
+func (r *RulesetSection) GetId() database.RecordId {
 	return r.ID
 }
 
 // SetId sets the unique identifier for this RulesetSection record.
-func (r *RulesetSection) SetId(id common.RecordId) {
+func (r *RulesetSection) SetId(id database.RecordId) {
 	r.ID = id
 }
 
@@ -46,22 +47,22 @@ func (r *RulesetSection) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that both the referenced Ruleset and RuleSection records exist.
-func (r *RulesetSection) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	if err := common.ExistsById(ctx, db, &Ruleset{}, r.RulesetId.RecordId()); err != nil {
+func (r *RulesetSection) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	if err := database.ExistsById(ctx, db, &Ruleset{}, r.RulesetId.RecordId()); err != nil {
 		return err
 	}
-	if err := common.ExistsById(ctx, db, &RuleSection{}, r.SectionId.RecordId()); err != nil {
+	if err := database.ExistsById(ctx, db, &RuleSection{}, r.SectionId.RecordId()); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *RulesetSection) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (r *RulesetSection) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
-func (r *RulesetSection) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return []common.RecordId{common.SysAdminRecordId}
+func (r *RulesetSection) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return []database.RecordId{database.SysAdminRecordId}
 }
 
 // Timestamps returns the create and update timestamps for this RulesetSection record.
@@ -79,6 +80,6 @@ func (r *RulesetSection) SetUpdatedAt(updatedAt time.Time) {
 	r.UpdatedAt = updatedAt
 }
 
-func (r *RulesetSection) BlankRecord() common.CrudRecord {
+func (r *RulesetSection) BlankRecord() database.CrudRecord {
 	return new(RulesetSection)
 }

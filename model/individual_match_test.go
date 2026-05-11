@@ -3,11 +3,12 @@ package model
 import (
 	"context"
 	"fmt"
-	"intraclub/common"
 	"testing"
+
+	"intraclub/database"
 )
 
-func newStoredMatchPair(t *testing.T, db common.DatabaseProvider, s *ScoringStructure) (*IndividualMatch, *IndividualMatch) {
+func newStoredMatchPair(t *testing.T, db database.DatabaseProvider, s *ScoringStructure) (*IndividualMatch, *IndividualMatch) {
 	match1 := NewMatch()
 	match2 := NewMatch()
 
@@ -17,18 +18,18 @@ func newStoredMatchPair(t *testing.T, db common.DatabaseProvider, s *ScoringStru
 	match1.Editors = []UserId{s.Owner}
 	match2.Editors = []UserId{s.Owner}
 
-	created1, err := common.CreateOne(context.Background(), db, match1)
+	created1, err := database.CreateOne(context.Background(), db, match1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	match2.Opponent = created1.ID
-	created2, err := common.CreateOne(context.Background(), db, match2)
+	created2, err := database.CreateOne(context.Background(), db, match2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	created1.Opponent = created2.ID
-	err = common.UpdateOne(context.Background(), db, created1)
+	err = database.UpdateOne(context.Background(), db, created1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,7 +50,7 @@ var sixZeroDustedFlow = []bool{
 	true, true, true, true, true, true, // win set two
 }
 
-func runMatchFlow(t *testing.T, db common.DatabaseProvider, match1, match2 *IndividualMatch, flow []bool) {
+func runMatchFlow(t *testing.T, db database.DatabaseProvider, match1, match2 *IndividualMatch, flow []bool) {
 	for _, won := range flow {
 		if won {
 			err := match1.IncrementSecondary(context.Background(), db)
@@ -66,7 +67,7 @@ func runMatchFlow(t *testing.T, db common.DatabaseProvider, match1, match2 *Indi
 }
 
 func TestMatchFlow(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ss := newDefaultStoredScoringStructure(t, db)
 	match1, match2 := newStoredMatchPair(t, db, ss)
 
@@ -89,7 +90,7 @@ var closeThreeSets = []bool{
 }
 
 func TestMatchFlow2(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ss := newDefaultStoredScoringStructure(t, db)
 	match1, match2 := newStoredMatchPair(t, db, ss)
 
@@ -112,7 +113,7 @@ var thirdSetTiebreak = []bool{
 }
 
 func TestMatchFlowThirdSetTiebreak(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ss := newThirdSetTiebreakScoringStructure(t, db)
 	match1, match2 := newStoredMatchPair(t, db, ss)
 
@@ -129,7 +130,7 @@ func TestMatchFlowThirdSetTiebreak(t *testing.T) {
 }
 
 func TestIndividualPointTotals(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	ss := newDefaultStoredScoringStructure(t, db)
 	match1, match2 := newStoredMatchPair(t, db, ss)
 

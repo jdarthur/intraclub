@@ -3,12 +3,14 @@ package model
 import (
 	"context"
 	"errors"
+	"reflect"
+	"time"
+
+	"intraclub/database"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"intraclub/common"
-	"reflect"
-	"time"
 )
 
 type MongoDb struct {
@@ -18,11 +20,11 @@ type MongoDb struct {
 	Connection *mongo.Database
 }
 
-func (m *MongoDb) GetAll(ctx context.Context, recordType common.CrudRecord) ([]common.CrudRecord, error) {
+func (m *MongoDb) GetAll(ctx context.Context, recordType database.CrudRecord) ([]database.CrudRecord, error) {
 	return m.GetAllWhere(ctx, recordType, nil)
 }
 
-func (m *MongoDb) GetAllWhere(ctx context.Context, recordType common.CrudRecord, where common.WhereFunc) ([]common.CrudRecord, error) {
+func (m *MongoDb) GetAllWhere(ctx context.Context, recordType database.CrudRecord, where database.WhereFunc) ([]database.CrudRecord, error) {
 
 	res, err := m.Connection.Collection(recordType.Type()).Find(ctx, nil)
 	if err != nil {
@@ -40,10 +42,10 @@ func (m *MongoDb) GetAllWhere(ctx context.Context, recordType common.CrudRecord,
 		return nil, err
 	}
 
-	output := make([]common.CrudRecord, 0, ptr.Elem().Len())
+	output := make([]database.CrudRecord, 0, ptr.Elem().Len())
 	sliceVal := ptr.Elem()
 	for i := 0; i < sliceVal.Len(); i++ {
-		record := sliceVal.Index(i).Elem().Interface().(common.CrudRecord)
+		record := sliceVal.Index(i).Elem().Interface().(database.CrudRecord)
 		if where == nil || where(ctx, record) {
 			output = append(output, record)
 		}
@@ -54,7 +56,7 @@ func (m *MongoDb) GetAllWhere(ctx context.Context, recordType common.CrudRecord,
 
 var IntraclubMongoDatabase = "intraclub"
 
-func (m *MongoDb) GetOne(ctx context.Context, record common.CrudRecord) (object common.CrudRecord, exists bool, err error) {
+func (m *MongoDb) GetOne(ctx context.Context, record database.CrudRecord) (object database.CrudRecord, exists bool, err error) {
 
 	blank := record.BlankRecord()
 
@@ -74,9 +76,9 @@ func (m *MongoDb) GetOne(ctx context.Context, record common.CrudRecord) (object 
 
 }
 
-func (m *MongoDb) Create(ctx context.Context, object common.CrudRecord) (common.CrudRecord, error) {
+func (m *MongoDb) Create(ctx context.Context, object database.CrudRecord) (database.CrudRecord, error) {
 
-	object.SetId(common.NewRecordId())
+	object.SetId(database.NewRecordId())
 
 	_, err := m.Connection.Collection(object.Type()).InsertOne(ctx, object)
 	if err != nil {
@@ -87,7 +89,7 @@ func (m *MongoDb) Create(ctx context.Context, object common.CrudRecord) (common.
 
 }
 
-func (m *MongoDb) Update(ctx context.Context, object common.CrudRecord) error {
+func (m *MongoDb) Update(ctx context.Context, object database.CrudRecord) error {
 
 	v, err := m.Connection.Collection(object.Type()).UpdateOne(ctx, byId(object.GetId()), bson.M{"$set": object})
 	if err != nil {
@@ -101,7 +103,7 @@ func (m *MongoDb) Update(ctx context.Context, object common.CrudRecord) error {
 	return nil
 }
 
-func (m *MongoDb) Delete(ctx context.Context, record common.CrudRecord) error {
+func (m *MongoDb) Delete(ctx context.Context, record database.CrudRecord) error {
 
 	deleted, err := m.Connection.Collection(record.Type()).DeleteOne(ctx, byId(record.GetId()))
 	if err != nil {
@@ -125,7 +127,7 @@ func defaultTimeout() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), 5*time.Second)
 }
 
-func byId(id common.RecordId) bson.M {
+func byId(id database.RecordId) bson.M {
 	return bson.M{"_id": id.String()}
 }
 
@@ -143,7 +145,7 @@ func (m *MongoDb) Connect() error {
 	return nil
 }
 
-func NewMongoDbProvider(url, username, password string) common.DatabaseProvider {
+func NewMongoDbProvider(url, username, password string) database.DatabaseProvider {
 	return &MongoDb{
 		Hostname: url,
 		Username: username,

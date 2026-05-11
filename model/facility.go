@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"intraclub/common"
 	"strings"
+
+	"intraclub/database"
 )
 
 // FacilityId is a wrapper around the common.RecordId type
@@ -13,10 +14,10 @@ import (
 // struct. Other records referring to this type (as opposed to
 // common.RecordId) allows better code navigation, enabling us
 // to automatically determine which structs depend on Facility
-type FacilityId common.RecordId
+type FacilityId database.RecordId
 
-func (id FacilityId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id FacilityId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id FacilityId) String() string {
@@ -43,7 +44,7 @@ type Facility struct {
 	LayoutPhoto    PhotoId    `json:"layout_photo"` // ID of a Photo showing the layout of the Facility (i.e. orientation of courts, parking, etc.)
 }
 
-func (f *Facility) GetOwner() common.RecordId {
+func (f *Facility) GetOwner() database.RecordId {
 	return f.UserId.RecordId()
 }
 
@@ -67,7 +68,7 @@ func NewFacility() *Facility {
 // PreDelete validates that this Facility is not in use by any existing
 // Season. If it is assigned to a Season, then it may not be deleted as the
 // Facility information is viewable and potentially important to the participants
-func (f *Facility) PreDelete(ctx context.Context, db common.DatabaseProvider) error {
+func (f *Facility) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
 	inUse, err := f.IsFacilityInUse(ctx, db)
 	if err != nil {
 		return err
@@ -79,26 +80,26 @@ func (f *Facility) PreDelete(ctx context.Context, db common.DatabaseProvider) er
 }
 
 // SetOwner assigns the owner of this common.CrudRecord
-func (f *Facility) SetOwner(recordId common.RecordId) {
+func (f *Facility) SetOwner(recordId database.RecordId) {
 	f.UserId = UserId(recordId)
 }
 
 // EditableBy returns a list of common.RecordId values who are allowed
 // to edit (or possibly delete) this common.CrudRecord
-func (f *Facility) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+func (f *Facility) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
 	// This record can only be edited by the owner. It should
 	// probably be created once and reused many times without
 	// modification, so it is unlikely that updates will occur
 	// very often. It also may not be deleted after assignment
 	// to a particular season (as described in PreDelete)
-	return common.SysAdminAndUsers(f.UserId.RecordId())
+	return database.SysAdminAndUsers(f.UserId.RecordId())
 }
 
 // AccessibleTo returns a list of common.RecordId values who are allowed
 // to view this record (in this instance, all users, regardless of their
 // authentication status)
-func (f *Facility) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (f *Facility) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
 // Type is the database table name for this record
@@ -107,12 +108,12 @@ func (f *Facility) Type() string {
 }
 
 // GetId returns a unique ID for this record
-func (f *Facility) GetId() common.RecordId {
+func (f *Facility) GetId() database.RecordId {
 	return f.ID.RecordId()
 }
 
 // SetId sets a unique ID for this record
-func (f *Facility) SetId(id common.RecordId) {
+func (f *Facility) SetId(id database.RecordId) {
 	f.ID = FacilityId(id)
 }
 
@@ -138,16 +139,16 @@ func (f *Facility) StaticallyValid() error {
 // DynamicallyValid validates this record against the record-specific
 // business logic rules using a common.DatabaseProvider to validate e.g.
 // individual ID values for existence, ownership constraints, etc.
-func (f *Facility) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+func (f *Facility) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
 	if f.LayoutPhoto != 0 {
-		return common.ExistsById(ctx, db, &Photo{}, f.LayoutPhoto.RecordId())
+		return database.ExistsById(ctx, db, &Photo{}, f.LayoutPhoto.RecordId())
 	}
 	return nil
 }
 
 // IsFacilityInUse checks if this Facility is assigned to any Season records.
 // If so, it will be illegal to delete the record (see PreDelete for more info)
-func (f *Facility) IsFacilityInUse(ctx context.Context, db common.DatabaseProvider) (bool, error) {
+func (f *Facility) IsFacilityInUse(ctx context.Context, db database.DatabaseProvider) (bool, error) {
 	seasons, err := f.GetSeasonsForFacility(ctx, db)
 	if err != nil {
 		return false, err
@@ -158,16 +159,16 @@ func (f *Facility) IsFacilityInUse(ctx context.Context, db common.DatabaseProvid
 // GetSeasonsForFacility gets all the Season records which have this Facility
 // assigned. This is used for convenience purposes, e.g. in the UI to provide
 // a link to navigate to a season from the single-Facility page.
-func (f *Facility) GetSeasonsForFacility(ctx context.Context, db common.DatabaseProvider) ([]*Season, error) {
+func (f *Facility) GetSeasonsForFacility(ctx context.Context, db database.DatabaseProvider) ([]*Season, error) {
 	// get all Seasons where Season.Facility == this FacilityId
 	filter := func(_ context.Context, c *Season) bool { return c.Facility == f.ID }
-	seasons, err := common.GetAllWhere[*Season](ctx, db, filter)
+	seasons, err := database.GetAllWhere[*Season](ctx, db, filter)
 	if err != nil {
 		return nil, err
 	}
 	return seasons, nil
 }
 
-func (f *Facility) BlankRecord() common.CrudRecord {
+func (f *Facility) BlankRecord() database.CrudRecord {
 	return new(Facility)
 }

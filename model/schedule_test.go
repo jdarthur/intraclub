@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"testing"
 
-	"intraclub/common"
+	"intraclub/database"
 )
 
-func newStoredSchedule(t *testing.T, db common.DatabaseProvider, season *Season) *Schedule {
+func newStoredSchedule(t *testing.T, db database.DatabaseProvider, season *Season) *Schedule {
 	schedule := NewSchedule()
 	schedule.SeasonId = season.ID
 
-	v, err := common.CreateOne(context.Background(), db, schedule)
+	v, err := database.CreateOne(context.Background(), db, schedule)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -20,12 +20,12 @@ func newStoredSchedule(t *testing.T, db common.DatabaseProvider, season *Season)
 }
 
 func TestSeasonUpdatedOnScheduleCreate(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, _ := newDefaultSeason(t, db)
 
 	schedule := newStoredSchedule(t, db, season)
 
-	season, err := common.GetExistingRecordById(context.Background(), db, &Season{}, schedule.SeasonId.RecordId())
+	season, err := database.GetExistingRecordById(context.Background(), db, &Season{}, schedule.SeasonId.RecordId())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,14 +36,14 @@ func TestSeasonUpdatedOnScheduleCreate(t *testing.T) {
 }
 
 func TestOneSchedulePerSeason(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, _ := newDefaultSeason(t, db)
 	schedule := newStoredSchedule(t, db, season)
 
 	schedule2 := NewSchedule()
 	schedule2.SeasonId = season.ID
 	schedule2.Matchups = schedule.Matchups
-	_, err := common.CreateOne(context.Background(), db, schedule2)
+	_, err := database.CreateOne(context.Background(), db, schedule2)
 	if err == nil {
 		t.Fatal("Expected error creating a duplicate schedule")
 	}

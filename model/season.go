@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"time"
 
-	"intraclub/common"
+	"intraclub/database"
 )
 
-type SeasonId common.RecordId
+type SeasonId database.RecordId
 
-func (id SeasonId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id SeasonId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id SeasonId) String() string {
@@ -54,7 +54,7 @@ type Season struct {
 	Owner            UserId             // commissioner who owns this season
 }
 
-func (s *Season) GetOwner() common.RecordId {
+func (s *Season) GetOwner() database.RecordId {
 	return s.Owner.RecordId()
 }
 
@@ -65,7 +65,7 @@ func (s *Season) UniquenessEquivalent(other *Season) error {
 	return nil
 }
 
-func (s *Season) SetOwner(recordId common.RecordId) {
+func (s *Season) SetOwner(recordId database.RecordId) {
 	s.Owner = UserId(recordId)
 }
 
@@ -79,7 +79,7 @@ func NewSeason() *Season {
 // StaticallyValid checks the basic validity of the Season record,
 // ensuring the name is set and start time is valid.
 
-func (s *Season) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
+func (s *Season) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
 	commissioners, err := s.GetCommissioners(ctx, db)
 	if err != nil {
 		return nil
@@ -87,19 +87,19 @@ func (s *Season) EditableBy(ctx context.Context, db common.DatabaseProvider) []c
 	return UserIdListToRecordIdList(commissioners)
 }
 
-func (s *Season) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (s *Season) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
 func (s *Season) Type() string {
 	return "season"
 }
 
-func (s *Season) GetId() common.RecordId {
+func (s *Season) GetId() database.RecordId {
 	return s.ID.RecordId()
 }
 
-func (s *Season) SetId(id common.RecordId) {
+func (s *Season) SetId(id database.RecordId) {
 	s.ID = SeasonId(id)
 }
 
@@ -120,30 +120,30 @@ func (s *Season) StaticallyValid() error {
 // DynamicallyValid validates that all referenced entities (Draft, Facility, Schedule, PlayoffStructure)
 // exist in the database. Note: This does not validate that commissioners or teams exist as they
 // are stored in separate join tables and should be validated through those models.
-func (s *Season) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	if s.DraftId.RecordId() != common.InvalidRecordId {
-		err := common.ExistsById(ctx, db, &Draft{}, s.DraftId.RecordId())
+func (s *Season) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	if s.DraftId.RecordId() != database.InvalidRecordId {
+		err := database.ExistsById(ctx, db, &Draft{}, s.DraftId.RecordId())
 		if err != nil {
 			return err
 		}
 	}
 
-	if s.Facility.RecordId() != common.InvalidRecordId {
-		err := common.ExistsById(ctx, db, &Facility{}, s.Facility.RecordId())
+	if s.Facility.RecordId() != database.InvalidRecordId {
+		err := database.ExistsById(ctx, db, &Facility{}, s.Facility.RecordId())
 		if err != nil {
 			return err
 		}
 	}
 
-	if s.ScheduleID.RecordId() != common.InvalidRecordId {
-		err := common.ExistsById(ctx, db, &Schedule{}, s.ScheduleID.RecordId())
+	if s.ScheduleID.RecordId() != database.InvalidRecordId {
+		err := database.ExistsById(ctx, db, &Schedule{}, s.ScheduleID.RecordId())
 		if err != nil {
 			return err
 		}
 	}
 
-	if s.PlayoffStructure.RecordId() != common.InvalidRecordId {
-		err := common.ExistsById(ctx, db, &PlayoffStructure{}, s.PlayoffStructure.RecordId())
+	if s.PlayoffStructure.RecordId() != database.InvalidRecordId {
+		err := database.ExistsById(ctx, db, &PlayoffStructure{}, s.PlayoffStructure.RecordId())
 		if err != nil {
 			return err
 		}
@@ -153,8 +153,8 @@ func (s *Season) DynamicallyValid(ctx context.Context, db common.DatabaseProvide
 }
 
 // GetDraft retrieves the Draft associated with this season.
-func (s *Season) GetDraft(ctx context.Context, db common.DatabaseProvider) (*Draft, error) {
-	draft, exists, err := common.GetOneById(ctx, db, &Draft{}, s.DraftId.RecordId())
+func (s *Season) GetDraft(ctx context.Context, db database.DatabaseProvider) (*Draft, error) {
+	draft, exists, err := database.GetOneById(ctx, db, &Draft{}, s.DraftId.RecordId())
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,7 @@ func (s *Season) GetDraft(ctx context.Context, db common.DatabaseProvider) (*Dra
 
 // IsUserIdASeasonParticipant checks if a user is a participant in the season,
 // either as a commissioner, late addition, or as a member of a team in the season.
-func (s *Season) IsUserIdASeasonParticipant(ctx context.Context, db common.DatabaseProvider, u UserId) (bool, error) {
+func (s *Season) IsUserIdASeasonParticipant(ctx context.Context, db database.DatabaseProvider, u UserId) (bool, error) {
 	commissioners, err := s.GetCommissioners(ctx, db)
 	if err != nil {
 		return false, err
@@ -209,7 +209,7 @@ func (s *Season) IsUserIdASeasonParticipant(ctx context.Context, db common.Datab
 
 // IsUserIdACommissionerViaDB checks if a user ID is one of the commissioners for this season.
 // Returns false if an error occurs during the database query.
-func (s *Season) IsUserIdACommissionerViaDB(ctx context.Context, db common.DatabaseProvider, u UserId) bool {
+func (s *Season) IsUserIdACommissionerViaDB(ctx context.Context, db database.DatabaseProvider, u UserId) bool {
 	commissioners, err := s.GetCommissioners(ctx, db)
 	if err != nil {
 		return false
@@ -224,8 +224,8 @@ func (s *Season) IsUserIdACommissionerViaDB(ctx context.Context, db common.Datab
 
 // GetCommissioners retrieves all commissioner User IDs for this season by querying
 // the SeasonCommissioner join table.
-func (s *Season) GetCommissioners(ctx context.Context, db common.DatabaseProvider) ([]UserId, error) {
-	commissioners, err := common.GetAllWhere[*SeasonCommissioner](ctx, db, func(_ context.Context, c *SeasonCommissioner) bool {
+func (s *Season) GetCommissioners(ctx context.Context, db database.DatabaseProvider) ([]UserId, error) {
+	commissioners, err := database.GetAllWhere[*SeasonCommissioner](ctx, db, func(_ context.Context, c *SeasonCommissioner) bool {
 		return c.SeasonId == s.ID
 	})
 	if err != nil {
@@ -240,8 +240,8 @@ func (s *Season) GetCommissioners(ctx context.Context, db common.DatabaseProvide
 
 // GetTeams retrieves all Team records for this season by querying the SeasonTeam join table
 // and fetching each team from the database.
-func (s *Season) GetTeams(ctx context.Context, db common.DatabaseProvider) ([]*Team, error) {
-	seasonTeams, err := common.GetAllWhere[*SeasonTeam](ctx, db, func(_ context.Context, st *SeasonTeam) bool {
+func (s *Season) GetTeams(ctx context.Context, db database.DatabaseProvider) ([]*Team, error) {
+	seasonTeams, err := database.GetAllWhere[*SeasonTeam](ctx, db, func(_ context.Context, st *SeasonTeam) bool {
 		return st.SeasonId == s.ID
 	})
 	if err != nil {
@@ -249,7 +249,7 @@ func (s *Season) GetTeams(ctx context.Context, db common.DatabaseProvider) ([]*T
 	}
 	result := make([]*Team, 0, len(seasonTeams))
 	for _, st := range seasonTeams {
-		team, err := common.GetExistingRecordById(ctx, db, &Team{}, st.TeamId.RecordId())
+		team, err := database.GetExistingRecordById(ctx, db, &Team{}, st.TeamId.RecordId())
 		if err != nil {
 			return nil, err
 		}
@@ -260,8 +260,8 @@ func (s *Season) GetTeams(ctx context.Context, db common.DatabaseProvider) ([]*T
 
 // GetLateAdditions retrieves all late addition User IDs for this season by querying
 // the SeasonLateAddition join table.
-func (s *Season) GetLateAdditions(ctx context.Context, db common.DatabaseProvider) ([]UserId, error) {
-	lateAdditions, err := common.GetAllWhere[*SeasonLateAddition](ctx, db, func(_ context.Context, sla *SeasonLateAddition) bool {
+func (s *Season) GetLateAdditions(ctx context.Context, db database.DatabaseProvider) ([]UserId, error) {
+	lateAdditions, err := database.GetAllWhere[*SeasonLateAddition](ctx, db, func(_ context.Context, sla *SeasonLateAddition) bool {
 		return sla.SeasonId == s.ID
 	})
 	if err != nil {
@@ -275,25 +275,25 @@ func (s *Season) GetLateAdditions(ctx context.Context, db common.DatabaseProvide
 }
 
 // AddCommissioner creates a new SeasonCommissioner record to add a commissioner to this season.
-func (s *Season) AddCommissioner(ctx context.Context, db common.DatabaseProvider, userId UserId) error {
+func (s *Season) AddCommissioner(ctx context.Context, db database.DatabaseProvider, userId UserId) error {
 	commissioner := &SeasonCommissioner{
 		SeasonId: s.ID,
 		UserId:   userId,
 	}
-	_, err := common.CreateOne(ctx, db, commissioner)
+	_, err := database.CreateOne(ctx, db, commissioner)
 	return err
 }
 
 // RemoveCommissioner removes all SeasonCommissioner records for a given user from this season.
-func (s *Season) RemoveCommissioner(ctx context.Context, db common.DatabaseProvider, userId UserId) error {
-	commissioners, err := common.GetAllWhere[*SeasonCommissioner](ctx, db, func(_ context.Context, c *SeasonCommissioner) bool {
+func (s *Season) RemoveCommissioner(ctx context.Context, db database.DatabaseProvider, userId UserId) error {
+	commissioners, err := database.GetAllWhere[*SeasonCommissioner](ctx, db, func(_ context.Context, c *SeasonCommissioner) bool {
 		return c.SeasonId == s.ID && c.UserId == userId
 	})
 	if err != nil {
 		return err
 	}
 	for _, c := range commissioners {
-		_, _, err = common.DeleteOneById(ctx, db, &SeasonCommissioner{}, c.ID)
+		_, _, err = database.DeleteOneById(ctx, db, &SeasonCommissioner{}, c.ID)
 		if err != nil {
 			return err
 		}
@@ -302,25 +302,25 @@ func (s *Season) RemoveCommissioner(ctx context.Context, db common.DatabaseProvi
 }
 
 // AddTeam creates a new SeasonTeam record to add a team to this season.
-func (s *Season) AddTeam(ctx context.Context, db common.DatabaseProvider, teamId TeamId) error {
+func (s *Season) AddTeam(ctx context.Context, db database.DatabaseProvider, teamId TeamId) error {
 	seasonTeam := &SeasonTeam{
 		SeasonId: s.ID,
 		TeamId:   teamId,
 	}
-	_, err := common.CreateOne(ctx, db, seasonTeam)
+	_, err := database.CreateOne(ctx, db, seasonTeam)
 	return err
 }
 
 // RemoveTeam removes all SeasonTeam records for a given team from this season.
-func (s *Season) RemoveTeam(ctx context.Context, db common.DatabaseProvider, teamId TeamId) error {
-	seasonTeams, err := common.GetAllWhere[*SeasonTeam](ctx, db, func(_ context.Context, st *SeasonTeam) bool {
+func (s *Season) RemoveTeam(ctx context.Context, db database.DatabaseProvider, teamId TeamId) error {
+	seasonTeams, err := database.GetAllWhere[*SeasonTeam](ctx, db, func(_ context.Context, st *SeasonTeam) bool {
 		return st.SeasonId == s.ID && st.TeamId == teamId
 	})
 	if err != nil {
 		return err
 	}
 	for _, st := range seasonTeams {
-		_, _, err = common.DeleteOneById(ctx, db, &SeasonTeam{}, st.ID)
+		_, _, err = database.DeleteOneById(ctx, db, &SeasonTeam{}, st.ID)
 		if err != nil {
 			return err
 		}
@@ -329,25 +329,25 @@ func (s *Season) RemoveTeam(ctx context.Context, db common.DatabaseProvider, tea
 }
 
 // AddLateAddition creates a new SeasonLateAddition record to add a late addition user to this season.
-func (s *Season) AddLateAddition(ctx context.Context, db common.DatabaseProvider, userId UserId) error {
+func (s *Season) AddLateAddition(ctx context.Context, db database.DatabaseProvider, userId UserId) error {
 	lateAddition := &SeasonLateAddition{
 		SeasonId: s.ID,
 		UserId:   userId,
 	}
-	_, err := common.CreateOne(ctx, db, lateAddition)
+	_, err := database.CreateOne(ctx, db, lateAddition)
 	return err
 }
 
 // RemoveLateAddition removes all SeasonLateAddition records for a given user from this season.
-func (s *Season) RemoveLateAddition(ctx context.Context, db common.DatabaseProvider, userId UserId) error {
-	lateAdditions, err := common.GetAllWhere[*SeasonLateAddition](ctx, db, func(_ context.Context, sla *SeasonLateAddition) bool {
+func (s *Season) RemoveLateAddition(ctx context.Context, db database.DatabaseProvider, userId UserId) error {
+	lateAdditions, err := database.GetAllWhere[*SeasonLateAddition](ctx, db, func(_ context.Context, sla *SeasonLateAddition) bool {
 		return sla.SeasonId == s.ID && sla.UserId == userId
 	})
 	if err != nil {
 		return err
 	}
 	for _, l := range lateAdditions {
-		_, _, err = common.DeleteOneById(ctx, db, &SeasonLateAddition{}, l.ID)
+		_, _, err = database.DeleteOneById(ctx, db, &SeasonLateAddition{}, l.ID)
 		if err != nil {
 			return err
 		}
@@ -356,7 +356,7 @@ func (s *Season) RemoveLateAddition(ctx context.Context, db common.DatabaseProvi
 }
 
 // AddTeams creates multiple SeasonTeam records to add teams to this season.
-func (s *Season) AddTeams(ctx context.Context, db common.DatabaseProvider, teamIds []TeamId) error {
+func (s *Season) AddTeams(ctx context.Context, db database.DatabaseProvider, teamIds []TeamId) error {
 	for _, teamId := range teamIds {
 		err := s.AddTeam(ctx, db, teamId)
 		if err != nil {
@@ -367,7 +367,7 @@ func (s *Season) AddTeams(ctx context.Context, db common.DatabaseProvider, teamI
 }
 
 // AddCommissioners creates multiple SeasonCommissioner records to add commissioners to this season.
-func (s *Season) AddCommissioners(ctx context.Context, db common.DatabaseProvider, userIds []UserId) error {
+func (s *Season) AddCommissioners(ctx context.Context, db database.DatabaseProvider, userIds []UserId) error {
 	for _, userId := range userIds {
 		err := s.AddCommissioner(ctx, db, userId)
 		if err != nil {
@@ -378,7 +378,7 @@ func (s *Season) AddCommissioners(ctx context.Context, db common.DatabaseProvide
 }
 
 // AddLateAdditions creates multiple SeasonLateAddition records to add late addition users to this season.
-func (s *Season) AddLateAdditions(ctx context.Context, db common.DatabaseProvider, userIds []UserId) error {
+func (s *Season) AddLateAdditions(ctx context.Context, db database.DatabaseProvider, userIds []UserId) error {
 	for _, userId := range userIds {
 		err := s.AddLateAddition(ctx, db, userId)
 		if err != nil {
@@ -393,8 +393,8 @@ func (s *Season) AddLateAdditions(ctx context.Context, db common.DatabaseProvide
 // used as a reusable way to compose the common.CrudRecord.EditableBy() list for record
 // types which are downstream of a Season and editable by the commissioners, e.g. a Schedule
 // or Week belonging to a Season
-func EditableBySeason(ctx context.Context, db common.DatabaseProvider, seasonId SeasonId) []common.RecordId {
-	season, err := common.GetExistingRecordById(ctx, db, &Season{}, seasonId.RecordId())
+func EditableBySeason(ctx context.Context, db database.DatabaseProvider, seasonId SeasonId) []database.RecordId {
+	season, err := database.GetExistingRecordById(ctx, db, &Season{}, seasonId.RecordId())
 	if err != nil {
 		fmt.Println(err) // shouldn't get here, but print an error if so for debugging
 		return nil
@@ -403,7 +403,7 @@ func EditableBySeason(ctx context.Context, db common.DatabaseProvider, seasonId 
 }
 
 // GetTeamCaptains returns the list of captain User IDs for all teams in this season.
-func (s *Season) GetTeamCaptains(ctx context.Context, db common.DatabaseProvider) ([]UserId, error) {
+func (s *Season) GetTeamCaptains(ctx context.Context, db database.DatabaseProvider) ([]UserId, error) {
 	teams, err := s.GetTeams(ctx, db)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to get teams for season: %s\n", err.Error())
@@ -421,7 +421,7 @@ func (s *Season) GetTeamCaptains(ctx context.Context, db common.DatabaseProvider
 
 // IsTeamAssignedToSeason checks if a team is assigned to this season by querying
 // the SeasonTeam join table.
-func (s *Season) IsTeamAssignedToSeason(ctx context.Context, db common.DatabaseProvider, teamId TeamId) bool {
+func (s *Season) IsTeamAssignedToSeason(ctx context.Context, db database.DatabaseProvider, teamId TeamId) bool {
 	teams, err := s.GetTeams(ctx, db)
 	if err != nil {
 		return false
@@ -434,6 +434,6 @@ func (s *Season) IsTeamAssignedToSeason(ctx context.Context, db common.DatabaseP
 	return false
 }
 
-func (s *Season) BlankRecord() common.CrudRecord {
+func (s *Season) BlankRecord() database.CrudRecord {
 	return new(Season)
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"intraclub/common"
+	"intraclub/database"
 )
 
 func newValidBlurb(owner UserId, season SeasonId) *Blurb {
@@ -17,15 +17,15 @@ func newValidBlurb(owner UserId, season SeasonId) *Blurb {
 	return b
 }
 
-func newDefaultBlurb(t *testing.T, db common.DatabaseProvider) (*Blurb, *Season) {
+func newDefaultBlurb(t *testing.T, db database.DatabaseProvider) (*Blurb, *Season) {
 	season, commissioner := newDefaultSeason(t, db)
 	b := newStoredBlurb(t, db, commissioner.ID, season.ID)
 	return b, season
 }
 
-func newStoredBlurb(t *testing.T, db common.DatabaseProvider, owner UserId, season SeasonId) *Blurb {
+func newStoredBlurb(t *testing.T, db database.DatabaseProvider, owner UserId, season SeasonId) *Blurb {
 	b := newValidBlurb(owner, season)
-	v, err := common.CreateOne(context.Background(), db, b)
+	v, err := database.CreateOne(context.Background(), db, b)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,8 +73,8 @@ func TestBlurbContentIsOnlyWhitespace(t *testing.T) {
 }
 
 func TestBlurbUserIdDoesNotExist(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
-	b := newValidBlurb(UserId(common.InvalidRecordId), SeasonId(0))
+	db := database.NewUnitTestDBProvider()
+	b := newValidBlurb(UserId(database.InvalidRecordId), SeasonId(0))
 	err := b.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("expected error on invalid user ID")
@@ -83,7 +83,7 @@ func TestBlurbUserIdDoesNotExist(t *testing.T) {
 }
 
 func TestBlurbSeasonIdDoesNotExist(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	user := newStoredUser(t, db)
 	b := newValidBlurb(user.ID, SeasonId(0))
 	err := b.DynamicallyValid(context.Background(), db)
@@ -94,7 +94,7 @@ func TestBlurbSeasonIdDoesNotExist(t *testing.T) {
 }
 
 func TestBlurbPhotoIdDoesNotExist(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
 	b := newValidBlurb(commish.ID, season.ID)
 	b.Photos = []PhotoId{0}
@@ -106,7 +106,7 @@ func TestBlurbPhotoIdDoesNotExist(t *testing.T) {
 }
 
 func TestBlurbPhotoDoesNotBelongToUser(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 
 	b, _ := newDefaultBlurb(t, db)
 
@@ -123,7 +123,7 @@ func TestBlurbPhotoDoesNotBelongToUser(t *testing.T) {
 }
 
 func TestInvalidReaction(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
 	b := newStoredBlurb(t, db, commish.ID, season.ID)
 	err := b.React(context.Background(), db, commish.ID, reactionType(99999))
@@ -134,7 +134,7 @@ func TestInvalidReaction(t *testing.T) {
 }
 
 func TestUserIdIsNotAMemberOfSeason(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
 	b := newStoredBlurb(t, db, commish.ID, season.ID)
 
@@ -147,7 +147,7 @@ func TestUserIdIsNotAMemberOfSeason(t *testing.T) {
 }
 
 func TestUserSuccessfulReact(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
 	b := newStoredBlurb(t, db, commish.ID, season.ID)
 	err := b.React(context.Background(), db, commish.ID, ThumbsUp)
@@ -157,7 +157,7 @@ func TestUserSuccessfulReact(t *testing.T) {
 }
 
 func TestDuplicateReaction(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
 	b := newStoredBlurb(t, db, commish.ID, season.ID)
 	err := b.React(context.Background(), db, commish.ID, ThumbsUp)
@@ -172,7 +172,7 @@ func TestDuplicateReaction(t *testing.T) {
 }
 
 func TestReactAndUnreact(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
 	b := newStoredBlurb(t, db, commish.ID, season.ID)
 	err := b.React(context.Background(), db, commish.ID, ThumbsUp)
@@ -186,7 +186,7 @@ func TestReactAndUnreact(t *testing.T) {
 }
 
 func TestUnreactWhereNotPresent(t *testing.T) {
-	db := common.NewUnitTestDBProvider()
+	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
 	b := newStoredBlurb(t, db, commish.ID, season.ID)
 

@@ -5,11 +5,14 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"intraclub/common"
 	"net/http"
 	"sync"
 	"time"
+
+	"intraclub/api"
+	"intraclub/database"
+
+	"github.com/gin-gonic/gin"
 )
 
 var LoginTokenLength = 64
@@ -116,13 +119,13 @@ func (l *LoginToken) StaticallyValid() error {
 }
 
 // DynamicallyValid validates that this token corresponds to an existing user
-func (l *LoginToken) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
-	return common.ExistsById(ctx, db, &User{}, l.UserId.RecordId())
+func (l *LoginToken) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+	return database.ExistsById(ctx, db, &User{}, l.UserId.RecordId())
 }
 
 type StartLoginTokenManager struct {
 	tokens           sync.Map // map[string]*LoginToken
-	DatabaseProvider common.DatabaseProvider
+	DatabaseProvider database.DatabaseProvider
 }
 
 func (m *StartLoginTokenManager) GetToken(token string) (*LoginToken, bool) {
@@ -137,13 +140,13 @@ func (m *StartLoginTokenManager) AddToken(token *LoginToken) {
 	m.tokens.Store(token.Token, token)
 }
 
-func (m *StartLoginTokenManager) IsTokenValid(ctx context.Context, db common.DatabaseProvider, token *LoginToken) error {
+func (m *StartLoginTokenManager) IsTokenValid(ctx context.Context, db database.DatabaseProvider, token *LoginToken) error {
 	token, exists := m.GetToken(token.Token)
 	if !exists {
 		return fmt.Errorf("token %s does not exist\n", token.Token)
 	}
 
-	err := common.Validate(ctx, db, token)
+	err := database.Validate(ctx, db, token)
 	if err != nil {
 		return err
 	}
@@ -183,9 +186,9 @@ type RequestForLoginToken struct {
 }
 
 // RequestToken requests that a
-func (m *StartLoginTokenManager) RequestToken(ctx context.Context, db common.DatabaseProvider, req *RequestForLoginToken) (token *LoginToken, doesNotExist bool, err error) {
+func (m *StartLoginTokenManager) RequestToken(ctx context.Context, db database.DatabaseProvider, req *RequestForLoginToken) (token *LoginToken, doesNotExist bool, err error) {
 
-	user, err := common.GetAllWhere[*User](ctx, db, func(_ context.Context, c *User) bool {
+	user, err := database.GetAllWhere[*User](ctx, db, func(_ context.Context, c *User) bool {
 		return c.Email == req.Email
 	})
 
@@ -201,7 +204,7 @@ func (m *StartLoginTokenManager) RequestToken(ctx context.Context, db common.Dat
 		return nil, false, err
 	}
 
-	err = common.Validate(ctx, db, token)
+	err = database.Validate(ctx, db, token)
 	if err != nil {
 		return nil, false, err
 	}
@@ -221,8 +224,8 @@ func (m *StartLoginTokenManager) RequestToken(ctx context.Context, db common.Dat
 	return token, false, email.Send()
 }
 
-func (m *StartLoginTokenManager) GenerateTokenEmail(ctx context.Context, db common.DatabaseProvider, token *LoginToken) (*Email, error) {
-	user, exists, err := common.GetOneById(ctx, db, &User{}, token.UserId.RecordId())
+func (m *StartLoginTokenManager) GenerateTokenEmail(ctx context.Context, db database.DatabaseProvider, token *LoginToken) (*Email, error) {
+	user, exists, err := database.GetOneById(ctx, db, &User{}, token.UserId.RecordId())
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +310,7 @@ func (m *StartLoginTokenManager) LoginViaToken(token string) LoginResponse {
 		}
 	}
 
-	jwt, err := common.GenerateToken(t.UserId.RecordId())
+	jwt, err := api.GenerateToken(t.UserId.RecordId())
 	if err != nil {
 		return LoginResponse{
 			Error: err,

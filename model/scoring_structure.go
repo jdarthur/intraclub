@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"intraclub/common"
 	"net/http"
+
+	"intraclub/api"
+	"intraclub/database"
+
+	"github.com/gin-gonic/gin"
 )
 
 type ScoreCountingType int
@@ -79,22 +82,22 @@ func getScoreCountingTypes() []map[string]interface{} {
 }
 
 func GetScoreCountingTypes(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{common.ResourceKey: getScoreCountingTypes()})
+	c.JSON(http.StatusOK, gin.H{api.ResourceKey: getScoreCountingTypes()})
 }
 
-type ScoringStructureId common.RecordId
+type ScoringStructureId database.RecordId
 
 func (id ScoringStructureId) UnmarshalJSON(bytes []byte) error {
 	rid := id.RecordId()
-	return (*common.RecordId)(&rid).UnmarshalJSON(bytes)
+	return (*database.RecordId)(&rid).UnmarshalJSON(bytes)
 }
 
 func (id ScoringStructureId) MarshalJSON() ([]byte, error) {
 	return id.RecordId().MarshalJSON()
 }
 
-func (id ScoringStructureId) RecordId() common.RecordId {
-	return common.RecordId(id)
+func (id ScoringStructureId) RecordId() database.RecordId {
+	return database.RecordId(id)
 }
 
 func (id ScoringStructureId) String() string {
@@ -157,7 +160,7 @@ func (s *ScoringStructureList) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 	for _, id := range s2 {
-		recordId, err := common.RecordIdFromString(id)
+		recordId, err := database.RecordIdFromString(id)
 		if err != nil {
 			return err
 		}
@@ -220,7 +223,7 @@ func (c *ScoringStructure) UniquenessEquivalent(other *ScoringStructure) error {
 	return nil
 }
 
-func (c *ScoringStructure) GetOwner() common.RecordId {
+func (c *ScoringStructure) GetOwner() database.RecordId {
 	return c.Owner.RecordId()
 }
 
@@ -232,23 +235,23 @@ func (c *ScoringStructure) Type() string {
 	return "scoring_structure"
 }
 
-func (c *ScoringStructure) GetId() common.RecordId {
+func (c *ScoringStructure) GetId() database.RecordId {
 	return c.ID.RecordId()
 }
 
-func (c *ScoringStructure) SetId(id common.RecordId) {
+func (c *ScoringStructure) SetId(id database.RecordId) {
 	c.ID = ScoringStructureId(id)
 }
 
-func (c *ScoringStructure) EditableBy(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.SysAdminAndUsers(c.Owner.RecordId())
+func (c *ScoringStructure) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.SysAdminAndUsers(c.Owner.RecordId())
 }
 
-func (c *ScoringStructure) AccessibleTo(ctx context.Context, db common.DatabaseProvider) []common.RecordId {
-	return common.AccessibleToEveryone
+func (c *ScoringStructure) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.RecordId {
+	return database.AccessibleToEveryone
 }
 
-func (c *ScoringStructure) SetOwner(recordId common.RecordId) {
+func (c *ScoringStructure) SetOwner(recordId database.RecordId) {
 	c.Owner = UserId(recordId)
 }
 
@@ -315,9 +318,9 @@ func (c *ScoringStructure) StaticallyValid() error {
 	return nil
 }
 
-func (c *ScoringStructure) DynamicallyValid(ctx context.Context, db common.DatabaseProvider) error {
+func (c *ScoringStructure) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
 	for _, id := range c.SecondaryScoringStructures {
-		secondary, err := common.GetExistingRecordById(ctx, db, &ScoringStructure{}, id.RecordId())
+		secondary, err := database.GetExistingRecordById(ctx, db, &ScoringStructure{}, id.RecordId())
 		if err != nil {
 			return err
 		}
@@ -327,7 +330,7 @@ func (c *ScoringStructure) DynamicallyValid(ctx context.Context, db common.Datab
 		}
 
 	}
-	return common.ExistsById(ctx, db, &User{}, c.Owner.RecordId())
+	return database.ExistsById(ctx, db, &User{}, c.Owner.RecordId())
 }
 
 func (c *ScoringStructure) WinningScore(myScore, yourScore int) bool {
@@ -347,6 +350,6 @@ func (c *ScoringStructure) WinningScore(myScore, yourScore int) bool {
 	return false
 }
 
-func (c *ScoringStructure) BlankRecord() common.CrudRecord {
+func (c *ScoringStructure) BlankRecord() database.CrudRecord {
 	return new(ScoringStructure)
 }
