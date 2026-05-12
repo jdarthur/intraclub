@@ -164,6 +164,40 @@ func (d *Draft) DynamicallyValid(ctx context.Context, db database.DatabaseProvid
 	return nil
 }
 
+func (d *Draft) PostCreate(ctx context.Context, db database.DatabaseProvider) error {
+	return d.syncDraftFormat(ctx, db)
+}
+
+func (d *Draft) PostUpdate(ctx context.Context, db database.DatabaseProvider) error {
+	return d.syncDraftFormat(ctx, db)
+}
+
+func (d *Draft) syncDraftFormat(ctx context.Context, db database.DatabaseProvider) error {
+	existing, err := database.GetAllWhere[*DraftFormat](ctx, db, func(_ context.Context, df *DraftFormat) bool {
+		return df.DraftId == d.ID
+	})
+	if err != nil {
+		return err
+	}
+
+	if len(existing) == 0 {
+		draftFormat := &DraftFormat{
+			DraftId:  d.ID,
+			FormatId: d.Format,
+		}
+		_, err = database.CreateOne(ctx, db, draftFormat)
+		return err
+	}
+
+	df := existing[0]
+	if df.FormatId != d.Format {
+		df.FormatId = d.Format
+		err = database.UpdateOne(ctx, db, df)
+	}
+
+	return err
+}
+
 func (d *Draft) Type() string {
 	return "draft"
 }
