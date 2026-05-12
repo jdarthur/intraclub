@@ -108,11 +108,11 @@ func (id FormatId) String() string {
 //   - old guy / young guy
 //   - young guy / young guy.
 type Format struct {
-	ID              FormatId     `json:"id"`               // unique ID for the Format
-	UserId          database.UserId       `json:"user_id"`          // owner of the Format
-	Name            string       `json:"name"`             // name for the Format, e.g. "Men's Intraclub 1/2/3"
-	PossibleRatings RatingList   `json:"possible_ratings"` // list of possible Rating values for the lines, highest to lowest skill
-	Lines           []FormatLine `json:"lines"`            // Rating pairings that will play during a matchup
+	ID              FormatId        `json:"id"`               // unique ID for the Format
+	UserId          database.UserId `json:"user_id"`          // owner of the Format
+	Name            string          `json:"name"`             // name for the Format, e.g. "Men's Intraclub 1/2/3"
+	PossibleRatings RatingList      `json:"possible_ratings"` // list of possible Rating values for the lines, highest to lowest skill
+	Lines           []FormatLine    `json:"lines"`            // Rating pairings that will play during a matchup
 }
 
 func (f *Format) GetOwner() database.UserId {
@@ -125,6 +125,51 @@ func (f *Format) PreUpdate(ctx context.Context, db database.DatabaseProvider, ex
 
 func (f *Format) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
 	return f.CheckHasAssignedDrafts(ctx, db, false)
+}
+
+func (f *Format) PostCreate(ctx context.Context, db database.DatabaseProvider) error {
+	return f.syncFormatRatings(ctx, db)
+}
+
+func (f *Format) PostUpdate(ctx context.Context, db database.DatabaseProvider) error {
+	return f.syncFormatRatings(ctx, db)
+}
+
+func (f *Format) syncFormatRatings(ctx context.Context, db database.DatabaseProvider) error {
+	existing, err := database.GetAllWhere[*FormatRating](ctx, db, func(_ context.Context, fr *FormatRating) bool {
+		return fr.FormatId == f.ID
+	})
+	if err != nil {
+		return err
+	}
+
+	existingMap := make(map[RatingId]*FormatRating)
+	for _, fr := range existing {
+		existingMap[fr.RatingId] = fr
+	}
+
+	for _, ratingId := range f.PossibleRatings {
+		if _, exists := existingMap[ratingId]; !exists {
+			formatRating := &FormatRating{
+				FormatId: f.ID,
+				RatingId: ratingId,
+			}
+			_, err = database.CreateOne(ctx, db, formatRating)
+			if err != nil {
+				return err
+			}
+		}
+		delete(existingMap, ratingId)
+	}
+
+	for _, fr := range existingMap {
+		_, _, err = database.DeleteOneById(ctx, db, fr, fr.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (f *Format) SetOwner(userId database.UserId) {
@@ -222,13 +267,28 @@ func (f *Format) IsRatingValidForFormat(r RatingId) bool {
 }
 
 func (f *Format) GetAssignedDrafts(ctx context.Context, db database.DatabaseProvider) ([]*Draft, error) {
-	return database.GetAllWhere[*Draft](ctx, db, func(_ context.Context, c *Draft) bool {
-		return c.Format == f.ID
+	draftFormats, err := database.GetAllWhere[*DraftFormat](ctx, db, func(_ context.Context, df *DraftFormat) bool {
+		return df.FormatId == f.ID
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	drafts := make([]*Draft, 0, len(draftFormats))
+	for _, df := range draftFormats {
+		d, err := database.GetExistingRecordById(ctx, db, &Draft{}, df.DraftId.RecordId())
+		if err != nil {
+			return nil, err
+		}
+		drafts = append(drafts, d)
+	}
+	return drafts, nil
 }
 
 func (f *Format) CheckHasAssignedDrafts(ctx context.Context, db database.DatabaseProvider, isUpdate bool) error {
-	drafts, err := f.GetAssignedDrafts(ctx, db)
+	draftFormats, err := database.GetAllWhere[*DraftFormat](ctx, db, func(_ context.Context, df *DraftFormat) bool {
+		return df.FormatId == f.ID
+	})
 	if err != nil {
 		return err
 	}
@@ -238,8 +298,8 @@ func (f *Format) CheckHasAssignedDrafts(ctx context.Context, db database.Databas
 		verb = "delete"
 	}
 
-	if len(drafts) != 0 {
-		return fmt.Errorf("cannot %s format with %d assigned drafts", verb, len(drafts))
+	if len(draftFormats) != 0 {
+		return fmt.Errorf("cannot %s format with %d assigned drafts", verb, len(draftFormats))
 	}
 	return nil
 }

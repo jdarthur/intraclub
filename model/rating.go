@@ -47,10 +47,10 @@ func (r *RatingList) UnmarshalJSON(bytes []byte) error {
 }
 
 type Rating struct {
-	ID          RatingId `json:"id"`
-	UserId      database.UserId   `json:"user_id"`
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
+	ID          RatingId        `json:"id"`
+	UserId      database.UserId `json:"user_id"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
 }
 
 func (r *Rating) UniquenessEquivalent(other *Rating) error {
@@ -65,14 +65,14 @@ func (r *Rating) GetOwner() database.UserId {
 }
 
 func (r *Rating) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
-	formats, err := database.GetAllWhere[*Format](ctx, db, func(_ context.Context, c *Format) bool {
-		return c.IsRatingInOptionsList(r.ID)
+	formatRatings, err := database.GetAllWhere[*FormatRating](ctx, db, func(_ context.Context, fr *FormatRating) bool {
+		return fr.RatingId == r.ID
 	})
 	if err != nil {
 		return err
 	}
-	if len(formats) >= 0 {
-		return fmt.Errorf("rating with ID %s is in-use by %d formats", r.ID, len(formats))
+	if len(formatRatings) > 0 {
+		return fmt.Errorf("rating with ID %s is in-use by %d formats", r.ID, len(formatRatings))
 	}
 	return nil
 }
