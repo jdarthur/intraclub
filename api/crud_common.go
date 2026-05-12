@@ -72,7 +72,7 @@ type CrudCommon[T database.CrudRecord] struct {
 
 	// DatabaseProvider is the DatabaseProvider that we will use for
 	// all CRUD operations.
-	DatabaseProvider database.DatabaseProvider
+	DatabaseProvider database.Provider
 
 	// BaseRoute is the base route (e.g. `/user`) used for the various
 	// endpoints on the CrudCommon. It is derived from the Type() function
@@ -81,7 +81,7 @@ type CrudCommon[T database.CrudRecord] struct {
 	baseRoute string
 }
 
-func NewCrudCommon[T database.CrudRecord](createFunc func() T, userAuth bool, db database.DatabaseProvider) *CrudCommon[T] {
+func NewCrudCommon[T database.CrudRecord](createFunc func() T, userAuth bool, db database.Provider) *CrudCommon[T] {
 	baseRoute := createFunc().Type()
 	return &CrudCommon[T]{
 		CreateRecord: createFunc,

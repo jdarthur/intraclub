@@ -21,8 +21,8 @@ type LineupPairing struct {
 	ID              LineupPairingId // unique ID for this LineupPairing
 	LineupId        LineupId        // This correlates a LineupPairing into a group with other pairing and assigns to a Week
 	TeamId          TeamId          // Players must be on this team
-	Player1         database.UserId          // Player in slot 1 for the format / line
-	Player2         database.UserId          // Player in slot 2 for the format / line
+	Player1         database.UserId // Player in slot 1 for the format / line
+	Player2         database.UserId // Player in slot 2 for the format / line
 	FormatLineIndex int             // index in the Format.Lines list that this pairing applies to
 }
 
@@ -54,11 +54,11 @@ func (l *LineupPairing) SetId(id database.RecordId) {
 	l.ID = LineupPairingId(id)
 }
 
-func (l *LineupPairing) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (l *LineupPairing) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return EditableByTeamCaptainOrCoCaptains(ctx, db, l.TeamId)
 }
 
-func (l *LineupPairing) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (l *LineupPairing) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return AccessibleByTeamMembers(ctx, db, l.TeamId)
 }
 
@@ -74,7 +74,7 @@ func (l *LineupPairing) StaticallyValid() error {
 	return nil
 }
 
-func (l *LineupPairing) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (l *LineupPairing) DynamicallyValid(ctx context.Context, db database.Provider) error {
 
 	// get team
 	team, err := database.GetExistingRecordById(ctx, db, &Team{}, l.TeamId.RecordId())
@@ -110,7 +110,7 @@ func (l *LineupPairing) DynamicallyValid(ctx context.Context, db database.Databa
 	return nil
 }
 
-func (l *LineupPairing) GetFormat(ctx context.Context, db database.DatabaseProvider) (*Format, error) {
+func (l *LineupPairing) GetFormat(ctx context.Context, db database.Provider) (*Format, error) {
 	// get lineup so that we can get the format
 	lineup, err := database.GetExistingRecordById(ctx, db, &Lineup{}, l.LineupId.RecordId())
 	if err != nil {
@@ -122,7 +122,7 @@ func (l *LineupPairing) GetFormat(ctx context.Context, db database.DatabaseProvi
 	return lineup.GetFormat(ctx, db)
 }
 
-func (l *LineupPairing) ValidatePlayerRatings(ctx context.Context, db database.DatabaseProvider) error {
+func (l *LineupPairing) ValidatePlayerRatings(ctx context.Context, db database.Provider) error {
 	format, err := l.GetFormat(ctx, db)
 	if err != nil {
 		return err
@@ -149,6 +149,6 @@ func (l *LineupPairing) _validatePlayerRatings(format *Format, team *Team) error
 	return nil
 }
 
-func (l *LineupPairing) BlankRecord() database.CrudRecord {
+func (l *LineupPairing) NewRecord() database.CrudRecord {
 	return new(LineupPairing)
 }

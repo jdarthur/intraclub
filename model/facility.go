@@ -36,12 +36,12 @@ func (id FacilityId) MarshalJSON() ([]byte, error) {
 // A Facility must have a Name, Address, and a non-zero
 // NumberOfCourts. It may also have a
 type Facility struct {
-	ID             FacilityId `json:"id"`           // Unique ID for this Facility
-	UserId         database.UserId     `json:"user_id"`      // ID of the User who owns the record
-	Name           string     `json:"name"`         // Unique name for the Facility (to prevent duplicate records)
-	Address        string     `json:"address"`      // Unique street address for the Facility (to prevent duplicate records)
-	NumberOfCourts int        `json:"courts"`       // Number of courts available at the Facility
-	LayoutPhoto    PhotoId    `json:"layout_photo"` // ID of a Photo showing the layout of the Facility (i.e. orientation of courts, parking, etc.)
+	ID             FacilityId      `json:"id"`           // Unique ID for this Facility
+	UserId         database.UserId `json:"user_id"`      // ID of the User who owns the record
+	Name           string          `json:"name"`         // Unique name for the Facility (to prevent duplicate records)
+	Address        string          `json:"address"`      // Unique street address for the Facility (to prevent duplicate records)
+	NumberOfCourts int             `json:"courts"`       // Number of courts available at the Facility
+	LayoutPhoto    PhotoId         `json:"layout_photo"` // ID of a Photo showing the layout of the Facility (i.e. orientation of courts, parking, etc.)
 }
 
 func (f *Facility) GetOwner() database.UserId {
@@ -68,7 +68,7 @@ func NewFacility() *Facility {
 // PreDelete validates that this Facility is not in use by any existing
 // Season. If it is assigned to a Season, then it may not be deleted as the
 // Facility information is viewable and potentially important to the participants
-func (f *Facility) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
+func (f *Facility) PreDelete(ctx context.Context, db database.Provider) error {
 	inUse, err := f.IsFacilityInUse(ctx, db)
 	if err != nil {
 		return err
@@ -86,7 +86,7 @@ func (f *Facility) SetOwner(userId database.UserId) {
 
 // EditableBy returns a list of common.RecordId values who are allowed
 // to edit (or possibly delete) this common.CrudRecord
-func (f *Facility) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (f *Facility) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	// This record can only be edited by the owner. It should
 	// probably be created once and reused many times without
 	// modification, so it is unlikely that updates will occur
@@ -98,7 +98,7 @@ func (f *Facility) EditableBy(ctx context.Context, db database.DatabaseProvider)
 // AccessibleTo returns a list of common.RecordId values who are allowed
 // to view this record (in this instance, all users, regardless of their
 // authentication status)
-func (f *Facility) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (f *Facility) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -139,7 +139,7 @@ func (f *Facility) StaticallyValid() error {
 // DynamicallyValid validates this record against the record-specific
 // business logic rules using a common.DatabaseProvider to validate e.g.
 // individual ID values for existence, ownership constraints, etc.
-func (f *Facility) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (f *Facility) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	if f.LayoutPhoto != 0 {
 		return database.ExistsById(ctx, db, &Photo{}, f.LayoutPhoto.RecordId())
 	}
@@ -148,7 +148,7 @@ func (f *Facility) DynamicallyValid(ctx context.Context, db database.DatabasePro
 
 // IsFacilityInUse checks if this Facility is assigned to any Season records.
 // If so, it will be illegal to delete the record (see PreDelete for more info)
-func (f *Facility) IsFacilityInUse(ctx context.Context, db database.DatabaseProvider) (bool, error) {
+func (f *Facility) IsFacilityInUse(ctx context.Context, db database.Provider) (bool, error) {
 	seasons, err := f.GetSeasonsForFacility(ctx, db)
 	if err != nil {
 		return false, err
@@ -159,7 +159,7 @@ func (f *Facility) IsFacilityInUse(ctx context.Context, db database.DatabaseProv
 // GetSeasonsForFacility gets all the Season records which have this Facility
 // assigned. This is used for convenience purposes, e.g. in the UI to provide
 // a link to navigate to a season from the single-Facility page.
-func (f *Facility) GetSeasonsForFacility(ctx context.Context, db database.DatabaseProvider) ([]*Season, error) {
+func (f *Facility) GetSeasonsForFacility(ctx context.Context, db database.Provider) ([]*Season, error) {
 	// get all Seasons where Season.Facility == this FacilityId
 	filter := func(_ context.Context, c *Season) bool { return c.Facility == f.ID }
 	seasons, err := database.GetAllWhere[*Season](ctx, db, filter)
@@ -169,6 +169,6 @@ func (f *Facility) GetSeasonsForFacility(ctx context.Context, db database.Databa
 	return seasons, nil
 }
 
-func (f *Facility) BlankRecord() database.CrudRecord {
+func (f *Facility) NewRecord() database.CrudRecord {
 	return new(Facility)
 }

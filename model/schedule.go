@@ -45,11 +45,11 @@ func NewSchedule() *Schedule {
 	return &Schedule{}
 }
 
-func (s *Schedule) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (s *Schedule) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return EditableBySeason(ctx, db, s.SeasonId)
 }
 
-func (s *Schedule) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (s *Schedule) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -69,7 +69,7 @@ func (s *Schedule) StaticallyValid() error {
 	return nil
 }
 
-func (s *Schedule) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (s *Schedule) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	err := database.ExistsById(ctx, db, &Season{}, s.SeasonId.RecordId())
 	if err != nil {
 		return err
@@ -88,7 +88,7 @@ func (s *Schedule) DynamicallyValid(ctx context.Context, db database.DatabasePro
 	return nil
 }
 
-func (s *Schedule) PostCreate(ctx context.Context, db database.DatabaseProvider) error {
+func (s *Schedule) PostCreate(ctx context.Context, db database.Provider) error {
 	season, err := database.GetExistingRecordById(ctx, db, &Season{}, s.SeasonId.RecordId())
 	if err != nil {
 		return err
@@ -97,7 +97,7 @@ func (s *Schedule) PostCreate(ctx context.Context, db database.DatabaseProvider)
 	return database.UpdateOne(ctx, db, season)
 }
 
-func (s *Schedule) GetWeeks(ctx context.Context, db database.DatabaseProvider) ([]*Week, error) {
+func (s *Schedule) GetWeeks(ctx context.Context, db database.Provider) ([]*Week, error) {
 	season, err := database.GetExistingRecordById(ctx, db, &Season{}, s.SeasonId.RecordId())
 	if err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ func (s *Schedule) GetWeeks(ctx context.Context, db database.DatabaseProvider) (
 	})
 }
 
-func (s *Schedule) IsScheduleComplete(ctx context.Context, db database.DatabaseProvider) (bool, error) {
+func (s *Schedule) IsScheduleComplete(ctx context.Context, db database.Provider) (bool, error) {
 	weeks, err := s.GetWeeks(ctx, db)
 	if err != nil {
 		return false, err
@@ -116,6 +116,6 @@ func (s *Schedule) IsScheduleComplete(ctx context.Context, db database.DatabaseP
 	return len(weeks) == len(s.Matchups), nil
 }
 
-func (s *Schedule) BlankRecord() database.CrudRecord {
+func (s *Schedule) NewRecord() database.CrudRecord {
 	return new(Schedule)
 }

@@ -122,7 +122,7 @@ func ParseCsvLine(line, headers []string) (*User, error) {
 	return user, nil
 }
 
-func ParseUserList(ctx context.Context, db database.DatabaseProvider, input []*User) (newUsers, alreadyExistingUsers []*User, err error) {
+func ParseUserList(ctx context.Context, db database.Provider, input []*User) (newUsers, alreadyExistingUsers []*User, err error) {
 	existingUsersInDatabase, err := database.GetAll[*User](ctx, db)
 	if err != nil {
 		return nil, nil, err
@@ -151,7 +151,7 @@ func ParseUserList(ctx context.Context, db database.DatabaseProvider, input []*U
 	return newUsers, alreadyExistingUsers, nil
 }
 
-func ParseAndCreateCsvUsers(ctx context.Context, db database.DatabaseProvider, csvUserList []*User) (createdUsers, existingUsers []*User, err error) {
+func ParseAndCreateCsvUsers(ctx context.Context, db database.Provider, csvUserList []*User) (createdUsers, existingUsers []*User, err error) {
 
 	newUsers, alreadyExistingUsers, err := ParseUserList(ctx, db, csvUserList)
 	if err != nil {

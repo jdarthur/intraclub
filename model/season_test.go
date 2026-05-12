@@ -8,11 +8,11 @@ import (
 	"intraclub/database"
 )
 
-func newDefaultSeason(t *testing.T, db database.DatabaseProvider) (s *Season, commish *User) {
+func newDefaultSeason(t *testing.T, db database.Provider) (s *Season, commish *User) {
 	return newDefaultSeasonWithTeams(t, db, 1)
 }
 
-func newDefaultSeasonWithTeams(t *testing.T, db database.DatabaseProvider, teamCount int) (s *Season, commish *User) {
+func newDefaultSeasonWithTeams(t *testing.T, db database.Provider, teamCount int) (s *Season, commish *User) {
 	commissioner := newStoredUser(t, db)
 
 	teams := make([]*Team, 0)
@@ -24,7 +24,7 @@ func newDefaultSeasonWithTeams(t *testing.T, db database.DatabaseProvider, teamC
 	return newStoredSeason(t, db, commissioner.ID, teams), commissioner
 }
 
-func newStoredSeason(t *testing.T, db database.DatabaseProvider, commissioner database.UserId, teams []*Team) *Season {
+func newStoredSeason(t *testing.T, db database.Provider, commissioner database.UserId, teams []*Team) *Season {
 	draft := newStoredDraft(t, db, commissioner)
 	facility := newStoredFacility(t, db, commissioner)
 	playoffStructure := newStoredPlayoffStructure(t, db)

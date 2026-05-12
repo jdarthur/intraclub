@@ -6,17 +6,17 @@ import (
 )
 
 type RecordCache map[RecordId]CrudRecord // Map from a RecordId to the CrudRecord with that ID
-type UnitTestDBProvider struct {
+type UnitTestDbProvider struct {
 	Caches map[string]RecordCache // map from CrudRecord.Type to a RecordCache
 }
 
-func NewUnitTestDBProvider() *UnitTestDBProvider {
-	return &UnitTestDBProvider{
+func NewUnitTestDBProvider() *UnitTestDbProvider {
+	return &UnitTestDbProvider{
 		Caches: make(map[string]RecordCache),
 	}
 }
 
-func (u *UnitTestDBProvider) getOrCreateRecordCache(recordType CrudRecord) RecordCache {
+func (u *UnitTestDbProvider) getOrCreateRecordCache(recordType CrudRecord) RecordCache {
 	v, ok := u.Caches[recordType.Type()]
 	if ok {
 		return v
@@ -25,17 +25,17 @@ func (u *UnitTestDBProvider) getOrCreateRecordCache(recordType CrudRecord) Recor
 	return u.Caches[recordType.Type()]
 }
 
-func (u *UnitTestDBProvider) GetOne(ctx context.Context, record CrudRecord) (CrudRecord, bool, error) {
+func (u *UnitTestDbProvider) GetOne(ctx context.Context, record CrudRecord) (CrudRecord, bool, error) {
 	cache := u.getOrCreateRecordCache(record)
 	v, ok := cache[record.GetId()]
 	return v, ok, nil
 }
 
-func (u *UnitTestDBProvider) GetAll(ctx context.Context, recordType CrudRecord) ([]CrudRecord, error) {
+func (u *UnitTestDbProvider) GetAll(ctx context.Context, recordType CrudRecord) ([]CrudRecord, error) {
 	return u.GetAllWhere(ctx, recordType, nil)
 }
 
-func (u *UnitTestDBProvider) GetAllWhere(ctx context.Context, recordType CrudRecord, where WhereFunc) ([]CrudRecord, error) {
+func (u *UnitTestDbProvider) GetAllWhere(ctx context.Context, recordType CrudRecord, where WhereFunc) ([]CrudRecord, error) {
 
 	output := make([]CrudRecord, 0)
 	cache := u.getOrCreateRecordCache(recordType)
@@ -48,7 +48,7 @@ func (u *UnitTestDBProvider) GetAllWhere(ctx context.Context, recordType CrudRec
 	return output, nil
 }
 
-func (u *UnitTestDBProvider) Create(ctx context.Context, record CrudRecord) (CrudRecord, error) {
+func (u *UnitTestDbProvider) Create(ctx context.Context, record CrudRecord) (CrudRecord, error) {
 	// get the RecordCache for this type, creating it if necessary
 	cache := u.getOrCreateRecordCache(record)
 
@@ -68,7 +68,7 @@ func (u *UnitTestDBProvider) Create(ctx context.Context, record CrudRecord) (Cru
 	return record, nil
 }
 
-func (u *UnitTestDBProvider) Update(ctx context.Context, record CrudRecord) error {
+func (u *UnitTestDbProvider) Update(ctx context.Context, record CrudRecord) error {
 	_, exists, _ := u.GetOne(ctx, record)
 	if !exists {
 		return fmt.Errorf("%s with ID  %s does not exist", record.Type(), record.GetId())
@@ -78,7 +78,7 @@ func (u *UnitTestDBProvider) Update(ctx context.Context, record CrudRecord) erro
 	return nil
 }
 
-func (u *UnitTestDBProvider) Delete(ctx context.Context, record CrudRecord) error {
+func (u *UnitTestDbProvider) Delete(ctx context.Context, record CrudRecord) error {
 	_, exists, _ := u.GetOne(ctx, record)
 	if !exists {
 		return nil
@@ -88,7 +88,7 @@ func (u *UnitTestDBProvider) Delete(ctx context.Context, record CrudRecord) erro
 	return nil
 }
 
-func (u *UnitTestDBProvider) Dump() {
+func (u *UnitTestDbProvider) Dump() {
 	for tableName, cache := range u.Caches {
 		for id, record := range cache {
 			fmt.Printf("%s %s\n", tableName, id)

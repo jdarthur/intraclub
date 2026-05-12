@@ -47,11 +47,11 @@ func (t *testCrudRecord) SetId(id database.RecordId) {
 	t.ID = id
 }
 
-func (t *testCrudRecord) EditableBy(_ context.Context, db database.DatabaseProvider) []database.UserId {
+func (t *testCrudRecord) EditableBy(_ context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{t.Owner, database.SysAdminUserId}
 }
 
-func (t *testCrudRecord) AccessibleTo(_ context.Context, db database.DatabaseProvider) []database.UserId {
+func (t *testCrudRecord) AccessibleTo(_ context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -62,7 +62,7 @@ func (t *testCrudRecord) StaticallyValid() error {
 	return nil
 }
 
-func (t *testCrudRecord) DynamicallyValid(_ context.Context, db database.DatabaseProvider) error {
+func (t *testCrudRecord) DynamicallyValid(_ context.Context, db database.Provider) error {
 	return nil
 }
 
@@ -82,7 +82,7 @@ func (t *testCrudRecord) SetUpdateTimestamp(tm time.Time) time.Time {
 	return oldValue
 }
 
-func (t *testCrudRecord) BlankRecord() database.CrudRecord {
+func (t *testCrudRecord) NewRecord() database.CrudRecord {
 	return new(testCrudRecord)
 }
 

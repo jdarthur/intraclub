@@ -38,7 +38,7 @@ func (d *DraftFormat) StaticallyValid() error {
 	return nil
 }
 
-func (d *DraftFormat) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (d *DraftFormat) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	_, err := database.GetExistingRecordById(ctx, db, &Draft{}, d.DraftId.RecordId())
 	if err != nil {
 		return err
@@ -52,15 +52,15 @@ func (d *DraftFormat) DynamicallyValid(ctx context.Context, db database.Database
 	return nil
 }
 
-func (d *DraftFormat) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (d *DraftFormat) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (d *DraftFormat) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (d *DraftFormat) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{database.SysAdminUserId}
 }
 
-func (d *DraftFormat) BlankRecord() database.CrudRecord {
+func (d *DraftFormat) NewRecord() database.CrudRecord {
 	return new(DraftFormat)
 }
 

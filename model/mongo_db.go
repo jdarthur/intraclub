@@ -31,7 +31,7 @@ func (m *MongoDb) GetAllWhere(ctx context.Context, recordType database.CrudRecor
 		return nil, err
 	}
 
-	blank := recordType.BlankRecord()
+	blank := recordType.NewRecord()
 	sliceType := reflect.SliceOf(reflect.TypeOf(blank))
 	slice := reflect.MakeSlice(sliceType, 0, 0)
 	ptr := reflect.New(sliceType)
@@ -58,7 +58,7 @@ var IntraclubMongoDatabase = "intraclub"
 
 func (m *MongoDb) GetOne(ctx context.Context, record database.CrudRecord) (object database.CrudRecord, exists bool, err error) {
 
-	blank := record.BlankRecord()
+	blank := record.NewRecord()
 
 	res := m.Connection.Collection(record.Type()).FindOne(ctx, byId(record.GetId()))
 	if res.Err() != nil {
@@ -145,7 +145,7 @@ func (m *MongoDb) Connect() error {
 	return nil
 }
 
-func NewMongoDbProvider(url, username, password string) database.DatabaseProvider {
+func NewMongoDbProvider(url, username, password string) database.Provider {
 	return &MongoDb{
 		Hostname: url,
 		Username: username,

@@ -20,7 +20,7 @@ func assertRuleAmendmentIsStaticallyInvalid(t *testing.T, r *RuleAmendment, cont
 	fmt.Println(err)
 }
 
-func assertDynamicallyInvalid(t *testing.T, db database.DatabaseProvider, r *RuleAmendment, containsText string) {
+func assertDynamicallyInvalid(t *testing.T, db database.Provider, r *RuleAmendment, containsText string) {
 	err := r.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("Expected DynamicallyValid to return error")
@@ -31,7 +31,7 @@ func assertDynamicallyInvalid(t *testing.T, db database.DatabaseProvider, r *Rul
 	fmt.Println(err)
 }
 
-func assertAmendmentIsInvalidForRuleset(t *testing.T, db database.DatabaseProvider, r *Ruleset, a *RuleAmendment, containsText string) {
+func assertAmendmentIsInvalidForRuleset(t *testing.T, db database.Provider, r *Ruleset, a *RuleAmendment, containsText string) {
 	_, err := r.Amend(context.Background(), db, a)
 	if err == nil {
 		t.Fatal("Expected Amend to return error")

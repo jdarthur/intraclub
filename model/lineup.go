@@ -39,11 +39,11 @@ func (l *Lineup) SetOwner(userId database.UserId) {
 	// team captain or co-captain status
 }
 
-func (l *Lineup) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (l *Lineup) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return EditableByTeamCaptainOrCoCaptains(ctx, db, l.TeamId)
 }
 
-func (l *Lineup) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (l *Lineup) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return AccessibleByTeamMembers(ctx, db, l.TeamId)
 }
 
@@ -63,7 +63,7 @@ func (l *Lineup) StaticallyValid() error {
 	return nil
 }
 
-func (l *Lineup) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (l *Lineup) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	err := database.ExistsById(ctx, db, &Team{}, l.TeamId.RecordId())
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (l *Lineup) DynamicallyValid(ctx context.Context, db database.DatabaseProvi
 	return nil
 }
 
-func (l *Lineup) GetFormat(ctx context.Context, db database.DatabaseProvider) (*Format, error) {
+func (l *Lineup) GetFormat(ctx context.Context, db database.Provider) (*Format, error) {
 	week, err := database.GetExistingRecordById(ctx, db, &Week{}, l.WeekId.RecordId())
 	if err != nil {
 		return nil, err
@@ -87,6 +87,6 @@ func (l *Lineup) GetFormat(ctx context.Context, db database.DatabaseProvider) (*
 	return database.GetExistingRecordById(ctx, db, &Format{}, draft.Format.RecordId())
 }
 
-func (l *Lineup) BlankRecord() database.CrudRecord {
+func (l *Lineup) NewRecord() database.CrudRecord {
 	return new(Lineup)
 }

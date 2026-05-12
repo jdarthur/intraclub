@@ -31,7 +31,7 @@ func (w *Week) GetOwner() database.UserId {
 	return database.InvalidUserId
 }
 
-func (w *Week) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
+func (w *Week) PreDelete(ctx context.Context, db database.Provider) error {
 	draft, exists, err := database.GetOneById(ctx, db, &Draft{}, w.DraftId.RecordId())
 	if err != nil {
 		return err
@@ -51,7 +51,7 @@ func (w *Week) PreDelete(ctx context.Context, db database.DatabaseProvider) erro
 	return nil
 }
 
-func (w *Week) DeleteAssignedAvailabilities(ctx context.Context, db database.DatabaseProvider) error {
+func (w *Week) DeleteAssignedAvailabilities(ctx context.Context, db database.Provider) error {
 	// get all availability records assigned to this Week
 	availabilities, err := database.GetAllWhere[*Availability](ctx, db, func(_ context.Context, c *Availability) bool {
 		return c.WeekId == w.ID
@@ -70,7 +70,7 @@ func (w *Week) DeleteAssignedAvailabilities(ctx context.Context, db database.Dat
 	return nil
 }
 
-func (w *Week) PreUpdate(_ context.Context, db database.DatabaseProvider, existingValues database.CrudRecord) error {
+func (w *Week) PreUpdate(_ context.Context, db database.Provider, existingValues database.CrudRecord) error {
 	weekInDatabase := existingValues.(*Week)
 	if w.DraftId != weekInDatabase.DraftId {
 		return fmt.Errorf("Draft ID %s cannot be changed\n", w.DraftId)
@@ -88,7 +88,7 @@ func NewWeek() *Week {
 	return &Week{}
 }
 
-func (w *Week) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (w *Week) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 
 	draft, err := database.GetExistingRecordById(ctx, db, &Draft{}, w.DraftId.RecordId())
 	if err != nil {
@@ -110,7 +110,7 @@ func (w *Week) EditableBy(ctx context.Context, db database.DatabaseProvider) []d
 	return []database.UserId{draft.Owner}
 }
 
-func (w *Week) AccessibleTo(_ context.Context, _ database.DatabaseProvider) []database.UserId {
+func (w *Week) AccessibleTo(_ context.Context, _ database.Provider) []database.UserId {
 	return []database.UserId{database.EveryoneUserId}
 }
 
@@ -121,7 +121,7 @@ func (w *Week) StaticallyValid() error {
 	return nil
 }
 
-func (w *Week) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (w *Week) DynamicallyValid(ctx context.Context, db database.Provider) error {
 
 	// draft ID must be set for the week
 	err := database.ExistsById(ctx, db, &Draft{}, w.DraftId.RecordId())
@@ -159,7 +159,7 @@ func (w *Week) GetNextWeek(allWeeks []*Week) (*Week, error) {
 
 // GetWeeksForDraft gets all the Week records associated with a Draft,
 // sorted in ascending order by Week.Date
-func GetWeeksForDraft(ctx context.Context, db database.DatabaseProvider, id DraftId) ([]*Week, error) {
+func GetWeeksForDraft(ctx context.Context, db database.Provider, id DraftId) ([]*Week, error) {
 	// get all weeks with matching draft ID
 	allWeeks, err := database.GetAllWhere[*Week](ctx, db, func(_ context.Context, c *Week) bool {
 		return c.DraftId == id
@@ -175,7 +175,7 @@ func GetWeeksForDraft(ctx context.Context, db database.DatabaseProvider, id Draf
 	return allWeeks, nil
 }
 
-func (w *Week) PushBackDefault(ctx context.Context, db database.DatabaseProvider) error {
+func (w *Week) PushBackDefault(ctx context.Context, db database.Provider) error {
 	allWeeks, err := GetWeeksForDraft(ctx, db, w.DraftId)
 	if err != nil {
 		return err
@@ -230,7 +230,7 @@ func (w *Week) PushBackDefault(ctx context.Context, db database.DatabaseProvider
 	return nil
 }
 
-func (w *Week) MoveAvailabilities(ctx context.Context, db database.DatabaseProvider, pushedTo *Week) error {
+func (w *Week) MoveAvailabilities(ctx context.Context, db database.Provider, pushedTo *Week) error {
 	// delete all the availabilities for this week
 	err := w.DeleteAssignedAvailabilities(ctx, db)
 	if err != nil {
@@ -266,6 +266,6 @@ func (w *Week) PushBackTo(newDate time.Time) {
 
 }
 
-func (w *Week) BlankRecord() database.CrudRecord {
+func (w *Week) NewRecord() database.CrudRecord {
 	return new(Week)
 }

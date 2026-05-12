@@ -66,7 +66,7 @@ type Ruleset struct {
 	Owner database.UserId `json:"owner"`
 }
 
-func (r *Ruleset) PreUpdate(ctx context.Context, db database.DatabaseProvider, existingValues database.CrudRecord) error {
+func (r *Ruleset) PreUpdate(ctx context.Context, db database.Provider, existingValues database.CrudRecord) error {
 	return errors.New("rulesets may not be directly modified (use Ruleset.Amend instead)")
 }
 
@@ -102,11 +102,11 @@ func (r *Ruleset) SetId(id database.RecordId) {
 	r.ID = RulesetId(id)
 }
 
-func (r *Ruleset) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (r *Ruleset) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return database.SysAdminAndUsers(r.Owner)
 }
 
-func (r *Ruleset) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (r *Ruleset) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -133,7 +133,7 @@ func (r *Ruleset) StaticallyValid() error {
 }
 
 // CountSections returns the number of RuleSection records associated with this ruleset.
-func (r *Ruleset) CountSections(ctx context.Context, db database.DatabaseProvider) (int, error) {
+func (r *Ruleset) CountSections(ctx context.Context, db database.Provider) (int, error) {
 	sectionRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
 		return 0, err
@@ -143,7 +143,7 @@ func (r *Ruleset) CountSections(ctx context.Context, db database.DatabaseProvide
 
 // GetSections returns all RuleSection IDs for this ruleset in order,
 // based on the SectionIndex stored in the RulesetSection join table.
-func (r *Ruleset) GetSections(ctx context.Context, db database.DatabaseProvider) ([]RuleSectionId, error) {
+func (r *Ruleset) GetSections(ctx context.Context, db database.Provider) ([]RuleSectionId, error) {
 	sectionRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (r *Ruleset) GetSections(ctx context.Context, db database.DatabaseProvider)
 
 // GetSectionRelations returns all RulesetSection join table records for this ruleset.
 // The results include the SectionIndex which determines the ordering of sections.
-func (r *Ruleset) GetSectionRelations(ctx context.Context, db database.DatabaseProvider) ([]*RulesetSection, error) {
+func (r *Ruleset) GetSectionRelations(ctx context.Context, db database.Provider) ([]*RulesetSection, error) {
 	result, err := database.GetAllWhere[*RulesetSection](ctx, db, func(_ context.Context, rs *RulesetSection) bool {
 		return rs.RulesetId == r.ID
 	})
@@ -170,7 +170,7 @@ func (r *Ruleset) GetSectionRelations(ctx context.Context, db database.DatabaseP
 	return result, nil
 }
 
-func (r *Ruleset) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (r *Ruleset) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	// owner must exist
 	err := database.ExistsById(ctx, db, &User{}, r.Owner.RecordId())
 	if err != nil {
@@ -215,7 +215,7 @@ func (r *Ruleset) DynamicallyValid(ctx context.Context, db database.DatabaseProv
 
 // AddSection creates a new RulesetSection join table record to add a section to this ruleset
 // at the specified position. The index parameter determines the ordering of sections.
-func (r *Ruleset) AddSection(ctx context.Context, db database.DatabaseProvider, sectionId RuleSectionId, index int) error {
+func (r *Ruleset) AddSection(ctx context.Context, db database.Provider, sectionId RuleSectionId, index int) error {
 	if err := database.ExistsById(ctx, db, &RuleSection{}, sectionId.RecordId()); err != nil {
 		return err
 	}
@@ -230,7 +230,7 @@ func (r *Ruleset) AddSection(ctx context.Context, db database.DatabaseProvider, 
 }
 
 // RemoveSection removes the RulesetSection join table records for a specific section from this ruleset.
-func (r *Ruleset) RemoveSection(ctx context.Context, db database.DatabaseProvider, sectionId RuleSectionId) error {
+func (r *Ruleset) RemoveSection(ctx context.Context, db database.Provider, sectionId RuleSectionId) error {
 	relations, err := database.GetAllWhere[*RulesetSection](ctx, db, func(_ context.Context, rs *RulesetSection) bool {
 		return rs.RulesetId == r.ID && rs.SectionId == sectionId
 	})
@@ -249,11 +249,11 @@ func (r *Ruleset) RemoveSection(ctx context.Context, db database.DatabaseProvide
 // Fork creates a new Ruleset that is a copy of this one, with a new owner.
 // The new ruleset gets an incremented revision number and copies all sections
 // from the original ruleset. Returns an error if the ruleset has no sections.
-func (r *Ruleset) BlankRecord() database.CrudRecord {
+func (r *Ruleset) NewRecord() database.CrudRecord {
 	return new(Ruleset)
 }
 
-func (r *Ruleset) Fork(ctx context.Context, db database.DatabaseProvider, newUserId database.UserId) (*Ruleset, error) {
+func (r *Ruleset) Fork(ctx context.Context, db database.Provider, newUserId database.UserId) (*Ruleset, error) {
 	sectionRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
 		return nil, err
@@ -334,11 +334,11 @@ func (section *RuleSection) SetId(id database.RecordId) {
 	section.ID = RuleSectionId(id)
 }
 
-func (section *RuleSection) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (section *RuleSection) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return database.SysAdminAndUsers(section.Owner)
 }
 
-func (section *RuleSection) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (section *RuleSection) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -367,7 +367,7 @@ func (section *RuleSection) StaticallyValid() error {
 	return nil
 }
 
-func (section *RuleSection) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (section *RuleSection) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	err := database.ExistsById(ctx, db, &Ruleset{}, section.Parent.RecordId())
 	if err != nil {
 		return err
@@ -401,6 +401,6 @@ func (section *RuleSection) Equals(other *RuleSection) bool {
 	return true
 }
 
-func (section *RuleSection) BlankRecord() database.CrudRecord {
+func (section *RuleSection) NewRecord() database.CrudRecord {
 	return new(RuleSection)
 }

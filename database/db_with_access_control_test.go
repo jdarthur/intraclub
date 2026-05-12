@@ -37,11 +37,11 @@ func (p *PrivateTestRecord) SetId(id RecordId) {
 	p.ID = id
 }
 
-func (p *PrivateTestRecord) EditableBy(_ context.Context, db DatabaseProvider) []UserId {
+func (p *PrivateTestRecord) EditableBy(_ context.Context, db Provider) []UserId {
 	return []UserId{p.Owner, SysAdminUserId}
 }
 
-func (p *PrivateTestRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []UserId {
+func (p *PrivateTestRecord) AccessibleTo(_ context.Context, db Provider) []UserId {
 	v := make([]UserId, 0, 1+len(p.SharedTo))
 	v = append(v, p.Owner)
 	v = append(v, p.SharedTo...)
@@ -52,15 +52,15 @@ func (p *PrivateTestRecord) StaticallyValid() error {
 	return nil
 }
 
-func (p *PrivateTestRecord) DynamicallyValid(_ context.Context, db DatabaseProvider) error {
+func (p *PrivateTestRecord) DynamicallyValid(_ context.Context, db Provider) error {
 	return nil
 }
 
-func (p *PrivateTestRecord) BlankRecord() CrudRecord {
+func (p *PrivateTestRecord) NewRecord() CrudRecord {
 	return new(PrivateTestRecord)
 }
 
-func (p *PrivateTestRecord) ShareTo(ctx context.Context, db DatabaseProvider, shareToUserId, updateUserId UserId) error {
+func (p *PrivateTestRecord) ShareTo(ctx context.Context, db Provider, shareToUserId, updateUserId UserId) error {
 	for _, s := range p.SharedTo {
 		if shareToUserId == s {
 			return nil
@@ -72,7 +72,7 @@ func (p *PrivateTestRecord) ShareTo(ctx context.Context, db DatabaseProvider, sh
 	return wac.UpdateOneById(ctx, p)
 }
 
-func newStoredPrivateTestRecord(t *testing.T, db DatabaseProvider, owner UserId) *PrivateTestRecord {
+func newStoredPrivateTestRecord(t *testing.T, db Provider, owner UserId) *PrivateTestRecord {
 	r := NewPrivateTestRecord()
 	r.Owner = owner
 	v, err := CreateOne(context.Background(), db, r)
@@ -193,7 +193,7 @@ func updateRecordIntoCopy(r *PrivateTestRecord, newValue string) *PrivateTestRec
 	return copyOfRecord
 }
 
-func updateRecordAndReQuery(t *testing.T, db DatabaseProvider, r *PrivateTestRecord, newValue string, asUser UserId) (*PrivateTestRecord, error) {
+func updateRecordAndReQuery(t *testing.T, db Provider, r *PrivateTestRecord, newValue string, asUser UserId) (*PrivateTestRecord, error) {
 	copied := updateRecordIntoCopy(r, newValue)
 
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: asUser}
@@ -254,7 +254,7 @@ func TestAccessibleBySysAdmin(t *testing.T) {
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
 	sysAdminId := UserId(NewRecordId())
-	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, userId UserId) (bool, error) {
+	SysAdminCheck = func(ctx context.Context, db Provider, userId UserId) (bool, error) {
 		return userId == sysAdminId, nil
 	}
 	wac := WithAccessControl[*PrivateTestRecord]{Database: db, AccessControlUser: sysAdminId}
@@ -275,7 +275,7 @@ func TestEditableBySysAdmin(t *testing.T) {
 	fmt.Printf("%+v\n", r)
 
 	sysAdminId := UserId(NewRecordId())
-	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, userId UserId) (bool, error) {
+	SysAdminCheck = func(ctx context.Context, db Provider, userId UserId) (bool, error) {
 		return userId == sysAdminId, nil
 	}
 	v, err := updateRecordAndReQuery(t, db, r, "new value", sysAdminId)
@@ -333,7 +333,7 @@ func TestGetAllBySysAdmin(t *testing.T) {
 
 	newStoredPrivateTestRecord(t, db, ownerId)
 
-	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, userId UserId) (bool, error) {
+	SysAdminCheck = func(ctx context.Context, db Provider, userId UserId) (bool, error) {
 		return userId == adminId, nil
 	}
 
@@ -524,7 +524,7 @@ func TestDeleteBySysAdmin(t *testing.T) {
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
 	sysAdminId := UserId(NewRecordId())
-	SysAdminCheck = func(ctx context.Context, db DatabaseProvider, userId UserId) (bool, error) {
+	SysAdminCheck = func(ctx context.Context, db Provider, userId UserId) (bool, error) {
 		return userId == sysAdminId, nil
 	}
 

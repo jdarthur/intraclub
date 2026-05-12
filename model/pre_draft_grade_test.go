@@ -9,7 +9,7 @@ import (
 	"intraclub/database"
 )
 
-func generateRandomPreDraftGrades(t *testing.T, db database.DatabaseProvider, playerCount, teamCount int) *Draft {
+func generateRandomPreDraftGrades(t *testing.T, db database.Provider, playerCount, teamCount int) *Draft {
 	randomDraft := newRandomDraft(t, db, playerCount, teamCount)
 	gradeCount := 10
 	if playerCount < 10 {
@@ -53,7 +53,7 @@ func generateRandomPreDraftGrades(t *testing.T, db database.DatabaseProvider, pl
 	return randomDraft
 }
 
-func newValidGrade(t *testing.T, db database.DatabaseProvider) *PreDraftGrade {
+func newValidGrade(t *testing.T, db database.Provider) *PreDraftGrade {
 	randomDraft := newRandomDraft(t, db, 4, 4)
 	format, err := database.GetExistingRecordById(context.Background(), db, &Format{}, randomDraft.Format.RecordId())
 	if err != nil {
@@ -73,7 +73,7 @@ func newValidGrade(t *testing.T, db database.DatabaseProvider) *PreDraftGrade {
 	return grade
 }
 
-func newStoredGrade(t *testing.T, db database.DatabaseProvider) *PreDraftGrade {
+func newStoredGrade(t *testing.T, db database.Provider) *PreDraftGrade {
 	grade := newValidGrade(t, db)
 	v, err := database.CreateOne(context.Background(), db, grade)
 	if err != nil {

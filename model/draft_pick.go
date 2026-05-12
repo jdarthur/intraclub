@@ -14,7 +14,7 @@ type DraftPick struct {
 	ID        database.RecordId `json:"id"`
 	DraftId   DraftId           `json:"draft_id"`
 	TeamId    TeamId            `json:"team_id"`
-	UserId    database.UserId            `json:"user_id"`
+	UserId    database.UserId   `json:"user_id"`
 	Round     int               `json:"round"`
 	Pick      int               `json:"pick"`
 	Rating    RatingId          `json:"rating"`
@@ -51,7 +51,7 @@ func (d *DraftPick) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that the referenced Draft, Team, and User records all exist.
-func (d *DraftPick) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (d *DraftPick) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	if err := database.ExistsById(ctx, db, &Draft{}, d.DraftId.RecordId()); err != nil {
 		return err
 	}
@@ -64,11 +64,11 @@ func (d *DraftPick) DynamicallyValid(ctx context.Context, db database.DatabasePr
 	return nil
 }
 
-func (d *DraftPick) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (d *DraftPick) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (d *DraftPick) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (d *DraftPick) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{database.SysAdminUserId}
 }
 
@@ -87,6 +87,6 @@ func (d *DraftPick) SetUpdatedAt(updatedAt time.Time) {
 	d.UpdatedAt = updatedAt
 }
 
-func (d *DraftPick) BlankRecord() database.CrudRecord {
+func (d *DraftPick) NewRecord() database.CrudRecord {
 	return new(DraftPick)
 }

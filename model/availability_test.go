@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"intraclub/database"
 )
 
-func newStoredAvailability(t *testing.T, db database.DatabaseProvider, u database.UserId, week WeekId) *Availability {
+func newStoredAvailability(t *testing.T, db database.Provider, u database.UserId, week WeekId) *Availability {
 
 	availability := NewAvailability()
 	availability.UserId = u
@@ -16,14 +18,12 @@ func newStoredAvailability(t *testing.T, db database.DatabaseProvider, u databas
 	availability.WeekId = week
 
 	v, err := database.CreateOne(context.Background(), db, availability)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	return v
 }
 
-func newDefaultAvailability(t *testing.T, db database.DatabaseProvider) *Availability {
+func newDefaultAvailability(t *testing.T, db database.Provider) *Availability {
 	season, _ := newDefaultSeason(t, db)
 	userId := getAnyTeamCaptain(t, db, season)
 	week := newStoredWeek(t, db, season)
@@ -37,13 +37,9 @@ func TestAvailabilityOnlyAccessibleToTeamMembers(t *testing.T) {
 
 	otherUser := newStoredUser(t, db)
 	wac := database.WithAccessControl[*Availability]{Database: db, AccessControlUser: otherUser.ID}
-	v, exists, err := wac.GetOneById(context.Background(), &Availability{}, v.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if exists {
-		t.Fatal("expected user 2 not to be able to access availability")
-	}
+	_, exists, err := wac.GetOneById(context.Background(), &Availability{}, v.ID)
+	require.NoError(t, err)
+	assert.False(t, exists, "expected user 2 not to be able to access availability")
 }
 
 func TestAvailabilityIsAccessibleToTeamMembers(t *testing.T) {
@@ -55,23 +51,16 @@ func TestAvailabilityIsAccessibleToTeamMembers(t *testing.T) {
 
 	wac := database.WithAccessControl[*Availability]{Database: db, AccessControlUser: userId}
 	v, exists, err := wac.GetOneById(context.Background(), &Availability{}, v.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !exists {
-		t.Fatal("expected user 2 not to be able to access availability")
-	}
+	require.NoError(t, err)
+	require.True(t, exists, "expected user to be able to access availability")
 	fmt.Printf("%T %+v\n", v, v)
 }
 
 func TestAvailabilityInvalidOption(t *testing.T) {
 	v := NewAvailability()
 	v.Available = AvailabilityOption(999)
-	err := v.StaticallyValid()
-	if err == nil {
-		t.Fatal("expected invalid option to fail")
-	}
-	fmt.Println(err)
+	assert.Error(t, v.StaticallyValid(), "expected invalid option to fail")
+	fmt.Println(v.StaticallyValid())
 }
 
 func TestAvailabilityUserDoesNotExist(t *testing.T) {
@@ -79,11 +68,8 @@ func TestAvailabilityUserDoesNotExist(t *testing.T) {
 	v := NewAvailability()
 	v.Available = AvailabilityAvailable
 
-	err := v.DynamicallyValid(context.Background(), db)
-	if err == nil {
-		t.Fatal("expected invalid option to fail")
-	}
-	fmt.Println(err)
+	assert.Error(t, v.DynamicallyValid(context.Background(), db), "expected invalid option to fail")
+	fmt.Println(v.DynamicallyValid(context.Background(), db))
 }
 
 func TestAvailabilityWeekDoesNotExist(t *testing.T) {
@@ -92,19 +78,14 @@ func TestAvailabilityWeekDoesNotExist(t *testing.T) {
 	userId := getAnyTeamCaptain(t, db, season)
 	v := NewAvailability()
 	v.UserId = userId
-	err := v.DynamicallyValid(context.Background(), db)
-	if err == nil {
-		t.Fatal("expected invalid option to fail")
-	}
-	fmt.Println(err)
+	assert.Error(t, v.DynamicallyValid(context.Background(), db), "expected invalid option to fail")
+	fmt.Println(v.DynamicallyValid(context.Background(), db))
 }
 
-func createAvailabilityForAllCaptains(t *testing.T, db database.DatabaseProvider, season *Season, weeks []*Week) []*Availability {
+func createAvailabilityForAllCaptains(t *testing.T, db database.Provider, season *Season, weeks []*Week) []*Availability {
 	// get all teams associated with this season
 	teams, err := season.GetTeams(context.Background(), db)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// save all created availability records to a list
 	output := make([]*Availability, 0)
@@ -114,9 +95,7 @@ func createAvailabilityForAllCaptains(t *testing.T, db database.DatabaseProvider
 	// record to the output list
 	for _, team := range teams {
 		captain, err := team.GetCaptain(context.Background(), db)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		for _, week := range weeks {
 			output = append(output, newStoredAvailability(t, db, captain, week.ID))
 		}
@@ -126,56 +105,42 @@ func createAvailabilityForAllCaptains(t *testing.T, db database.DatabaseProvider
 
 func TestGetAvailabilityForUserOnlyGetsOneUser(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	WeekCount := 4
+	weekCount := 4
 
-	season, weeks := newDefaultSeasonWithWeeks(t, db, WeekCount)
+	season, weeks := newDefaultSeasonWithWeeks(t, db, weekCount)
 	a := createAvailabilityForAllCaptains(t, db, season, weeks)
 
 	userId := a[0].UserId
 	availability, err := GetAvailabilityForUser(context.Background(), db, userId, season.DraftId)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if len(availability) != WeekCount {
-		t.Errorf("expected %d weeks, got %d", WeekCount, len(availability))
-	}
+	assert.Len(t, availability, weekCount, "expected %d weeks, got %d", weekCount, len(availability))
 	for _, a := range availability {
-		if a.UserId != userId {
-			t.Errorf("expected user %d, got %d", userId, a.UserId)
-		}
+		assert.Equal(t, userId, a.UserId, "expected user %d, got %d", userId, a.UserId)
 	}
 }
 
 func TestGetAvailabilityForUserOnlyGetsOneSeason(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	WeekCount := 4
+	weekCount := 4
 
 	// create a default season with 4 teams
-	season, weeks := newDefaultSeasonWithWeeks(t, db, WeekCount)
+	season, weeks := newDefaultSeasonWithWeeks(t, db, weekCount)
 	a := createAvailabilityForAllCaptains(t, db, season, weeks)
 
 	// get the teams for this season so we can make a new Season
 	teams, err := season.GetTeams(context.Background(), db)
-	if err != nil {
-		t.Fatal(err)
-	}
-	otherSeason, otherWeeks := newDefaultSeasonWithWeeksAndTeams(t, db, teams, WeekCount)
+	require.NoError(t, err)
+	otherSeason, otherWeeks := newDefaultSeasonWithWeeksAndTeams(t, db, teams, weekCount)
 	_ = createAvailabilityForAllCaptains(t, db, otherSeason, otherWeeks)
 
 	userId := a[0].UserId
 	availability, err := GetAvailabilityForUser(context.Background(), db, userId, season.DraftId)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if len(availability) != WeekCount {
-		t.Errorf("expected %d weeks, got %d", WeekCount, len(availability))
-	}
+	assert.Len(t, availability, weekCount, "expected %d weeks, got %d", weekCount, len(availability))
 	for _, a2 := range availability {
-		if a2.UserId != userId {
-			t.Errorf("expected user %d, got %d", userId, a2.UserId)
-		}
+		assert.Equal(t, userId, a2.UserId, "expected user %d, got %d", userId, a2.UserId)
 
 		// check if availability for each week is found
 		found := false
@@ -205,8 +170,6 @@ func TestMultipleAvailabilityForSingleWeekAndUserId(t *testing.T) {
 	availability2.Available = AvailabilityAvailable
 
 	_, err := database.CreateOne(context.Background(), db, availability2)
-	if err == nil {
-		t.Fatal("expected duplicate availability to fail")
-	}
+	assert.Error(t, err, "expected duplicate availability to fail")
 	fmt.Println(err)
 }

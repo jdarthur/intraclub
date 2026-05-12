@@ -6,18 +6,18 @@ import (
 )
 
 type WithAccessControl[T CrudRecord] struct {
-	Database          DatabaseProvider
+	Database          Provider
 	AccessControlUser UserId
 }
 
-func NewWithAccessControl[T CrudRecord](ctx context.Context, db DatabaseProvider, accessControlUser UserId) *WithAccessControl[T] {
+func NewWithAccessControl[T CrudRecord](ctx context.Context, db Provider, accessControlUser UserId) *WithAccessControl[T] {
 	return &WithAccessControl[T]{
 		Database:          db,
 		AccessControlUser: accessControlUser,
 	}
 }
 
-var SysAdminCheck func(ctx context.Context, db DatabaseProvider, userId UserId) (bool, error)
+var SysAdminCheck func(ctx context.Context, db Provider, userId UserId) (bool, error)
 
 func (w *WithAccessControl[T]) CanUserAccess(record T) bool {
 	list := record.AccessibleTo(context.Background(), w.Database)

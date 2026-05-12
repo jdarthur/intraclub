@@ -26,11 +26,11 @@ func (s *SeasonTeam) GetOwner() database.UserId {
 func (s *SeasonTeam) SetOwner(userId database.UserId) {}
 
 // AccessibleTo returns everyone as SeasonTeam records are public.
-func (s *SeasonTeam) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (s *SeasonTeam) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (s *SeasonTeam) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (s *SeasonTeam) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{database.SysAdminUserId}
 }
 
@@ -55,7 +55,7 @@ func (s *SeasonTeam) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that both the referenced Season and Team records exist.
-func (s *SeasonTeam) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (s *SeasonTeam) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	if err := database.ExistsById(ctx, db, &Season{}, s.SeasonId.RecordId()); err != nil {
 		return err
 	}
@@ -80,6 +80,6 @@ func (s *SeasonTeam) SetUpdatedAt(updatedAt time.Time) {
 	s.UpdatedAt = updatedAt
 }
 
-func (s *SeasonTeam) BlankRecord() database.CrudRecord {
+func (s *SeasonTeam) NewRecord() database.CrudRecord {
 	return new(SeasonTeam)
 }

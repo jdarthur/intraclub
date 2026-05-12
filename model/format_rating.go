@@ -38,7 +38,7 @@ func (f *FormatRating) StaticallyValid() error {
 	return nil
 }
 
-func (f *FormatRating) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (f *FormatRating) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	_, err := database.GetExistingRecordById(ctx, db, &Format{}, f.FormatId.RecordId())
 	if err != nil {
 		return err
@@ -52,15 +52,15 @@ func (f *FormatRating) DynamicallyValid(ctx context.Context, db database.Databas
 	return nil
 }
 
-func (f *FormatRating) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (f *FormatRating) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (f *FormatRating) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (f *FormatRating) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{database.SysAdminUserId}
 }
 
-func (f *FormatRating) BlankRecord() database.CrudRecord {
+func (f *FormatRating) NewRecord() database.CrudRecord {
 	return new(FormatRating)
 }
 

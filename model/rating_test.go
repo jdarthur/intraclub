@@ -16,7 +16,7 @@ func newValidRating(u database.UserId) *Rating {
 	}
 }
 
-func newStoredRating(t *testing.T, db database.DatabaseProvider) *Rating {
+func newStoredRating(t *testing.T, db database.Provider) *Rating {
 	user := newStoredUser(t, db)
 	r := NewRating()
 	r.UserId = user.ID

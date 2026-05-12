@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newReaction(t *testing.T, db database.DatabaseProvider) *Reaction {
+func newReaction(t *testing.T, db database.Provider) *Reaction {
 	user := newStoredUser(t, db)
 	reaction := &Reaction{
 		UserId: user.ID,

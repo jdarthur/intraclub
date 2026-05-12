@@ -9,7 +9,7 @@ import (
 	"intraclub/database"
 )
 
-func newStoredWeek(t *testing.T, db database.DatabaseProvider, season *Season) *Week {
+func newStoredWeek(t *testing.T, db database.Provider, season *Season) *Week {
 	week := NewWeek()
 	week.DraftId = season.DraftId
 	week.Date = time.Date(0, 0, 0, 8, 0, 0, 0, time.UTC)
@@ -20,7 +20,7 @@ func newStoredWeek(t *testing.T, db database.DatabaseProvider, season *Season) *
 	return v
 }
 
-func newStoredWeekAt(t *testing.T, db database.DatabaseProvider, season *Season, date time.Time) *Week {
+func newStoredWeekAt(t *testing.T, db database.Provider, season *Season, date time.Time) *Week {
 	week := NewWeek()
 	week.DraftId = season.DraftId
 	week.Date = date
@@ -31,7 +31,7 @@ func newStoredWeekAt(t *testing.T, db database.DatabaseProvider, season *Season,
 	return v
 }
 
-func newDefaultSeasonWithWeeks(t *testing.T, db database.DatabaseProvider, weekCount int) (*Season, []*Week) {
+func newDefaultSeasonWithWeeks(t *testing.T, db database.Provider, weekCount int) (*Season, []*Week) {
 	season, _ := newDefaultSeasonWithTeams(t, db, 4)
 
 	weeks := make([]*Week, 0)
@@ -41,7 +41,7 @@ func newDefaultSeasonWithWeeks(t *testing.T, db database.DatabaseProvider, weekC
 	return season, weeks
 }
 
-func newDefaultSeasonWithWeeksAndTeams(t *testing.T, db database.DatabaseProvider, teams []*Team, weekCount int) (*Season, []*Week) {
+func newDefaultSeasonWithWeeksAndTeams(t *testing.T, db database.Provider, teams []*Team, weekCount int) (*Season, []*Week) {
 	captain, err := teams[0].GetCaptain(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)

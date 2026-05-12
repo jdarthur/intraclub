@@ -19,7 +19,7 @@ func randomPhoneNumber() PhoneNumber {
 	return PhoneNumber(fmt.Sprintf("%d", random))
 }
 
-func newStoredUser(t *testing.T, db database.DatabaseProvider) *User {
+func newStoredUser(t *testing.T, db database.Provider) *User {
 	user := NewUser()
 	user.Email = randomEmail()
 	user.FirstName = fmt.Sprintf("Test %d", rand.Uint64())
@@ -33,7 +33,7 @@ func newStoredUser(t *testing.T, db database.DatabaseProvider) *User {
 	return v
 }
 
-func newSysAdmin(t *testing.T, db database.DatabaseProvider) *User {
+func newSysAdmin(t *testing.T, db database.Provider) *User {
 	database.SysAdminCheck = IsUserSystemAdministrator
 	sysAdmin := newStoredUser(t, db)
 	err := sysAdmin.AssignRole(context.Background(), db, SystemAdministrator)

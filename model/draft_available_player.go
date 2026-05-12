@@ -12,7 +12,7 @@ import (
 type DraftAvailablePlayer struct {
 	ID        database.RecordId `json:"id"`
 	DraftId   DraftId           `json:"draft_id"`
-	PlayerId  database.UserId            `json:"player_id"`
+	PlayerId  database.UserId   `json:"player_id"`
 	CreatedAt time.Time         `json:"created_at"`
 	UpdatedAt time.Time         `json:"updated_at"`
 }
@@ -46,7 +46,7 @@ func (d *DraftAvailablePlayer) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that both the referenced Draft and User records exist.
-func (d *DraftAvailablePlayer) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (d *DraftAvailablePlayer) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	if err := database.ExistsById(ctx, db, &Draft{}, d.DraftId.RecordId()); err != nil {
 		return err
 	}
@@ -56,11 +56,11 @@ func (d *DraftAvailablePlayer) DynamicallyValid(ctx context.Context, db database
 	return nil
 }
 
-func (d *DraftAvailablePlayer) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (d *DraftAvailablePlayer) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (d *DraftAvailablePlayer) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (d *DraftAvailablePlayer) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{database.SysAdminUserId}
 }
 
@@ -79,6 +79,6 @@ func (d *DraftAvailablePlayer) SetUpdatedAt(updatedAt time.Time) {
 	d.UpdatedAt = updatedAt
 }
 
-func (d *DraftAvailablePlayer) BlankRecord() database.CrudRecord {
+func (d *DraftAvailablePlayer) NewRecord() database.CrudRecord {
 	return new(DraftAvailablePlayer)
 }

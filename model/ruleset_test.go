@@ -22,7 +22,7 @@ func assertRulesetIsStaticallyInvalid(t *testing.T, r *Ruleset, textContains str
 	fmt.Println(err.Error())
 }
 
-func assertRulesetIsDynamicallyInvalid(t *testing.T, db database.DatabaseProvider, r *Ruleset, textContains string) {
+func assertRulesetIsDynamicallyInvalid(t *testing.T, db database.Provider, r *Ruleset, textContains string) {
 	err := r.DynamicallyValid(context.Background(), db)
 	if err == nil {
 		t.Fatal("expected error on DynamicallyValid, but got nil")
@@ -40,7 +40,7 @@ func newValidRuleset(t *testing.T, owner database.UserId) *Ruleset {
 	return x
 }
 
-func newValidStoredRuleset(t *testing.T, db database.DatabaseProvider) *Ruleset {
+func newValidStoredRuleset(t *testing.T, db database.Provider) *Ruleset {
 	user := newStoredUser(t, db)
 	x := newValidRuleset(t, user.ID)
 	v, err := database.CreateOne(context.Background(), db, x)
@@ -50,13 +50,13 @@ func newValidStoredRuleset(t *testing.T, db database.DatabaseProvider) *Ruleset 
 	return v
 }
 
-func newValidStoredRulesetWithOneSection(t *testing.T, db database.DatabaseProvider) *Ruleset {
+func newValidStoredRulesetWithOneSection(t *testing.T, db database.Provider) *Ruleset {
 	ruleset := newValidStoredRuleset(t, db)
 	amended := addSectionRevisionToEndOfExistingRuleset(t, db, ruleset)
 	return amended
 }
 
-func newValidStoredRulesetWithXSections(t *testing.T, db database.DatabaseProvider, count int) *Ruleset {
+func newValidStoredRulesetWithXSections(t *testing.T, db database.Provider, count int) *Ruleset {
 	ruleset := newValidStoredRuleset(t, db)
 	for i := 0; i < count; i++ {
 		ruleset = addSectionRevisionToEndOfExistingRuleset(t, db, ruleset)
@@ -64,7 +64,7 @@ func newValidStoredRulesetWithXSections(t *testing.T, db database.DatabaseProvid
 	return ruleset
 }
 
-func addSectionRevisionToEndOfExistingRuleset(t *testing.T, db database.DatabaseProvider, existing *Ruleset) *Ruleset {
+func addSectionRevisionToEndOfExistingRuleset(t *testing.T, db database.Provider, existing *Ruleset) *Ruleset {
 	afterSectionId := RuleSectionId(database.InvalidRecordId)
 
 	sections, err := existing.GetSections(context.Background(), db)

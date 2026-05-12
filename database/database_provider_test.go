@@ -45,11 +45,11 @@ func (t *testRecord) SetId(id RecordId) {
 	t.ID = id
 }
 
-func (t *testRecord) EditableBy(_ context.Context, db DatabaseProvider) []UserId {
+func (t *testRecord) EditableBy(_ context.Context, db Provider) []UserId {
 	return []UserId{t.Owner}
 }
 
-func (t *testRecord) AccessibleTo(_ context.Context, db DatabaseProvider) []UserId {
+func (t *testRecord) AccessibleTo(_ context.Context, db Provider) []UserId {
 	return AccessibleToEveryone
 }
 
@@ -61,7 +61,7 @@ func (t *testRecord) StaticallyValid() error {
 	return nil
 }
 
-func (t *testRecord) DynamicallyValid(_ context.Context, db DatabaseProvider) error {
+func (t *testRecord) DynamicallyValid(_ context.Context, db Provider) error {
 	return nil
 }
 
@@ -81,7 +81,7 @@ func (t *testRecord) SetUpdateTimestamp(time time.Time) time.Time {
 	return oldValue
 }
 
-func (t *testRecord) BlankRecord() CrudRecord {
+func (t *testRecord) NewRecord() CrudRecord {
 	return new(testRecord)
 }
 
@@ -486,7 +486,7 @@ func TestGetAllDifferentTypes(t *testing.T) {
 
 func TestCrudRecordBlankRecord(t *testing.T) {
 	v := newTestRecord()
-	blank := v.BlankRecord()
+	blank := v.NewRecord()
 	if blank == nil {
 		t.Fatal("BlankRecord should not return nil")
 	}

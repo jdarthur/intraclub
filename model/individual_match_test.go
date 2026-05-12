@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newStoredMatchPair(t *testing.T, db database.DatabaseProvider, s *ScoringStructure) (*IndividualMatch, *IndividualMatch) {
+func newStoredMatchPair(t *testing.T, db database.Provider, s *ScoringStructure) (*IndividualMatch, *IndividualMatch) {
 	match1 := NewMatch()
 	match2 := NewMatch()
 
@@ -50,7 +50,7 @@ var sixZeroDustedFlow = []bool{
 	true, true, true, true, true, true, // win set two
 }
 
-func runMatchFlow(t *testing.T, db database.DatabaseProvider, match1, match2 *IndividualMatch, flow []bool) {
+func runMatchFlow(t *testing.T, db database.Provider, match1, match2 *IndividualMatch, flow []bool) {
 	for _, won := range flow {
 		if won {
 			err := match1.IncrementSecondary(context.Background(), db)
