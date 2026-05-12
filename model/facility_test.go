@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newStoredFacility(t *testing.T, db database.DatabaseProvider, owner database.UserId) *Facility {
+func newStoredFacility(t *testing.T, db database.Provider, owner database.UserId) *Facility {
 	facility := NewFacility()
 	facility.UserId = owner
 	facility.Name = fmt.Sprintf("Test facility %s", database.NewRecordId())

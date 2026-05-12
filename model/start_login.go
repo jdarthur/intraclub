@@ -24,11 +24,11 @@ var BaseUrl = "https://localhost:5000"
 var UseDevTokenMode = false
 
 type LoginToken struct {
-	UserId   database.UserId    `json:"user_id"`
-	Expiry   time.Time `json:"expiry"`
-	UsedAt   time.Time `json:"used_at"`
-	Token    string    `json:"token"`
-	ReturnTo string    `json:"return_to"`
+	UserId   database.UserId `json:"user_id"`
+	Expiry   time.Time       `json:"expiry"`
+	UsedAt   time.Time       `json:"used_at"`
+	Token    string          `json:"token"`
+	ReturnTo string          `json:"return_to"`
 }
 
 // NewLoginToken creates a new one-time-use login token for a particular UserId with
@@ -119,13 +119,13 @@ func (l *LoginToken) StaticallyValid() error {
 }
 
 // DynamicallyValid validates that this token corresponds to an existing user
-func (l *LoginToken) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (l *LoginToken) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	return database.ExistsById(ctx, db, &User{}, l.UserId.RecordId())
 }
 
 type StartLoginTokenManager struct {
 	tokens           sync.Map // map[string]*LoginToken
-	DatabaseProvider database.DatabaseProvider
+	DatabaseProvider database.Provider
 }
 
 func (m *StartLoginTokenManager) GetToken(token string) (*LoginToken, bool) {
@@ -140,7 +140,7 @@ func (m *StartLoginTokenManager) AddToken(token *LoginToken) {
 	m.tokens.Store(token.Token, token)
 }
 
-func (m *StartLoginTokenManager) IsTokenValid(ctx context.Context, db database.DatabaseProvider, token *LoginToken) error {
+func (m *StartLoginTokenManager) IsTokenValid(ctx context.Context, db database.Provider, token *LoginToken) error {
 	token, exists := m.GetToken(token.Token)
 	if !exists {
 		return fmt.Errorf("token %s does not exist\n", token.Token)
@@ -186,7 +186,7 @@ type RequestForLoginToken struct {
 }
 
 // RequestToken requests that a
-func (m *StartLoginTokenManager) RequestToken(ctx context.Context, db database.DatabaseProvider, req *RequestForLoginToken) (token *LoginToken, doesNotExist bool, err error) {
+func (m *StartLoginTokenManager) RequestToken(ctx context.Context, db database.Provider, req *RequestForLoginToken) (token *LoginToken, doesNotExist bool, err error) {
 
 	user, err := database.GetAllWhere[*User](ctx, db, func(_ context.Context, c *User) bool {
 		return c.Email == req.Email
@@ -224,7 +224,7 @@ func (m *StartLoginTokenManager) RequestToken(ctx context.Context, db database.D
 	return token, false, email.Send()
 }
 
-func (m *StartLoginTokenManager) GenerateTokenEmail(ctx context.Context, db database.DatabaseProvider, token *LoginToken) (*Email, error) {
+func (m *StartLoginTokenManager) GenerateTokenEmail(ctx context.Context, db database.Provider, token *LoginToken) (*Email, error) {
 	user, exists, err := database.GetOneById(ctx, db, &User{}, token.UserId.RecordId())
 	if err != nil {
 		return nil, err
@@ -242,9 +242,9 @@ func (m *StartLoginTokenManager) GenerateTokenEmail(ctx context.Context, db data
 
 type LoginResponse struct {
 	UserId   database.UserId `json:"user_id"`
-	JWT      string `json:"jwt"`
-	ReturnTo string `json:"return_to"`
-	Error    error  `json:"error"`
+	JWT      string          `json:"jwt"`
+	ReturnTo string          `json:"return_to"`
+	Error    error           `json:"error"`
 }
 
 func (m *StartLoginTokenManager) OneTimePassword(c *gin.Context) {

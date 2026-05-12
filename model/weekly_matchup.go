@@ -23,7 +23,7 @@ type TeamMatchup struct {
 	Bye      bool
 }
 
-func (t *TeamMatchup) Validate(ctx context.Context, db database.DatabaseProvider, season *Season) error {
+func (t *TeamMatchup) Validate(ctx context.Context, db database.Provider, season *Season) error {
 	if t.Bye && t.AwayTeam != TeamId(database.InvalidRecordId) {
 		return fmt.Errorf("away team ID must not be set during a bye")
 	}
@@ -86,11 +86,11 @@ func (w *WeeklyMatchup) SetId(id database.RecordId) {
 	w.ID = WeeklyMatchupId(id)
 }
 
-func (w *WeeklyMatchup) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (w *WeeklyMatchup) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return EditableBySeason(ctx, db, w.SeasonId)
 }
 
-func (w *WeeklyMatchup) AccessibleTo(_ context.Context, db database.DatabaseProvider) []database.UserId {
+func (w *WeeklyMatchup) AccessibleTo(_ context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -122,7 +122,7 @@ func (w *WeeklyMatchup) StaticallyValid() error {
 	return nil
 }
 
-func (w *WeeklyMatchup) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (w *WeeklyMatchup) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	week, err := database.GetExistingRecordById(ctx, db, &Week{}, w.WeekId.RecordId())
 	if err != nil {
 		return err
@@ -150,7 +150,7 @@ func (w *WeeklyMatchup) DynamicallyValid(ctx context.Context, db database.Databa
 	return w.ValidateThatEachTeamHasOneMatchup(ctx, db, season)
 }
 
-func (w *WeeklyMatchup) ValidateThatEachTeamHasOneMatchup(ctx context.Context, db database.DatabaseProvider, season *Season) error {
+func (w *WeeklyMatchup) ValidateThatEachTeamHasOneMatchup(ctx context.Context, db database.Provider, season *Season) error {
 	m := make(map[TeamId]bool)
 	for _, matchup := range w.Matchups {
 		m[matchup.HomeTeam] = true
@@ -175,6 +175,6 @@ func (w *WeeklyMatchup) ValidateThatEachTeamHasOneMatchup(ctx context.Context, d
 	return nil
 }
 
-func (w *WeeklyMatchup) BlankRecord() database.CrudRecord {
+func (w *WeeklyMatchup) NewRecord() database.CrudRecord {
 	return new(WeeklyMatchup)
 }

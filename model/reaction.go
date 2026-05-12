@@ -87,15 +87,15 @@ var AllowedReactions = []reactionType{
 // directly in the database but are instead stored on a []Reaction in the
 // Blurb.Reactions and Comment.Reactions fields.
 type Reaction struct {
-	UserId database.UserId       `json:"user_id" bson:"user_id"`
-	Type   reactionType `json:"reaction_type" bson:"reaction_type"`
+	UserId database.UserId `json:"user_id" bson:"user_id"`
+	Type   reactionType    `json:"reaction_type" bson:"reaction_type"`
 }
 
 func (r *Reaction) StaticallyValid() error {
 	return r.Type.StaticallyValid()
 }
 
-func (r *Reaction) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (r *Reaction) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	return database.ExistsById(ctx, db, &User{}, r.UserId.RecordId())
 }
 
@@ -123,7 +123,7 @@ func (r ReactionList) StaticallyValid() error {
 	return nil
 }
 
-func (r ReactionList) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (r ReactionList) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	for _, reaction := range r {
 		err := reaction.DynamicallyValid(ctx, db)
 		if err != nil {
@@ -133,7 +133,7 @@ func (r ReactionList) DynamicallyValid(ctx context.Context, db database.Database
 	return nil
 }
 
-func (r ReactionList) CanAddReaction(ctx context.Context, db database.DatabaseProvider, new *Reaction) error {
+func (r ReactionList) CanAddReaction(ctx context.Context, db database.Provider, new *Reaction) error {
 	err := database.Validate(ctx, db, new)
 	if err != nil {
 		return err

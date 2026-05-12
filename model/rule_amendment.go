@@ -32,7 +32,7 @@ func (r RuleAmendmentType) StaticallyValid() error {
 	return nil
 }
 
-func (r *Ruleset) Amend(ctx context.Context, db database.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
+func (r *Ruleset) Amend(ctx context.Context, db database.Provider, a *RuleAmendment) (new *Ruleset, err error) {
 	err = r.ValidateAmendment(ctx, db, a)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (r *Ruleset) Amend(ctx context.Context, db database.DatabaseProvider, a *Ru
 	return nil, fmt.Errorf("unhandled rule amendment type: %d", a.Type)
 }
 
-func (r *Ruleset) HandleAddSection(ctx context.Context, db database.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
+func (r *Ruleset) HandleAddSection(ctx context.Context, db database.Provider, a *RuleAmendment) (new *Ruleset, err error) {
 	// update the parent and the owner in the new section to add
 	a.NewSection.Parent = r.ID
 	a.NewSection.Owner = r.Owner
@@ -131,7 +131,7 @@ func (r *Ruleset) HandleAddSection(ctx context.Context, db database.DatabaseProv
 	return newRuleset, nil
 }
 
-func (r *Ruleset) HandleRemoveSection(ctx context.Context, db database.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
+func (r *Ruleset) HandleRemoveSection(ctx context.Context, db database.Provider, a *RuleAmendment) (new *Ruleset, err error) {
 	// Get existing section relations
 	existingRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
@@ -161,7 +161,7 @@ func (r *Ruleset) HandleRemoveSection(ctx context.Context, db database.DatabaseP
 	return newRuleset, err
 }
 
-func (r *Ruleset) HandleModifySection(ctx context.Context, db database.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
+func (r *Ruleset) HandleModifySection(ctx context.Context, db database.Provider, a *RuleAmendment) (new *Ruleset, err error) {
 
 	existing, err := database.GetExistingRecordById(ctx, db, &RuleSection{}, a.TargetSection.RecordId())
 	if err != nil {
@@ -198,7 +198,7 @@ func (r *Ruleset) HandleModifySection(ctx context.Context, db database.DatabaseP
 	return r, nil
 }
 
-func (r *Ruleset) HandleReorderSection(ctx context.Context, db database.DatabaseProvider, a *RuleAmendment) (new *Ruleset, err error) {
+func (r *Ruleset) HandleReorderSection(ctx context.Context, db database.Provider, a *RuleAmendment) (new *Ruleset, err error) {
 	// Get existing section relations
 	existingRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
@@ -243,7 +243,7 @@ func (r *Ruleset) HandleReorderSection(ctx context.Context, db database.Database
 	return r, nil
 }
 
-func (r *Ruleset) HandleAmendment(ctx context.Context, db database.DatabaseProvider, newRelations []*RulesetSection) (newRuleset *Ruleset, err error) {
+func (r *Ruleset) HandleAmendment(ctx context.Context, db database.Provider, newRelations []*RulesetSection) (newRuleset *Ruleset, err error) {
 	// Build section ID list from relations
 	newSectionIds := make([]RuleSectionId, 0, len(newRelations))
 	for _, sr := range newRelations {
@@ -338,7 +338,7 @@ type RuleAmendment struct {
 	After         RuleSectionId     `json:"after"`
 }
 
-func (r *RuleAmendment) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (r *RuleAmendment) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	if r.Type == RuleAmendmentTypeAddSection {
 		if r.After.Empty() {
 			// if After section ID is empty, we are adding this new section to
@@ -430,7 +430,7 @@ func (r *RuleAmendment) StaticallyValid() error {
 	return nil
 }
 
-func (r *Ruleset) GetAmendmentBefore(ctx context.Context, db database.DatabaseProvider, id RuleSectionId) (RuleSectionId, error) {
+func (r *Ruleset) GetAmendmentBefore(ctx context.Context, db database.Provider, id RuleSectionId) (RuleSectionId, error) {
 	sectionRelations, err := r.GetSectionRelations(ctx, db)
 	if err != nil {
 		return 0, err
@@ -448,7 +448,7 @@ func (r *Ruleset) GetAmendmentBefore(ctx context.Context, db database.DatabasePr
 	return 0, fmt.Errorf("rule section ID %s was not found in ruleset %s", id, r.ID)
 }
 
-func (r *Ruleset) ValidateAmendment(ctx context.Context, db database.DatabaseProvider, a *RuleAmendment) error {
+func (r *Ruleset) ValidateAmendment(ctx context.Context, db database.Provider, a *RuleAmendment) error {
 	err := database.Validate(ctx, db, a)
 	if err != nil {
 		return err

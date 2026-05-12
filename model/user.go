@@ -38,11 +38,11 @@ func (u *User) SetOwner(userId database.UserId) {
 	// don't need to do anything as User records are self-owned
 }
 
-func (u *User) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (u *User) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{u.ID, database.SysAdminUserId}
 }
 
-func (u *User) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (u *User) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{database.EveryoneUserId}
 }
 
@@ -98,10 +98,10 @@ func (u *User) StaticallyValid() error {
 	return nil
 }
 
-func (u *User) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (u *User) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	return nil
 }
 
-func (u *User) BlankRecord() database.CrudRecord {
+func (u *User) NewRecord() database.CrudRecord {
 	return new(User)
 }

@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newStoredPlayoffStructure(t *testing.T, db database.DatabaseProvider) *PlayoffStructure {
+func newStoredPlayoffStructure(t *testing.T, db database.Provider) *PlayoffStructure {
 	user := newStoredUser(t, db)
 	s := NewPlayoffStructure()
 	s.UserId = user.ID

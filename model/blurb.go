@@ -34,13 +34,13 @@ func (b *Blurb) GetOwner() database.UserId {
 	return b.Owner
 }
 
-func (b *Blurb) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (b *Blurb) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{
 		b.Owner,
 	}
 }
 
-func (b *Blurb) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (b *Blurb) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -65,7 +65,7 @@ func (b *Blurb) StaticallyValid() error {
 	return nil
 }
 
-func (b *Blurb) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (b *Blurb) DynamicallyValid(ctx context.Context, db database.Provider) error {
 
 	err := database.ExistsById(ctx, db, &User{}, b.Owner.RecordId())
 	if err != nil {
@@ -104,7 +104,7 @@ func (b *Blurb) SetId(id database.RecordId) {
 	b.ID = BlurbId(id)
 }
 
-func (b *Blurb) React(ctx context.Context, db database.DatabaseProvider, u database.UserId, t reactionType) error {
+func (b *Blurb) React(ctx context.Context, db database.Provider, u database.UserId, t reactionType) error {
 	r := &Reaction{
 		UserId: u,
 		Type:   t,
@@ -125,7 +125,7 @@ func (b *Blurb) React(ctx context.Context, db database.DatabaseProvider, u datab
 	return database.UpdateOne(ctx, db, b)
 }
 
-func (b *Blurb) Unreact(ctx context.Context, db database.DatabaseProvider, u database.UserId, t reactionType) error {
+func (b *Blurb) Unreact(ctx context.Context, db database.Provider, u database.UserId, t reactionType) error {
 	r := &Reaction{
 		UserId: u,
 		Type:   t,
@@ -148,7 +148,7 @@ func (b *Blurb) Unreact(ctx context.Context, db database.DatabaseProvider, u dat
 	return database.UpdateOne(ctx, db, b)
 }
 
-func (b *Blurb) CanUserCommentOrReact(ctx context.Context, db database.DatabaseProvider, u database.UserId) error {
+func (b *Blurb) CanUserCommentOrReact(ctx context.Context, db database.Provider, u database.UserId) error {
 	// no error when we receive an empty user ID
 	if u.RecordId() == database.InvalidRecordId {
 		return nil
@@ -179,7 +179,7 @@ func (b *Blurb) CanUserCommentOrReact(ctx context.Context, db database.DatabaseP
 	return nil
 }
 
-func (b *Blurb) GetComments(ctx context.Context, db database.DatabaseProvider) ([]*Comment, error) {
+func (b *Blurb) GetComments(ctx context.Context, db database.Provider) ([]*Comment, error) {
 	v, err := database.GetAllWhere[*Comment](ctx, db, func(_ context.Context, c *Comment) bool {
 		return c.Blurb == b.ID
 	})
@@ -194,6 +194,6 @@ func (b *Blurb) GetComments(ctx context.Context, db database.DatabaseProvider) (
 	return v, nil
 }
 
-func (b *Blurb) BlankRecord() database.CrudRecord {
+func (b *Blurb) NewRecord() database.CrudRecord {
 	return new(Blurb)
 }

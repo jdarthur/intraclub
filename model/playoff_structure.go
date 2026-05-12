@@ -30,7 +30,7 @@ func (p *PlayoffStructure) GetOwner() database.UserId {
 	return p.UserId
 }
 
-func (p *PlayoffStructure) PreUpdate(ctx context.Context, db database.DatabaseProvider, existingValues database.CrudRecord) error {
+func (p *PlayoffStructure) PreUpdate(ctx context.Context, db database.Provider, existingValues database.CrudRecord) error {
 	s, err := p.GetAssignedSeasons(ctx, db)
 	if err != nil {
 		return err
@@ -41,7 +41,7 @@ func (p *PlayoffStructure) PreUpdate(ctx context.Context, db database.DatabasePr
 	return nil
 }
 
-func (p *PlayoffStructure) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
+func (p *PlayoffStructure) PreDelete(ctx context.Context, db database.Provider) error {
 	s, err := p.GetAssignedSeasons(ctx, db)
 	if err != nil {
 		return err
@@ -60,11 +60,11 @@ func (p *PlayoffStructure) SetOwner(userId database.UserId) {
 	p.UserId = userId
 }
 
-func (p *PlayoffStructure) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (p *PlayoffStructure) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{p.UserId}
 }
 
-func (p *PlayoffStructure) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (p *PlayoffStructure) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -125,16 +125,16 @@ func (p *PlayoffStructure) NumberOfRounds() int {
 	return int(v)
 }
 
-func (p *PlayoffStructure) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (p *PlayoffStructure) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	return database.ExistsById(ctx, db, &User{}, p.UserId.RecordId())
 }
 
-func (p *PlayoffStructure) GetAssignedSeasons(ctx context.Context, db database.DatabaseProvider) ([]*Season, error) {
+func (p *PlayoffStructure) GetAssignedSeasons(ctx context.Context, db database.Provider) ([]*Season, error) {
 	return database.GetAllWhere[*Season](ctx, db, func(_ context.Context, c *Season) bool {
 		return c.PlayoffStructure == p.ID
 	})
 }
 
-func (p *PlayoffStructure) BlankRecord() database.CrudRecord {
+func (p *PlayoffStructure) NewRecord() database.CrudRecord {
 	return new(PlayoffStructure)
 }

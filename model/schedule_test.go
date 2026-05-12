@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newStoredSchedule(t *testing.T, db database.DatabaseProvider, season *Season) *Schedule {
+func newStoredSchedule(t *testing.T, db database.Provider, season *Season) *Schedule {
 	schedule := NewSchedule()
 	schedule.SeasonId = season.ID
 

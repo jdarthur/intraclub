@@ -10,10 +10,10 @@ type Validatable interface {
 
 type DatabaseValidatable interface {
 	Validatable
-	DynamicallyValid(ctx context.Context, db DatabaseProvider) error
+	DynamicallyValid(ctx context.Context, db Provider) error
 }
 
-func Validate(ctx context.Context, db DatabaseProvider, d DatabaseValidatable) error {
+func Validate(ctx context.Context, db Provider, d DatabaseValidatable) error {
 	err := d.StaticallyValid()
 	if err != nil {
 		return err

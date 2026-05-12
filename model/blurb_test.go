@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"intraclub/database"
 )
 
@@ -17,80 +19,60 @@ func newValidBlurb(owner database.UserId, season SeasonId) *Blurb {
 	return b
 }
 
-func newDefaultBlurb(t *testing.T, db database.DatabaseProvider) (*Blurb, *Season) {
+func newDefaultBlurb(t *testing.T, db database.Provider) (*Blurb, *Season) {
 	season, commissioner := newDefaultSeason(t, db)
 	b := newStoredBlurb(t, db, commissioner.ID, season.ID)
 	return b, season
 }
 
-func newStoredBlurb(t *testing.T, db database.DatabaseProvider, owner database.UserId, season SeasonId) *Blurb {
+func newStoredBlurb(t *testing.T, db database.Provider, owner database.UserId, season SeasonId) *Blurb {
 	b := newValidBlurb(owner, season)
 	v, err := database.CreateOne(context.Background(), db, b)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	return v
 }
 
 func TestBlurbTitleIsEmpty(t *testing.T) {
 	b := NewBlurb()
-	err := b.StaticallyValid()
-	if err == nil {
-		t.Fatal("expected error on empty title")
-	}
-	fmt.Println(err)
+	assert.Error(t, b.StaticallyValid(), "expected error on empty title")
+	fmt.Println(b.StaticallyValid())
 }
 
 func TestBlurbTitleIsOnlyWhitespace(t *testing.T) {
 	b := NewBlurb()
 	b.Title = " \n"
-	err := b.StaticallyValid()
-	if err == nil {
-		t.Fatal("expected error on whitespace title")
-	}
-	fmt.Println(err)
+	assert.Error(t, b.StaticallyValid(), "expected error on whitespace title")
+	fmt.Println(b.StaticallyValid())
 }
 
 func TestBlurbContentIsEmpty(t *testing.T) {
 	b := NewBlurb()
 	b.Title = "title"
-	err := b.StaticallyValid()
-	if err == nil {
-		t.Fatal("expected error on empty content")
-	}
-	fmt.Println(err)
+	assert.Error(t, b.StaticallyValid(), "expected error on empty content")
+	fmt.Println(b.StaticallyValid())
 }
 
 func TestBlurbContentIsOnlyWhitespace(t *testing.T) {
 	b := NewBlurb()
 	b.Title = "title"
 	b.Content = "\t\r"
-	err := b.StaticallyValid()
-	if err == nil {
-		t.Fatal("expected error on whitespace content")
-	}
-	fmt.Println(err)
+	assert.Error(t, b.StaticallyValid(), "expected error on whitespace content")
+	fmt.Println(b.StaticallyValid())
 }
 
 func TestBlurbUserIdDoesNotExist(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	b := newValidBlurb(database.InvalidUserId, SeasonId(0))
-	err := b.DynamicallyValid(context.Background(), db)
-	if err == nil {
-		t.Fatal("expected error on invalid user ID")
-	}
-	fmt.Println(err)
+	assert.Error(t, b.DynamicallyValid(context.Background(), db), "expected error on invalid user ID")
+	fmt.Println(b.DynamicallyValid(context.Background(), db))
 }
 
 func TestBlurbSeasonIdDoesNotExist(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	user := newStoredUser(t, db)
 	b := newValidBlurb(user.ID, SeasonId(0))
-	err := b.DynamicallyValid(context.Background(), db)
-	if err == nil {
-		t.Fatal("expected error on invalid user ID")
-	}
-	fmt.Println(err)
+	assert.Error(t, b.DynamicallyValid(context.Background(), db), "expected error on invalid user ID")
+	fmt.Println(b.DynamicallyValid(context.Background(), db))
 }
 
 func TestBlurbPhotoIdDoesNotExist(t *testing.T) {
@@ -98,11 +80,8 @@ func TestBlurbPhotoIdDoesNotExist(t *testing.T) {
 	season, commish := newDefaultSeason(t, db)
 	b := newValidBlurb(commish.ID, season.ID)
 	b.Photos = []PhotoId{0}
-	err := b.DynamicallyValid(context.Background(), db)
-	if err == nil {
-		t.Fatal("expected error on invalid photo ID")
-	}
-	fmt.Println(err)
+	assert.Error(t, b.DynamicallyValid(context.Background(), db), "expected error on invalid photo ID")
+	fmt.Println(b.DynamicallyValid(context.Background(), db))
 }
 
 func TestBlurbPhotoDoesNotBelongToUser(t *testing.T) {
@@ -115,22 +94,16 @@ func TestBlurbPhotoDoesNotBelongToUser(t *testing.T) {
 
 	b.Photos = []PhotoId{photo.ID}
 
-	err := b.DynamicallyValid(context.Background(), db)
-	if err == nil {
-		t.Fatal("expected error on non-owned photo ID")
-	}
-	fmt.Println(err)
+	assert.Error(t, b.DynamicallyValid(context.Background(), db), "expected error on non-owned photo ID")
+	fmt.Println(b.DynamicallyValid(context.Background(), db))
 }
 
 func TestInvalidReaction(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
 	b := newStoredBlurb(t, db, commish.ID, season.ID)
-	err := b.React(context.Background(), db, commish.ID, reactionType(99999))
-	if err == nil {
-		t.Fatal("expected error on invalid reaction")
-	}
-	fmt.Println(err)
+	assert.Error(t, b.React(context.Background(), db, commish.ID, reactionType(99999)), "expected error on invalid reaction")
+	fmt.Println(b.React(context.Background(), db, commish.ID, reactionType(99999)))
 }
 
 func TestUserIdIsNotAMemberOfSeason(t *testing.T) {
@@ -139,50 +112,32 @@ func TestUserIdIsNotAMemberOfSeason(t *testing.T) {
 	b := newStoredBlurb(t, db, commish.ID, season.ID)
 
 	otherUser := newStoredUser(t, db)
-	err := b.React(context.Background(), db, otherUser.ID, ThumbsUp)
-	if err == nil {
-		t.Fatal("expected error on reaction from user who is not participating in season")
-	}
-	fmt.Println(err)
+	assert.Error(t, b.React(context.Background(), db, otherUser.ID, ThumbsUp), "expected error on reaction from user who is not participating in season")
+	fmt.Println(b.React(context.Background(), db, otherUser.ID, ThumbsUp))
 }
 
 func TestUserSuccessfulReact(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
 	b := newStoredBlurb(t, db, commish.ID, season.ID)
-	err := b.React(context.Background(), db, commish.ID, ThumbsUp)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, b.React(context.Background(), db, commish.ID, ThumbsUp))
 }
 
 func TestDuplicateReaction(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
 	b := newStoredBlurb(t, db, commish.ID, season.ID)
-	err := b.React(context.Background(), db, commish.ID, ThumbsUp)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = b.React(context.Background(), db, commish.ID, ThumbsUp)
-	if err == nil {
-		t.Fatal("expected error on duplicate reaction")
-	}
-	fmt.Println(err)
+	require.NoError(t, b.React(context.Background(), db, commish.ID, ThumbsUp))
+	assert.Error(t, b.React(context.Background(), db, commish.ID, ThumbsUp), "expected error on duplicate reaction")
+	fmt.Println(b.React(context.Background(), db, commish.ID, ThumbsUp))
 }
 
 func TestReactAndUnreact(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
 	b := newStoredBlurb(t, db, commish.ID, season.ID)
-	err := b.React(context.Background(), db, commish.ID, ThumbsUp)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = b.Unreact(context.Background(), db, commish.ID, ThumbsUp)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, b.React(context.Background(), db, commish.ID, ThumbsUp))
+	require.NoError(t, b.Unreact(context.Background(), db, commish.ID, ThumbsUp))
 }
 
 func TestUnreactWhereNotPresent(t *testing.T) {
@@ -190,9 +145,6 @@ func TestUnreactWhereNotPresent(t *testing.T) {
 	season, commish := newDefaultSeason(t, db)
 	b := newStoredBlurb(t, db, commish.ID, season.ID)
 
-	err := b.Unreact(context.Background(), db, commish.ID, ThumbsUp)
-	if err == nil {
-		t.Fatal("expected error on unreact where existing reaction doesn't exist")
-	}
-	fmt.Println(err)
+	assert.Error(t, b.Unreact(context.Background(), db, commish.ID, ThumbsUp), "expected error on unreact where existing reaction doesn't exist")
+	fmt.Println(b.Unreact(context.Background(), db, commish.ID, ThumbsUp))
 }

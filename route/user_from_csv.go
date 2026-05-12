@@ -18,7 +18,7 @@ type CsvImportResult struct {
 }
 
 type CsvImportHandler struct {
-	DatabaseProvider database.DatabaseProvider
+	DatabaseProvider database.Provider
 }
 
 func (h *CsvImportHandler) HandleCsvImport(c *gin.Context) {

@@ -93,7 +93,7 @@ type ApiRequest[T database.Validatable] struct {
 	// DatabaseProvider is a DatabaseProvider interface passed to the
 	// ApiRoute if it needs to do something in the database. This will not be
 	// used unless the route is manually using the RouteFamily struct
-	DatabaseProvider database.DatabaseProvider
+	DatabaseProvider database.Provider
 
 	request *http.Request
 }
@@ -123,7 +123,7 @@ type RouteFamily[T database.Validatable] struct {
 	UseAuth bool
 
 	// DatabaseProvider is the DatabaseProvider that the Handler functions will use
-	DatabaseProvider database.DatabaseProvider
+	DatabaseProvider database.Provider
 
 	// Middleware is a list of gin.HandlerFunc functions that will be
 	// run before the wrapper's handler functions are run for each request
@@ -175,7 +175,7 @@ func (r *RouteFamily[T]) addToEngine(e *gin.RouterGroup) {
 // the RouteFamily helper functions and applies common DB and auth logic to an ApiRoute
 type routeWrapper[T database.Validatable] struct {
 	Route    ApiRoute[T]
-	Database database.DatabaseProvider
+	Database database.Provider
 	UseAuth  bool
 }
 

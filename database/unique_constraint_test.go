@@ -35,11 +35,11 @@ func (t *testUnique) SetId(id RecordId) {
 	t.RecordId = id
 }
 
-func (t *testUnique) EditableBy(_ context.Context, db DatabaseProvider) []UserId {
+func (t *testUnique) EditableBy(_ context.Context, db Provider) []UserId {
 	return nil
 }
 
-func (t *testUnique) AccessibleTo(_ context.Context, db DatabaseProvider) []UserId {
+func (t *testUnique) AccessibleTo(_ context.Context, db Provider) []UserId {
 	return nil
 }
 
@@ -49,11 +49,11 @@ func (t *testUnique) StaticallyValid() error {
 	return nil
 }
 
-func (t *testUnique) DynamicallyValid(_ context.Context, db DatabaseProvider) error {
+func (t *testUnique) DynamicallyValid(_ context.Context, db Provider) error {
 	return nil
 }
 
-func (t *testUnique) BlankRecord() CrudRecord {
+func (t *testUnique) NewRecord() CrudRecord {
 	return new(testUnique)
 }
 

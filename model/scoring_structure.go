@@ -243,11 +243,11 @@ func (c *ScoringStructure) SetId(id database.RecordId) {
 	c.ID = ScoringStructureId(id)
 }
 
-func (c *ScoringStructure) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (c *ScoringStructure) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return database.SysAdminAndUsers(c.Owner)
 }
 
-func (c *ScoringStructure) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (c *ScoringStructure) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -318,7 +318,7 @@ func (c *ScoringStructure) StaticallyValid() error {
 	return nil
 }
 
-func (c *ScoringStructure) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (c *ScoringStructure) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	for _, id := range c.SecondaryScoringStructures {
 		secondary, err := database.GetExistingRecordById(ctx, db, &ScoringStructure{}, id.RecordId())
 		if err != nil {
@@ -350,6 +350,6 @@ func (c *ScoringStructure) WinningScore(myScore, yourScore int) bool {
 	return false
 }
 
-func (c *ScoringStructure) BlankRecord() database.CrudRecord {
+func (c *ScoringStructure) NewRecord() database.CrudRecord {
 	return new(ScoringStructure)
 }

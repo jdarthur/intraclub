@@ -76,7 +76,7 @@ func ValidateToken(token string) (*AuthToken, error) {
 
 var UserType database.CrudRecord
 
-func GetToken(c *gin.Context, db database.DatabaseProvider) (*AuthToken, error) {
+func GetToken(c *gin.Context, db database.Provider) (*AuthToken, error) {
 	token := c.Request.Header.Get(AuthTokenHeaderValue)
 	if token == "" {
 		return nil, nil

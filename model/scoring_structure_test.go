@@ -36,7 +36,7 @@ var TennisTiebreakThirdSet = ScoringStructure{
 	},
 }
 
-func newDefaultStoredScoringStructure(t *testing.T, db database.DatabaseProvider) *ScoringStructure {
+func newDefaultStoredScoringStructure(t *testing.T, db database.Provider) *ScoringStructure {
 
 	s := newDefaultStoredSetScoringStructure(t, db)
 	matchScoringStructure := &TennisMatchScoringStructure
@@ -55,7 +55,7 @@ func newDefaultStoredScoringStructure(t *testing.T, db database.DatabaseProvider
 	return m
 }
 
-func newThirdSetTiebreakScoringStructure(t *testing.T, db database.DatabaseProvider) *ScoringStructure {
+func newThirdSetTiebreakScoringStructure(t *testing.T, db database.Provider) *ScoringStructure {
 
 	s := newDefaultStoredSetScoringStructure(t, db)
 	s2 := newTenPointTiebreakSetScoringStructure(t, db)
@@ -76,7 +76,7 @@ func newThirdSetTiebreakScoringStructure(t *testing.T, db database.DatabaseProvi
 	return m
 }
 
-func newDefaultStoredSetScoringStructure(t *testing.T, db database.DatabaseProvider) *ScoringStructure {
+func newDefaultStoredSetScoringStructure(t *testing.T, db database.Provider) *ScoringStructure {
 	owner := newStoredUser(t, db)
 
 	setScoringStructure := &TennisSetScoringStructure
@@ -89,7 +89,7 @@ func newDefaultStoredSetScoringStructure(t *testing.T, db database.DatabaseProvi
 	return s
 }
 
-func newTenPointTiebreakSetScoringStructure(t *testing.T, db database.DatabaseProvider) *ScoringStructure {
+func newTenPointTiebreakSetScoringStructure(t *testing.T, db database.Provider) *ScoringStructure {
 	owner := newStoredUser(t, db)
 
 	setScoringStructure := &TennisTiebreakThirdSet

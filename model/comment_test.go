@@ -16,7 +16,7 @@ func newValidComment(u database.UserId, blurb BlurbId) *Comment {
 	return c
 }
 
-func getAnyTeamCaptain(t *testing.T, db database.DatabaseProvider, season *Season ) database.UserId {
+func getAnyTeamCaptain(t *testing.T, db database.Provider, season *Season) database.UserId {
 	teams, err := season.GetTeams(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
@@ -41,7 +41,7 @@ func copyComment(c *Comment) *Comment {
 	}
 }
 
-func newStoredComment(t *testing.T, db database.DatabaseProvider, user database.UserId, blurb *Blurb) *Comment {
+func newStoredComment(t *testing.T, db database.Provider, user database.UserId, blurb *Blurb) *Comment {
 	c := newValidComment(user, blurb.ID)
 
 	v, err := database.CreateOne(context.Background(), db, c)

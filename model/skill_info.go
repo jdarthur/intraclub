@@ -24,7 +24,7 @@ var LeagueTypes = []LeagueType{
 // Men's seniors team in 2024"
 type SkillInfo struct {
 	ID             database.RecordId `json:"id" bson:"_id"`          // unique ID, only queryable field (entry IDs are stored in a list on the User collection)
-	UserId         database.UserId            `json:"user_id" bson:"user_id"` // ID of the User that this record belongs to
+	UserId         database.UserId   `json:"user_id" bson:"user_id"` // ID of the User that this record belongs to
 	LeagueType     LeagueType        `json:"league_type"`            // Type of league (USTA / ALTA / T2)
 	MostRecentYear int               `json:"most_recent_year"`       // Year that you played on this team, e.g. 2024
 	Captain        string            `json:"captain"`                // Captain of the team for search convenience, e.g. John Smith
@@ -51,12 +51,12 @@ func (s *SkillInfo) SetId(id database.RecordId) {
 	panic("implement me")
 }
 
-func (s *SkillInfo) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (s *SkillInfo) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (s *SkillInfo) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (s *SkillInfo) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	// TODO implement me
 	panic("implement me")
 }
@@ -71,12 +71,12 @@ func (s *SkillInfo) StaticallyValid() error {
 	panic("implement me")
 }
 
-func (s *SkillInfo) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (s *SkillInfo) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (s *SkillInfo) BlankRecord() database.CrudRecord {
+func (s *SkillInfo) NewRecord() database.CrudRecord {
 	return new(SkillInfo)
 }
 
@@ -93,7 +93,7 @@ func IsValidLeagueType(leagueType LeagueType) bool {
 	}
 }
 
-func GetAllCaptains(ctx context.Context, db database.DatabaseProvider) ([]string, error) {
+func GetAllCaptains(ctx context.Context, db database.Provider) ([]string, error) {
 	v, err := database.GetAll[*SkillInfo](ctx, db)
 	if err != nil {
 		return nil, err

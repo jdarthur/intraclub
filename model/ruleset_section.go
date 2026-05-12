@@ -47,7 +47,7 @@ func (r *RulesetSection) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that both the referenced Ruleset and RuleSection records exist.
-func (r *RulesetSection) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (r *RulesetSection) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	if err := database.ExistsById(ctx, db, &Ruleset{}, r.RulesetId.RecordId()); err != nil {
 		return err
 	}
@@ -57,11 +57,11 @@ func (r *RulesetSection) DynamicallyValid(ctx context.Context, db database.Datab
 	return nil
 }
 
-func (r *RulesetSection) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (r *RulesetSection) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (r *RulesetSection) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (r *RulesetSection) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{database.SysAdminUserId}
 }
 
@@ -80,6 +80,6 @@ func (r *RulesetSection) SetUpdatedAt(updatedAt time.Time) {
 	r.UpdatedAt = updatedAt
 }
 
-func (r *RulesetSection) BlankRecord() database.CrudRecord {
+func (r *RulesetSection) NewRecord() database.CrudRecord {
 	return new(RulesetSection)
 }

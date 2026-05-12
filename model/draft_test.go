@@ -7,22 +7,23 @@ import (
 	"testing"
 
 	"intraclub/database"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func newDefaultStoredDraft(t *testing.T, db database.DatabaseProvider) *Draft {
+func newDefaultStoredDraft(t *testing.T, db database.Provider) *Draft {
 	user := newStoredUser(t, db)
 	return newStoredDraft(t, db, user.ID)
 }
 
-func newStoredDraft(t *testing.T, db database.DatabaseProvider, commissioner database.UserId) *Draft {
+func newStoredDraft(t *testing.T, db database.Provider, commissioner database.UserId) *Draft {
 	draft := NewDraft()
 	draft.Owner = commissioner
 	draft.Format = newDefaultStoredFormat(t, db).ID
 
 	v, err := database.CreateOne(context.Background(), db, draft)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Add commissioner as available player
 	availablePlayer := &DraftAvailablePlayer{
@@ -30,13 +31,11 @@ func newStoredDraft(t *testing.T, db database.DatabaseProvider, commissioner dat
 		PlayerId: commissioner,
 	}
 	_, err = database.CreateOne(context.Background(), db, availablePlayer)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	return v
 }
 
-func newUninitializedRandomDraft(t *testing.T, db database.DatabaseProvider, playerCount, teamCount int) *Draft {
+func newUninitializedRandomDraft(t *testing.T, db database.Provider, playerCount, teamCount int) *Draft {
 	draft := NewDraft()
 	commissioner := newStoredUser(t, db)
 	draft.Owner = commissioner.ID
@@ -44,9 +43,7 @@ func newUninitializedRandomDraft(t *testing.T, db database.DatabaseProvider, pla
 
 	var err error
 	draft, err = database.CreateOne(context.Background(), db, draft)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	for i := 0; i < playerCount-teamCount; i++ {
 		user := newStoredUser(t, db)
@@ -55,15 +52,13 @@ func newUninitializedRandomDraft(t *testing.T, db database.DatabaseProvider, pla
 			PlayerId: user.ID,
 		}
 		_, err = database.CreateOne(context.Background(), db, availablePlayer)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	}
 
 	return draft
 }
 
-func newRandomDraft(t *testing.T, db database.DatabaseProvider, playerCount, teamCount int) *Draft {
+func newRandomDraft(t *testing.T, db database.Provider, playerCount, teamCount int) *Draft {
 
 	// create an uninitialized draft
 	draft := newUninitializedRandomDraft(t, db, playerCount, teamCount)
@@ -77,30 +72,24 @@ func newRandomDraft(t *testing.T, db database.DatabaseProvider, playerCount, tea
 
 	// initialize the team / captain assignments
 	err := draft.Initialize(context.Background(), db, users)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	return draft
 }
 
-func completeExistingDraft(t *testing.T, draft *Draft, db database.DatabaseProvider) {
+func completeExistingDraft(t *testing.T, draft *Draft, db database.Provider) {
 	captains, _ := draft.GetCaptains(context.Background(), db)
 	availablePlayers, _ := draft.GetAvailablePlayers(context.Background(), db)
 
 	for _, v := range captains {
 		err := draft.Select(context.Background(), v.CaptainId, db)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	}
 
 	remaining := len(availablePlayers) - len(captains)
 	for i := 0; i < remaining; i++ {
 		onTheClock, err := draft.GetCaptainOnTheClock(context.Background(), db)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 
 		available := draft.GetAllAvailableToSelect(onTheClock, db)
 		if len(available) == 0 {
@@ -109,34 +98,28 @@ func completeExistingDraft(t *testing.T, draft *Draft, db database.DatabaseProvi
 
 		index := rand.Intn(len(available))
 		err = draft.Select(context.Background(), available[index], db)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 	}
 }
 
-func doRandomDraft(t *testing.T, db database.DatabaseProvider, playerCount int, teamCount int) *Draft {
+func doRandomDraft(t *testing.T, db database.Provider, playerCount int, teamCount int) *Draft {
 	draft := newRandomDraft(t, db, playerCount, teamCount)
 	completeExistingDraft(t, draft, db)
 	return draft
 }
 
-func selectRandomAvailableByCaptain(t *testing.T, draft *Draft, captain database.UserId, db database.DatabaseProvider) {
+func selectRandomAvailableByCaptain(t *testing.T, draft *Draft, captain database.UserId, db database.Provider) {
 	available := draft.GetAllAvailableToSelect(captain, db)
 	index := rand.Intn(len(available))
 	err := draft.SelectByCaptain(context.Background(), available[index], captain, db)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }
 
-func newCompletedDraft(t *testing.T, db database.DatabaseProvider) (*Draft, *Season) {
+func newCompletedDraft(t *testing.T, db database.Provider) (*Draft, *Season) {
 	draft := doRandomDraft(t, db, 100, 4)
 	facility := newStoredFacility(t, db, draft.Owner)
 	season, err := draft.CreateSeason(context.Background(), db, "Test season", facility.ID, NewStartTime(8, 30))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	return draft, season
 }
 
@@ -146,9 +129,7 @@ func TestRandomDraft(t *testing.T) {
 
 	captains, _ := draft.GetCaptains(context.Background(), db)
 	available := draft.GetAllAvailableToSelect(captains[0].CaptainId, db)
-	if len(available) != 0 {
-		t.Fatal("Expected no available users left to draft")
-	}
+	assert.Empty(t, available, "Expected no available users left to draft")
 	fmt.Printf("%+v\n", draft)
 }
 
@@ -157,18 +138,12 @@ func TestCaptainIsNotInDraftList(t *testing.T) {
 	draft := newRandomDraft(t, db, 10, 4)
 
 	captains, err := draft.GetCaptains(context.Background(), db)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if len(captains) == 0 {
-		t.Fatal("Expected at least one captain")
-	}
+	require.NotEmpty(t, captains, "Expected at least one captain")
 
 	availablePlayers, err := draft.GetAvailablePlayers(context.Background(), db)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	captainToRemove := captains[0].CaptainId
 	found := false
@@ -178,25 +153,17 @@ func TestCaptainIsNotInDraftList(t *testing.T) {
 			break
 		}
 	}
-	if !found {
-		t.Fatal("Expected captain to exist in available players list")
-	}
+	require.True(t, found, "Expected captain to exist in available players list")
 
 	dap, _ := database.GetAllWhere[*DraftAvailablePlayer](context.Background(), db, func(_ context.Context, dap *DraftAvailablePlayer) bool {
 		return dap.DraftId == draft.ID && dap.PlayerId == captainToRemove
 	})
-	if len(dap) == 0 {
-		t.Fatal("Expected to find DraftAvailablePlayer for captain")
-	}
+	require.Len(t, dap, 1, "Expected to find DraftAvailablePlayer for captain")
 	err = db.Delete(context.Background(), dap[0])
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	err = draft.DynamicallyValid(context.Background(), db)
-	if err == nil {
-		t.Fatal("Expected draft without captain ID in list to be invalid")
-	}
+	assert.Error(t, err, "Expected draft without captain ID in list to be invalid")
 	fmt.Println(err)
 }
 
@@ -209,15 +176,11 @@ func TestCaptainsCanOnlyBeSelfDrafted(t *testing.T) {
 	otherCaptain := captains[1].CaptainId
 
 	err := draft.SelectByCaptain(context.Background(), otherCaptain, captainOnTheClock, db)
-	if err == nil {
-		t.Fatal("Expected draft of captain by another captain to be invalid")
-	}
+	assert.Error(t, err, "Expected draft of captain by another captain to be invalid")
 	fmt.Println(err)
 
 	err = draft.SelectByCaptain(context.Background(), captainOnTheClock, captainOnTheClock, db)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 }
 
 func TestCaptainsIsNotOnTheClock(t *testing.T) {
@@ -226,9 +189,7 @@ func TestCaptainsIsNotOnTheClock(t *testing.T) {
 
 	captains, _ := draft.GetCaptains(context.Background(), db)
 	err := draft.SelectByCaptain(context.Background(), captains[1].CaptainId, captains[1].CaptainId, db)
-	if err == nil {
-		t.Fatal("Expected selection by captain not on the clock to be invalid")
-	}
+	assert.Error(t, err, "Expected selection by captain not on the clock to be invalid")
 	fmt.Println(err)
 }
 
@@ -284,9 +245,7 @@ func TestDoubleSelectPlayer(t *testing.T) {
 
 	picks, _ := draft.GetPicks(context.Background(), db)
 	err := draft.SelectByCaptain(context.Background(), picks[0].UserId, captain2, db)
-	if err == nil {
-		t.Fatalf("Expected double-selection of player to be invalid")
-	}
+	assert.Error(t, err, "Expected double-selection of player to be invalid")
 	fmt.Println(err)
 }
 
@@ -296,9 +255,7 @@ func TestSelectValidButNotDraftableUserId(t *testing.T) {
 	captains, _ := draft.GetCaptains(context.Background(), db)
 	captain1 := captains[0].CaptainId
 	err := draft.SelectByCaptain(context.Background(), newStoredUser(t, db).ID, captain1, db)
-	if err == nil {
-		t.Fatalf("Expected double-selection of player to be invalid")
-	}
+	assert.Error(t, err, "Expected selection of non-draftable player to be invalid")
 	fmt.Println(err)
 }
 
@@ -314,30 +271,22 @@ func TestGetRatingForSelection(t *testing.T) {
 
 	for i := 0; i <= 20; i++ {
 		rating := draft.GetRatingForPick(format.PossibleRatings, i)
-		if rating != format.PossibleRatings[0] {
-			t.Fatalf("Expected rating to be %s, got %s", format.PossibleRatings[0], rating)
-		}
+		assert.Equal(t, format.PossibleRatings[0], rating)
 	}
 
 	for i := 21; i <= 40; i++ {
 		rating := draft.GetRatingForPick(format.PossibleRatings, i)
-		if rating != format.PossibleRatings[1] {
-			t.Fatalf("Expected rating to be %s, got %s", format.PossibleRatings[1], rating)
-		}
+		assert.Equal(t, format.PossibleRatings[1], rating)
 	}
 
 	for i := 41; i <= 70; i++ {
 		rating := draft.GetRatingForPick(format.PossibleRatings, i)
-		if rating != format.PossibleRatings[2] {
-			t.Fatalf("Expected rating to be %s, got %s", format.PossibleRatings[2], rating)
-		}
+		assert.Equal(t, format.PossibleRatings[2], rating)
 	}
 
 	for i := 71; i <= 100; i++ {
 		rating := draft.GetRatingForPick(format.PossibleRatings, i)
-		if rating != format.PossibleRatings[3] {
-			t.Fatalf("Expected rating to be %s, got %s", format.PossibleRatings[3], rating)
-		}
+		assert.Equal(t, format.PossibleRatings[3], rating)
 	}
 }
 
@@ -351,11 +300,8 @@ func TestRatingWithCutoffBelowPrevious(t *testing.T) {
 		format.PossibleRatings[2]: 70,
 	}
 
-	err := draft.ValidateRatingsCutoff(format.PossibleRatings)
-	if err == nil {
-		t.Fatal("Expected draft to be invalid")
-	}
-	fmt.Println(err)
+	assert.Error(t, draft.ValidateRatingsCutoff(format.PossibleRatings), "Expected draft to be invalid")
+	fmt.Println(draft.ValidateRatingsCutoff(format.PossibleRatings))
 }
 
 func TestRatingCutoffIsZero(t *testing.T) {
@@ -368,11 +314,8 @@ func TestRatingCutoffIsZero(t *testing.T) {
 		format.PossibleRatings[2]: 70,
 	}
 
-	err := draft.ValidateRatingsCutoff(format.PossibleRatings)
-	if err == nil {
-		t.Fatal("Expected draft to be invalid")
-	}
-	fmt.Println(err)
+	assert.Error(t, draft.ValidateRatingsCutoff(format.PossibleRatings), "Expected draft to be invalid")
+	fmt.Println(draft.ValidateRatingsCutoff(format.PossibleRatings))
 }
 
 func TestRatingCutoffIsMissing(t *testing.T) {
@@ -384,11 +327,8 @@ func TestRatingCutoffIsMissing(t *testing.T) {
 		format.PossibleRatings[1]: 10,
 	}
 
-	err := draft.ValidateRatingsCutoff(format.PossibleRatings)
-	if err == nil {
-		t.Fatal("Expected draft to be invalid")
-	}
-	fmt.Println(err)
+	assert.Error(t, draft.ValidateRatingsCutoff(format.PossibleRatings), "Expected draft to be invalid")
+	fmt.Println(draft.ValidateRatingsCutoff(format.PossibleRatings))
 }
 
 func TestRatingCutoffForLastRatingIdIsPresent(t *testing.T) {
@@ -402,11 +342,8 @@ func TestRatingCutoffForLastRatingIdIsPresent(t *testing.T) {
 		format.PossibleRatings[3]: 80,
 	}
 
-	err := draft.DynamicallyValid(context.Background(), db)
-	if err == nil {
-		t.Fatal("Expected draft to be invalid")
-	}
-	fmt.Println(err)
+	assert.Error(t, draft.DynamicallyValid(context.Background(), db), "Expected draft to be invalid")
+	fmt.Println(draft.DynamicallyValid(context.Background(), db))
 }
 
 func TestTeamCaptainAssignmentHasIncorrectCaptainId(t *testing.T) {
@@ -414,9 +351,7 @@ func TestTeamCaptainAssignmentHasIncorrectCaptainId(t *testing.T) {
 	draft := newRandomDraft(t, db, 100, 4)
 
 	captains, err := draft.GetCaptains(context.Background(), db)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// set the team ID for the first captain to the ID of the second
 	// captain's team. This should fail the dynamically-valid check
@@ -424,15 +359,9 @@ func TestTeamCaptainAssignmentHasIncorrectCaptainId(t *testing.T) {
 	teamId2 := captains[1].TeamId
 	captains[0].TeamId = teamId2
 
-	err = captains[0].DynamicallyValid(context.Background(), db)
-	if err == nil {
-		t.Fatal("Expected captain record to be invalid")
-	}
-	err = draft.DynamicallyValid(context.Background(), db)
-	if err == nil {
-		t.Fatal("Expected draft to be invalid")
-	}
-	fmt.Println(err)
+	assert.Error(t, captains[0].DynamicallyValid(context.Background(), db), "Expected captain record to be invalid")
+	assert.Error(t, draft.DynamicallyValid(context.Background(), db), "Expected draft to be invalid")
+	fmt.Println(draft.DynamicallyValid(context.Background(), db))
 }
 
 func TestGetRoundAndPick(t *testing.T) {
@@ -440,12 +369,8 @@ func TestGetRoundAndPick(t *testing.T) {
 	draft := newRandomDraft(t, db, 100, 4)
 
 	round, pick := draft.GetRoundAndPickFromPicks(context.Background(), db, 8)
-	if round != 3 {
-		t.Fatalf("Expected round to be 3, got %d", round)
-	}
-	if pick != 1 {
-		t.Fatalf("Expected pick to be 1, got %d", pick)
-	}
+	assert.Equal(t, 3, round, "Expected round to be 3")
+	assert.Equal(t, 1, pick, "Expected pick to be 1")
 }
 
 func TestDraftResults(t *testing.T) {
@@ -454,26 +379,18 @@ func TestDraftResults(t *testing.T) {
 
 	captains, _ := draft.GetCaptains(context.Background(), db)
 	results, err := draft.GetDraftSelectionsByCaptainId(context.Background(), db, captains[0].CaptainId)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(results) != 25 {
-		t.Fatalf("Expected results length to be 25, got %d", len(results))
-	}
+	require.NoError(t, err)
+	assert.Len(t, results, 25, "Expected results length to be 25")
 }
 
-func printOverlappingMembers(t *testing.T, db database.DatabaseProvider, team *Team, teams []*Team) int {
+func printOverlappingMembers(t *testing.T, db database.Provider, team *Team, teams []*Team) int {
 	i := 0
 	members, err := team.GetMembers(context.Background(), db)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	for _, otherTeam := range teams {
 		if otherTeam.ID != team.ID {
 			otherMembers, err := otherTeam.GetMembers(context.Background(), db)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			for _, member := range members {
 				for _, otherMember := range otherMembers {
 					if member == otherMember {
@@ -492,26 +409,20 @@ func TestTeamAssignmentAfterDraft(t *testing.T) {
 	draft := doRandomDraft(t, db, 100, 4)
 
 	err := draft.AssignDraftedPlayersToTeams(context.Background(), db)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	captains, _ := draft.GetCaptains(context.Background(), db)
 	teams := make([]*Team, 0)
 
 	for _, assignment := range captains {
 		team, err := database.GetExistingRecordById(context.Background(), db, &Team{}, assignment.TeamId.RecordId())
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		teams = append(teams, team)
 	}
 
 	for _, team := range teams {
 		i := printOverlappingMembers(t, db, team, teams)
-		if i != 0 {
-			t.Fatalf("Expected team overlapping members to be zero, but got %d", i)
-		}
+		assert.Zero(t, i, "Expected team overlapping members to be zero")
 	}
 }
 
@@ -519,34 +430,24 @@ func TestDoubleInitializeDraft(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	draft := newRandomDraft(t, db, 100, 4)
 
-	err := draft.Initialize(context.Background(), db, []database.UserId{})
-	if err == nil {
-		t.Fatal("Expected draft double-initialize to be invalid")
-	}
-	fmt.Println(err)
+	assert.Error(t, draft.Initialize(context.Background(), db, []database.UserId{}), "Expected draft double-initialize to be invalid")
+	fmt.Println(draft.Initialize(context.Background(), db, []database.UserId{}))
 }
 
 func TestInitializeDraftWithInvalidCaptain(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	draft := newUninitializedRandomDraft(t, db, 100, 4)
 
-	err := draft.Initialize(context.Background(), db, []database.UserId{database.InvalidUserId})
-	if err == nil {
-		t.Fatal("Expected invalid captain ID to be invalid")
-	}
-	fmt.Println(err)
+	assert.Error(t, draft.Initialize(context.Background(), db, []database.UserId{database.InvalidUserId}), "Expected invalid captain ID to be invalid")
+	fmt.Println(draft.Initialize(context.Background(), db, []database.UserId{database.InvalidUserId}))
 }
 
 func TestNoAssignedFormat(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	draft := newRandomDraft(t, db, 100, 4)
 	draft.Format = FormatId(database.InvalidRecordId)
-	err := database.UpdateOne(context.Background(), db, draft)
-	if err == nil {
-		t.Fatal("Expected draft to be invalid with empty format")
-	}
-
-	fmt.Println(err)
+	assert.Error(t, database.UpdateOne(context.Background(), db, draft), "Expected draft to be invalid with empty format")
+	fmt.Println(database.UpdateOne(context.Background(), db, draft))
 }
 
 func TestInvalidAvailablePlayerId(t *testing.T) {
@@ -559,10 +460,7 @@ func TestInvalidAvailablePlayerId(t *testing.T) {
 		PlayerId: database.InvalidUserId,
 	}
 	_, err := database.CreateOne(context.Background(), db, availablePlayer)
-	if err == nil {
-		t.Fatal("Expected draft to be invalid with invalid player")
-	}
-
+	assert.Error(t, err, "Expected draft to be invalid with invalid player")
 	fmt.Println(err)
 }
 
@@ -573,17 +471,11 @@ func TestDraftHasSelectionBeforeInitialization(t *testing.T) {
 	// This test verifies that draft initialization fails if picks already exist
 	// Since we're testing new schema, just verify initialization works for valid cases
 	captains, err := draft.GetCaptains(context.Background(), db)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(captains) != 0 {
-		t.Fatal("Expected draft to have no captains before initialization")
-	}
+	require.NoError(t, err)
+	assert.Empty(t, captains, "Expected draft to have no captains before initialization")
 
 	err = draft.Initialize(context.Background(), db, []database.UserId{newStoredUser(t, db).ID})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	fmt.Println("Draft initialized successfully")
 }
@@ -593,19 +485,12 @@ func TestDraftAddAvailablePlayers(t *testing.T) {
 	draft := newRandomDraft(t, db, 9, 2)
 	playerToAdd := newStoredUser(t, db)
 
-	err := draft.AssignDraftablePlayers(context.Background(), db, []database.UserId{playerToAdd.ID})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, draft.AssignDraftablePlayers(context.Background(), db, []database.UserId{playerToAdd.ID}))
 
 	availablePlayers, _ := draft.GetAvailablePlayers(context.Background(), db)
-	if len(availablePlayers) != 10 {
-		t.Fatalf("Expected to find 10 players, got %d", len(availablePlayers))
-	}
+	assert.Len(t, availablePlayers, 10, "Expected to find 10 players")
 
-	if !draft.IsInDraftList(context.Background(), db, playerToAdd.ID) {
-		t.Fatalf("Expected to find new player in draftable list")
-	}
+	assert.True(t, draft.IsInDraftList(context.Background(), db, playerToAdd.ID), "Expected to find new player in draftable list")
 }
 
 func TestDraftReAddAvailablePlayers(t *testing.T) {
@@ -615,17 +500,75 @@ func TestDraftReAddAvailablePlayers(t *testing.T) {
 	availablePlayers, _ := draft.GetAvailablePlayers(context.Background(), db)
 	playerToAdd := availablePlayers[0]
 
-	err := draft.AssignDraftablePlayers(context.Background(), db, []database.UserId{playerToAdd})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, draft.AssignDraftablePlayers(context.Background(), db, []database.UserId{playerToAdd}))
 
 	availablePlayers, _ = draft.GetAvailablePlayers(context.Background(), db)
-	if len(availablePlayers) != 10 {
-		t.Fatalf("Expected to find 10 players, got %d", len(availablePlayers))
-	}
+	assert.Len(t, availablePlayers, 10, "Expected to find 10 players")
 
-	if !draft.IsInDraftList(context.Background(), db, playerToAdd) {
-		t.Fatalf("Expected to find player in draftable list")
+	assert.True(t, draft.IsInDraftList(context.Background(), db, playerToAdd), "Expected to find player in draftable list")
+}
+
+func TestDraftPostCreateCreatesDraftFormat(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	draft := newDefaultStoredDraft(t, db)
+
+	draftFormats, err := database.GetAllWhere[*DraftFormat](context.Background(), db, func(_ context.Context, df *DraftFormat) bool {
+		return df.DraftId == draft.ID
+	})
+	require.NoError(t, err)
+	assert.Len(t, draftFormats, 1, "Expected 1 DraftFormat record")
+	assert.Equal(t, draft.Format, draftFormats[0].FormatId, "Expected DraftFormat.FormatId to match")
+}
+
+func TestDraftPostUpdateSyncsDraftFormat(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	draft := newDefaultStoredDraft(t, db)
+	newFormat := newDefaultStoredFormat(t, db)
+
+	draft.Format = newFormat.ID
+	require.NoError(t, database.UpdateOne(context.Background(), db, draft))
+
+	draftFormats, err := database.GetAllWhere[*DraftFormat](context.Background(), db, func(_ context.Context, df *DraftFormat) bool {
+		return df.DraftId == draft.ID
+	})
+	require.NoError(t, err)
+	assert.Len(t, draftFormats, 1, "Expected 1 DraftFormat record")
+	assert.Equal(t, newFormat.ID, draftFormats[0].FormatId, "Expected DraftFormat.FormatId to match")
+}
+
+func TestDraftFormatDuplicateDraftIdFails(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	draft := newDefaultStoredDraft(t, db)
+
+	duplicate := &DraftFormat{
+		DraftId:  draft.ID,
+		FormatId: draft.Format,
 	}
+	_, err := database.CreateOne(context.Background(), db, duplicate)
+	assert.Error(t, err, "Expected duplicate DraftFormat to fail")
+	fmt.Println(err)
+}
+
+func TestDraftFormatInvalidDraftId(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	format := newDefaultStoredFormat(t, db)
+
+	df := &DraftFormat{
+		DraftId:  DraftId(database.InvalidRecordId),
+		FormatId: format.ID,
+	}
+	assert.Error(t, df.DynamicallyValid(context.Background(), db), "Expected invalid draft ID to fail validation")
+	fmt.Println(df.DynamicallyValid(context.Background(), db))
+}
+
+func TestDraftFormatInvalidFormatId(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	draft := newDefaultStoredDraft(t, db)
+
+	df := &DraftFormat{
+		DraftId:  draft.ID,
+		FormatId: FormatId(database.InvalidRecordId),
+	}
+	assert.Error(t, df.DynamicallyValid(context.Background(), db), "Expected invalid format ID to fail validation")
+	fmt.Println(df.DynamicallyValid(context.Background(), db))
 }

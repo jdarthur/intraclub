@@ -91,11 +91,11 @@ func (s *IndividualMatch) SetId(id database.RecordId) {
 	s.ID = IndividualMatchId(id)
 }
 
-func (s *IndividualMatch) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (s *IndividualMatch) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return s.Editors
 }
 
-func (s *IndividualMatch) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (s *IndividualMatch) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -116,7 +116,7 @@ func (s *IndividualMatch) StaticallyValid() error {
 	return nil
 }
 
-func (s *IndividualMatch) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (s *IndividualMatch) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	err := database.ExistsById(ctx, db, &ScoringStructure{}, s.Structure.RecordId())
 	if err != nil {
 		return err
@@ -144,7 +144,7 @@ func (s *IndividualMatch) DynamicallyValid(ctx context.Context, db database.Data
 	return nil
 }
 
-func (s *IndividualMatch) Initialize(ctx context.Context, db database.DatabaseProvider) error {
+func (s *IndividualMatch) Initialize(ctx context.Context, db database.Provider) error {
 	if s._structure == nil {
 		v, err := database.GetExistingRecordById(ctx, db, &ScoringStructure{}, s.Structure.RecordId())
 		if err != nil {
@@ -197,7 +197,7 @@ func (s *IndividualMatch) WonSecondary(opp *IndividualMatch) bool {
 	return currentSubstructure.WinningScore(s.SecondaryValue, opp.SecondaryValue)
 }
 
-func (s *IndividualMatch) MarkStatus(ctx context.Context, db database.DatabaseProvider, newStatus IndividualMatchStatus, opp *IndividualMatch) error {
+func (s *IndividualMatch) MarkStatus(ctx context.Context, db database.Provider, newStatus IndividualMatchStatus, opp *IndividualMatch) error {
 	s.Status = newStatus
 
 	oppStatus := MatchInProgress
@@ -209,7 +209,7 @@ func (s *IndividualMatch) MarkStatus(ctx context.Context, db database.DatabasePr
 	return database.UpdateOne(ctx, db, opp)
 }
 
-func (s *IndividualMatch) AddCompletedSecondary(ctx context.Context, db database.DatabaseProvider) error {
+func (s *IndividualMatch) AddCompletedSecondary(ctx context.Context, db database.Provider) error {
 	completedValue := CompletedSecondary{
 		UsValue: s.SecondaryValue,
 	}
@@ -230,7 +230,7 @@ func (s *IndividualMatch) AddCompletedSecondary(ctx context.Context, db database
 	return database.UpdateOne(ctx, db, s)
 }
 
-func (s *IndividualMatch) IncrementSecondary(ctx context.Context, db database.DatabaseProvider) error {
+func (s *IndividualMatch) IncrementSecondary(ctx context.Context, db database.Provider) error {
 	s.SecondaryValue += 1
 
 	if s.Status != MatchUnstarted {
@@ -264,12 +264,12 @@ func (s *IndividualMatch) IncrementSecondary(ctx context.Context, db database.Da
 	return database.UpdateOne(ctx, db, s)
 }
 
-func (s *IndividualMatch) ResetSecondaryForOpponent(ctx context.Context, db database.DatabaseProvider, opp *IndividualMatch) error {
+func (s *IndividualMatch) ResetSecondaryForOpponent(ctx context.Context, db database.Provider, opp *IndividualMatch) error {
 	opp.SecondaryValue = 0
 	return database.UpdateOne(ctx, db, opp)
 }
 
-func (s *IndividualMatch) GetOpponent(ctx context.Context, db database.DatabaseProvider) (*IndividualMatch, error) {
+func (s *IndividualMatch) GetOpponent(ctx context.Context, db database.Provider) (*IndividualMatch, error) {
 	return database.GetExistingRecordById(ctx, db, &IndividualMatch{}, s.Opponent.RecordId())
 }
 
@@ -311,6 +311,6 @@ func (s *IndividualMatch) GetSecondaryPointTotal() int {
 	return output
 }
 
-func (s *IndividualMatch) BlankRecord() database.CrudRecord {
+func (s *IndividualMatch) NewRecord() database.CrudRecord {
 	return new(IndividualMatch)
 }

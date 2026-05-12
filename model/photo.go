@@ -79,11 +79,11 @@ func (p *Photo) SetOwner(userId database.UserId) {
 	p.Owner = userId
 }
 
-func (p *Photo) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (p *Photo) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{p.Owner, database.SysAdminUserId}
 }
 
-func (p *Photo) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (p *Photo) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{database.EveryoneUserId}
 }
 
@@ -98,7 +98,7 @@ func (p *Photo) StaticallyValid() error {
 	return nil
 }
 
-func (p *Photo) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (p *Photo) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	err := database.ExistsById(ctx, db, &User{}, p.Owner.RecordId())
 	if err != nil {
 		return err
@@ -118,6 +118,6 @@ func (p *Photo) SetId(id database.RecordId) {
 	p.ID = PhotoId(id)
 }
 
-func (p *Photo) BlankRecord() database.CrudRecord {
+func (p *Photo) NewRecord() database.CrudRecord {
 	return new(Photo)
 }

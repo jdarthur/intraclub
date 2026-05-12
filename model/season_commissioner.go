@@ -12,7 +12,7 @@ import (
 type SeasonCommissioner struct {
 	ID        database.RecordId `json:"id"`
 	SeasonId  SeasonId          `json:"season_id"`
-	UserId    database.UserId            `json:"user_id"`
+	UserId    database.UserId   `json:"user_id"`
 	CreatedAt time.Time         `json:"created_at"`
 	UpdatedAt time.Time         `json:"updated_at"`
 }
@@ -26,11 +26,11 @@ func (s *SeasonCommissioner) GetOwner() database.UserId {
 func (s *SeasonCommissioner) SetOwner(userId database.UserId) {}
 
 // AccessibleTo returns everyone as SeasonCommissioner records are public.
-func (s *SeasonCommissioner) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (s *SeasonCommissioner) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (s *SeasonCommissioner) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (s *SeasonCommissioner) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{database.SysAdminUserId}
 }
 
@@ -55,7 +55,7 @@ func (s *SeasonCommissioner) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that both the referenced Season and User records exist.
-func (s *SeasonCommissioner) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (s *SeasonCommissioner) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	if err := database.ExistsById(ctx, db, &Season{}, s.SeasonId.RecordId()); err != nil {
 		return err
 	}
@@ -80,6 +80,6 @@ func (s *SeasonCommissioner) SetUpdatedAt(updatedAt time.Time) {
 	s.UpdatedAt = updatedAt
 }
 
-func (s *SeasonCommissioner) BlankRecord() database.CrudRecord {
+func (s *SeasonCommissioner) NewRecord() database.CrudRecord {
 	return new(SeasonCommissioner)
 }

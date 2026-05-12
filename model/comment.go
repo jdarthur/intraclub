@@ -35,7 +35,7 @@ func (c *Comment) GetOwner() database.UserId {
 	return c.Owner
 }
 
-func (c *Comment) CanOnlyDelete(ctx context.Context, db database.DatabaseProvider, userId database.UserId) bool {
+func (c *Comment) CanOnlyDelete(ctx context.Context, db database.Provider, userId database.UserId) bool {
 	return userId != c.Owner
 }
 
@@ -71,7 +71,7 @@ func (c *Comment) SetId(id database.RecordId) {
 	c.ID = CommentId(id)
 }
 
-func (c *Comment) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (c *Comment) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	blurb, err := database.GetExistingRecordById(ctx, db, &Blurb{}, c.Blurb.RecordId())
 	if err != nil {
 		return []database.UserId{}
@@ -96,7 +96,7 @@ func (c *Comment) EditableBy(ctx context.Context, db database.DatabaseProvider) 
 	return editors
 }
 
-func (c *Comment) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (c *Comment) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -121,7 +121,7 @@ func (c *Comment) StaticallyValid() error {
 	return c.Reactions.StaticallyValid()
 }
 
-func (c *Comment) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (c *Comment) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	err := database.ExistsById(ctx, db, &User{}, c.Owner.RecordId())
 	if err != nil {
 		return err
@@ -158,6 +158,6 @@ func (c *Comment) DynamicallyValid(ctx context.Context, db database.DatabaseProv
 	return c.Reactions.DynamicallyValid(ctx, db)
 }
 
-func (c *Comment) BlankRecord() database.CrudRecord {
+func (c *Comment) NewRecord() database.CrudRecord {
 	return new(Comment)
 }

@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newStoredCommissionerProposalForSeason(t *testing.T, db database.DatabaseProvider, season *Season, mustBeUnanimous bool) *CommissionerProposal {
+func newStoredCommissionerProposalForSeason(t *testing.T, db database.Provider, season *Season, mustBeUnanimous bool) *CommissionerProposal {
 	proposal := NewCommissionerProposal()
 	proposal.Description = "test description"
 	proposal.SeasonId = season.ID
@@ -21,13 +21,13 @@ func newStoredCommissionerProposalForSeason(t *testing.T, db database.DatabasePr
 	return v
 }
 
-func newStoredCommissionerProposal(t *testing.T, db database.DatabaseProvider, mustBeUnanimous bool) (*Season, *CommissionerProposal) {
+func newStoredCommissionerProposal(t *testing.T, db database.Provider, mustBeUnanimous bool) (*Season, *CommissionerProposal) {
 	season, _ := newDefaultSeasonWithTeams(t, db, 4)
 	proposal := newStoredCommissionerProposalForSeason(t, db, season, mustBeUnanimous)
 	return season, proposal
 }
 
-func assertProposalStatus(t *testing.T, proposal *CommissionerProposal, db database.DatabaseProvider, expectAccepted, expectRejected bool) {
+func assertProposalStatus(t *testing.T, proposal *CommissionerProposal, db database.Provider, expectAccepted, expectRejected bool) {
 	accepted, rejected, err := proposal.Status(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)

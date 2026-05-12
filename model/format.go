@@ -56,7 +56,7 @@ func (l *FormatLine) StaticallyValid() error {
 	return nil
 }
 
-func (l *FormatLine) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (l *FormatLine) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	err := database.ExistsById(ctx, db, &Rating{}, l.Player1Rating.RecordId())
 	if err != nil {
 		return err
@@ -119,23 +119,23 @@ func (f *Format) GetOwner() database.UserId {
 	return f.UserId
 }
 
-func (f *Format) PreUpdate(ctx context.Context, db database.DatabaseProvider, existingValues database.CrudRecord) error {
+func (f *Format) PreUpdate(ctx context.Context, db database.Provider, existingValues database.CrudRecord) error {
 	return f.CheckHasAssignedDrafts(ctx, db, true)
 }
 
-func (f *Format) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
+func (f *Format) PreDelete(ctx context.Context, db database.Provider) error {
 	return f.CheckHasAssignedDrafts(ctx, db, false)
 }
 
-func (f *Format) PostCreate(ctx context.Context, db database.DatabaseProvider) error {
+func (f *Format) PostCreate(ctx context.Context, db database.Provider) error {
 	return f.syncFormatRatings(ctx, db)
 }
 
-func (f *Format) PostUpdate(ctx context.Context, db database.DatabaseProvider) error {
+func (f *Format) PostUpdate(ctx context.Context, db database.Provider) error {
 	return f.syncFormatRatings(ctx, db)
 }
 
-func (f *Format) syncFormatRatings(ctx context.Context, db database.DatabaseProvider) error {
+func (f *Format) syncFormatRatings(ctx context.Context, db database.Provider) error {
 	existing, err := database.GetAllWhere[*FormatRating](ctx, db, func(_ context.Context, fr *FormatRating) bool {
 		return fr.FormatId == f.ID
 	})
@@ -180,11 +180,11 @@ func NewFormat() *Format {
 	return &Format{}
 }
 
-func (f *Format) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (f *Format) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{f.UserId}
 }
 
-func (f *Format) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (f *Format) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -242,7 +242,7 @@ func (f *Format) IsRatingInOptionsList(r RatingId) bool {
 	return false
 }
 
-func (f *Format) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (f *Format) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	err := database.ExistsById(ctx, db, &User{}, f.UserId.RecordId())
 	if err != nil {
 		return err
@@ -266,7 +266,7 @@ func (f *Format) IsRatingValidForFormat(r RatingId) bool {
 	return false
 }
 
-func (f *Format) GetAssignedDrafts(ctx context.Context, db database.DatabaseProvider) ([]*Draft, error) {
+func (f *Format) GetAssignedDrafts(ctx context.Context, db database.Provider) ([]*Draft, error) {
 	draftFormats, err := database.GetAllWhere[*DraftFormat](ctx, db, func(_ context.Context, df *DraftFormat) bool {
 		return df.FormatId == f.ID
 	})
@@ -285,7 +285,7 @@ func (f *Format) GetAssignedDrafts(ctx context.Context, db database.DatabaseProv
 	return drafts, nil
 }
 
-func (f *Format) CheckHasAssignedDrafts(ctx context.Context, db database.DatabaseProvider, isUpdate bool) error {
+func (f *Format) CheckHasAssignedDrafts(ctx context.Context, db database.Provider, isUpdate bool) error {
 	draftFormats, err := database.GetAllWhere[*DraftFormat](ctx, db, func(_ context.Context, df *DraftFormat) bool {
 		return df.FormatId == f.ID
 	})
@@ -304,6 +304,6 @@ func (f *Format) CheckHasAssignedDrafts(ctx context.Context, db database.Databas
 	return nil
 }
 
-func (f *Format) BlankRecord() database.CrudRecord {
+func (f *Format) NewRecord() database.CrudRecord {
 	return new(Format)
 }

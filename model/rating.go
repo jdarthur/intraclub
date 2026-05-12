@@ -64,7 +64,7 @@ func (r *Rating) GetOwner() database.UserId {
 	return r.UserId
 }
 
-func (r *Rating) PreDelete(ctx context.Context, db database.DatabaseProvider) error {
+func (r *Rating) PreDelete(ctx context.Context, db database.Provider) error {
 	formatRatings, err := database.GetAllWhere[*FormatRating](ctx, db, func(_ context.Context, fr *FormatRating) bool {
 		return fr.RatingId == r.ID
 	})
@@ -85,11 +85,11 @@ func NewRating() *Rating {
 	return &Rating{}
 }
 
-func (r *Rating) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (r *Rating) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return database.SysAdminAndUsers(r.UserId)
 }
 
-func (r *Rating) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (r *Rating) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
@@ -118,10 +118,10 @@ func (r *Rating) StaticallyValid() error {
 	return nil
 }
 
-func (r *Rating) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (r *Rating) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	return database.ExistsById(ctx, db, &User{}, r.UserId.RecordId())
 }
 
-func (r *Rating) BlankRecord() database.CrudRecord {
+func (r *Rating) NewRecord() database.CrudRecord {
 	return new(Rating)
 }

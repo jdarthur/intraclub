@@ -14,7 +14,7 @@ type DraftCaptain struct {
 	ID         database.RecordId `json:"id"`
 	DraftId    DraftId           `json:"draft_id"`
 	TeamId     TeamId            `json:"team_id"`
-	CaptainId  database.UserId            `json:"captain_id"`
+	CaptainId  database.UserId   `json:"captain_id"`
 	DraftOrder int               `json:"draft_order"`
 	CreatedAt  time.Time         `json:"created_at"`
 	UpdatedAt  time.Time         `json:"updated_at"`
@@ -49,7 +49,7 @@ func (d *DraftCaptain) StaticallyValid() error {
 }
 
 // DynamicallyValid verifies that the referenced Draft, Team, and User records all exist.
-func (d *DraftCaptain) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (d *DraftCaptain) DynamicallyValid(ctx context.Context, db database.Provider) error {
 
 	// ensure tha the user ID exists
 	err := database.ExistsById(ctx, db, &User{}, d.CaptainId.RecordId())
@@ -79,11 +79,11 @@ func (d *DraftCaptain) DynamicallyValid(ctx context.Context, db database.Databas
 	return nil
 }
 
-func (d *DraftCaptain) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (d *DraftCaptain) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	return database.AccessibleToEveryone
 }
 
-func (d *DraftCaptain) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (d *DraftCaptain) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{database.SysAdminUserId}
 }
 
@@ -102,6 +102,6 @@ func (d *DraftCaptain) SetUpdatedAt(updatedAt time.Time) {
 	d.UpdatedAt = updatedAt
 }
 
-func (d *DraftCaptain) BlankRecord() database.CrudRecord {
+func (d *DraftCaptain) NewRecord() database.CrudRecord {
 	return new(DraftCaptain)
 }

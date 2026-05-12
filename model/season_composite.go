@@ -18,7 +18,7 @@ func (s SeasonComposite) StaticallyValid() error {
 	return nil
 }
 
-func GetMySeasons(ctx context.Context, db database.DatabaseProvider, token *api.AuthToken, asPlayer, asCommissioner bool) ([]*SeasonComposite, error) {
+func GetMySeasons(ctx context.Context, db database.Provider, token *api.AuthToken, asPlayer, asCommissioner bool) ([]*SeasonComposite, error) {
 	if asPlayer {
 		if asCommissioner {
 			return GetMySeasonsAsPlayerOrCommissioner(ctx, db, token)
@@ -30,21 +30,21 @@ func GetMySeasons(ctx context.Context, db database.DatabaseProvider, token *api.
 	return nil, fmt.Errorf("must get seasons as either player or commissioner or both, not neither")
 }
 
-func GetMySeasonsAsCommissioner(ctx context.Context, db database.DatabaseProvider, token *api.AuthToken) ([]*SeasonComposite, error) {
+func GetMySeasonsAsCommissioner(ctx context.Context, db database.Provider, token *api.AuthToken) ([]*SeasonComposite, error) {
 	drafts, err := database.GetAllWhere[*Draft](ctx, db, func(_ context.Context, c *Draft) bool {
 		return isUserCommissioner(c, token.UserId)
 	})
 	return getSeasonComposites(ctx, db, drafts, err)
 }
 
-func GetMySeasonsAsPlayer(ctx context.Context, db database.DatabaseProvider, token *api.AuthToken) ([]*SeasonComposite, error) {
+func GetMySeasonsAsPlayer(ctx context.Context, db database.Provider, token *api.AuthToken) ([]*SeasonComposite, error) {
 	drafts, err := database.GetAllWhere[*Draft](ctx, db, func(_ context.Context, c *Draft) bool {
 		return isUserPlayer(ctx, c, token.UserId, db)
 	})
 	return getSeasonComposites(ctx, db, drafts, err)
 }
 
-func GetMySeasonsAsPlayerOrCommissioner(ctx context.Context, db database.DatabaseProvider, token *api.AuthToken) ([]*SeasonComposite, error) {
+func GetMySeasonsAsPlayerOrCommissioner(ctx context.Context, db database.Provider, token *api.AuthToken) ([]*SeasonComposite, error) {
 	drafts, err := database.GetAllWhere[*Draft](ctx, db, func(_ context.Context, c *Draft) bool {
 		return isUserPlayerOrCommissioner(ctx, c, token.UserId, db)
 	})
@@ -53,7 +53,7 @@ func GetMySeasonsAsPlayerOrCommissioner(ctx context.Context, db database.Databas
 
 // isUserPlayer checks if this user is a player in a particular season,
 // by checking if they were selected in the season's draft.
-func isUserPlayer(ctx context.Context, c *Draft, userId database.UserId, db database.DatabaseProvider) bool {
+func isUserPlayer(ctx context.Context, c *Draft, userId database.UserId, db database.Provider) bool {
 	picks, err := c.GetPicks(ctx, db)
 	if err != nil {
 		return false
@@ -73,14 +73,14 @@ func isUserCommissioner(c *Draft, userId database.UserId) bool {
 
 // isUserPlayerOrCommissioner checks if the user is either a player or
 // the commissioner of the provided Draft
-func isUserPlayerOrCommissioner(ctx context.Context, c *Draft, userId database.UserId, db database.DatabaseProvider) bool {
+func isUserPlayerOrCommissioner(ctx context.Context, c *Draft, userId database.UserId, db database.Provider) bool {
 	return isUserCommissioner(c, userId) || isUserPlayer(ctx, c, userId, db)
 }
 
 // getSeasonComposite takes a list of Draft records and returns a list of
 // SeasonComposite records. This will pull all the associated Season records
 // for a Draft if a season has been created.
-func getSeasonComposites(ctx context.Context, db database.DatabaseProvider, drafts []*Draft, err error) ([]*SeasonComposite, error) {
+func getSeasonComposites(ctx context.Context, db database.Provider, drafts []*Draft, err error) ([]*SeasonComposite, error) {
 	// The error from the "Get all drafts" query is passed into this function for a bit of
 	// code reuse. Just return the error to the end-caller if it is non-nil
 	if err != nil {

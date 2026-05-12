@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func SeedDevData(db database.DatabaseProvider) {
+func SeedDevData(db database.Provider) {
 	user := seedDevUsers(db)
 	seedDevScoringStructures(db, user.ID)
 	seedDevRatings(db, user.ID)
@@ -21,7 +21,7 @@ func getDevContext() context.Context {
 	return ctx
 }
 
-func seedDevUsers(db database.DatabaseProvider) *User {
+func seedDevUsers(db database.Provider) *User {
 	user1 := NewUser()
 	user1.FirstName = "JD"
 	user1.LastName = "Arthur"
@@ -37,7 +37,7 @@ func seedDevUsers(db database.DatabaseProvider) *User {
 	return v
 }
 
-func seedDevScoringStructures(db database.DatabaseProvider, u database.UserId) {
+func seedDevScoringStructures(db database.Provider, u database.UserId) {
 	ctx := getDevContext()
 	scoringStructure := NewScoringStructure()
 	scoringStructure.Name = "Tennis standard set"
@@ -76,7 +76,7 @@ var MensOne = "Men's 1"
 var MensTwo = "Men's 2"
 var MensThree = "Men's 3"
 
-func seedDevRatings(db database.DatabaseProvider, u database.UserId) {
+func seedDevRatings(db database.Provider, u database.UserId) {
 	ctx := getDevContext()
 	r := NewRating()
 	r.UserId = u
@@ -109,7 +109,7 @@ func seedDevRatings(db database.DatabaseProvider, u database.UserId) {
 	}
 }
 
-func seedDevFormat(db database.DatabaseProvider, u database.UserId) {
+func seedDevFormat(db database.Provider, u database.UserId) {
 	ctx := getDevContext()
 	ratings, err := database.GetAll[*Rating](ctx, db)
 	if err != nil {

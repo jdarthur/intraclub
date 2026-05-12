@@ -8,7 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newStoredWeeklyMatchup(t *testing.T, db database.DatabaseProvider) (*Season, *WeeklyMatchup) {
+func newStoredWeeklyMatchup(t *testing.T, db database.Provider) (*Season, *WeeklyMatchup) {
 	season, _ := newDefaultSeasonWithTeams(t, db, 4)
 	week := newStoredWeek(t, db, season)
 

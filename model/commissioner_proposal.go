@@ -15,18 +15,18 @@ import (
 // after-the-fact or modifying a player's rating). This can be ratified either by
 // majority rule (50%+1), or by unanimous consent, based on the type of proposal
 type CommissionerProposal struct {
-	ID              database.RecordId // unique ID for this proposal
-	Description     string            // description of the change or action
-	SeasonId        SeasonId          // season that this pertains to
-	Votes           map[database.UserId]bool   // votes of all commissioners or team captains, true == vote in favor, false == vote against
-	MustBeUnanimous bool              // true if this proposal must get unanimous consent to pass
+	ID              database.RecordId        // unique ID for this proposal
+	Description     string                   // description of the change or action
+	SeasonId        SeasonId                 // season that this pertains to
+	Votes           map[database.UserId]bool // votes of all commissioners or team captains, true == vote in favor, false == vote against
+	MustBeUnanimous bool                     // true if this proposal must get unanimous consent to pass
 }
 
 func (c *CommissionerProposal) GetOwner() database.UserId {
 	return database.InvalidUserId
 }
 
-func (c *CommissionerProposal) PreUpdate(ctx context.Context, db database.DatabaseProvider, existingValues database.CrudRecord) error {
+func (c *CommissionerProposal) PreUpdate(ctx context.Context, db database.Provider, existingValues database.CrudRecord) error {
 	old := existingValues.(*CommissionerProposal)
 	if c.MustBeUnanimous != old.MustBeUnanimous {
 		return fmt.Errorf("'must be unanimous' constraint can not be updated after creation")
@@ -52,12 +52,12 @@ func (c *CommissionerProposal) SetId(id database.RecordId) {
 	c.ID = id
 }
 
-func (c *CommissionerProposal) EditableBy(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (c *CommissionerProposal) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	// proposal is editable only by the
 	return EditableBySeason(ctx, db, c.SeasonId)
 }
 
-func (c *CommissionerProposal) AccessibleTo(ctx context.Context, db database.DatabaseProvider) []database.UserId {
+func (c *CommissionerProposal) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
 	// a commissioner proposal is only accessible to the other commissioners and the
 	// team captains involved in the given Season.
 	voters, err := c.GetAllVoterIds(ctx, db)
@@ -81,7 +81,7 @@ func (c *CommissionerProposal) StaticallyValid() error {
 	return nil
 }
 
-func (c *CommissionerProposal) DynamicallyValid(ctx context.Context, db database.DatabaseProvider) error {
+func (c *CommissionerProposal) DynamicallyValid(ctx context.Context, db database.Provider) error {
 	// this will return an error if the SeasonId on this proposal is not valid,
 	// so we don't need to check for that scenario again in this function
 	possibleVoters, err := c.GetAllVoterIds(ctx, db)
@@ -105,7 +105,7 @@ func (c *CommissionerProposal) DynamicallyValid(ctx context.Context, db database
 	return nil
 }
 
-func (c *CommissionerProposal) GetAllVoterIds(ctx context.Context, db database.DatabaseProvider) ([]database.UserId, error) {
+func (c *CommissionerProposal) GetAllVoterIds(ctx context.Context, db database.Provider) ([]database.UserId, error) {
 	// get underlying season
 	season, err := database.GetExistingRecordById(ctx, db, &Season{}, c.SeasonId.RecordId())
 	if err != nil {
@@ -126,7 +126,7 @@ func (c *CommissionerProposal) GetAllVoterIds(ctx context.Context, db database.D
 	return append(output, teamCaptains...), nil
 }
 
-func (c *CommissionerProposal) Vote(ctx context.Context, db database.DatabaseProvider, voterId database.UserId, vote bool) error {
+func (c *CommissionerProposal) Vote(ctx context.Context, db database.Provider, voterId database.UserId, vote bool) error {
 	// add vote to the map
 	c.Votes[voterId] = vote
 
@@ -150,7 +150,7 @@ func (c *CommissionerProposal) VotesToPassOrFail(voterIds []database.UserId) (vo
 	}
 }
 
-func (c *CommissionerProposal) Status(ctx context.Context, db database.DatabaseProvider) (accepted, rejected bool, err error) {
+func (c *CommissionerProposal) Status(ctx context.Context, db database.Provider) (accepted, rejected bool, err error) {
 	voterIds, err := c.GetAllVoterIds(ctx, db)
 	if err != nil {
 		return false, false, err
@@ -184,6 +184,6 @@ func (c *CommissionerProposal) Status(ctx context.Context, db database.DatabaseP
 	return false, false, nil
 }
 
-func (c *CommissionerProposal) BlankRecord() database.CrudRecord {
+func (c *CommissionerProposal) NewRecord() database.CrudRecord {
 	return new(CommissionerProposal)
 }
