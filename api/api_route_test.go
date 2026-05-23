@@ -67,7 +67,7 @@ func (s simpleRoute) RequestBody() (*testRouteRecord, bool) {
 	return new(testRouteRecord), false
 }
 
-func (s simpleRoute) Handler(request ApiRequest[*testRouteRecord]) (any, int, error) {
+func (s simpleRoute) Handler(request Request[*testRouteRecord]) (any, int, error) {
 	return gin.H{"message": "ok"}, http.StatusOK, nil
 }
 
@@ -81,7 +81,7 @@ func (r routeWithBody) RequestBody() (*testRouteRecord, bool) {
 	return new(testRouteRecord), true
 }
 
-func (r routeWithBody) Handler(request ApiRequest[*testRouteRecord]) (any, int, error) {
+func (r routeWithBody) Handler(request Request[*testRouteRecord]) (any, int, error) {
 	return gin.H{"value": request.Body.Value}, http.StatusOK, nil
 }
 
@@ -95,7 +95,7 @@ func (r routeWithId) RequestBody() (*testRouteRecord, bool) {
 	return new(testRouteRecord), false
 }
 
-func (r routeWithId) Handler(request ApiRequest[*testRouteRecord]) (any, int, error) {
+func (r routeWithId) Handler(request Request[*testRouteRecord]) (any, int, error) {
 	return gin.H{"id": request.PathId.String()}, http.StatusOK, nil
 }
 
@@ -324,7 +324,7 @@ func TestApiRequestParseQuery(t *testing.T) {
 		Age  []string `json:"age"`
 	}
 
-	apiReq := ApiRequest[*testRouteRecord]{
+	apiReq := Request[*testRouteRecord]{
 		request: req,
 	}
 	err := apiReq.ParseQuery(&parsed)
@@ -345,7 +345,7 @@ func TestApiRequestParseQueryEmpty(t *testing.T) {
 
 	var parsed map[string]any
 
-	apiReq := ApiRequest[*testRouteRecord]{
+	apiReq := Request[*testRouteRecord]{
 		request: req,
 	}
 	err := apiReq.ParseQuery(&parsed)

@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// PathIdField is the field in a request to an ApiRoute
+// PathIdField is the field in a request to a Route
 // that specifies a RecordId, such as a user ID in `GET /users/:id`
 var PathIdField = "id"
 
@@ -19,41 +19,11 @@ func AppendPathId(route string) string {
 	return fmt.Sprintf("%s/:%s", route, PathIdField)
 }
 
-// HttpMethod is a type used to enforce method correctness in ApiRoute
-type HttpMethod int
-
-const (
-	HttpMethodGet HttpMethod = iota
-	HttpMethodPost
-	HttpMethodPut
-	HttpMethodDelete
-	HttpMethodInvalid
-)
-
-func (m HttpMethod) String() string {
-	switch m {
-	case HttpMethodGet:
-		return "GET"
-	case HttpMethodPost:
-		return "POST"
-	case HttpMethodPut:
-		return "PUT"
-	case HttpMethodDelete:
-		return "DELETE"
-	default:
-		return "INVALID"
-	}
-}
-
-func (m HttpMethod) Valid() bool {
-	return m < HttpMethodInvalid
-}
-
-// ApiRoute is a generic API route interface which can be accessed
+// Route is a generic API route interface which can be accessed
 // at a particular path, with an optional request body and with a
 // handler function which returns a response value, an HTTP response
 // code, and an error if the request was invalid or something went wrong
-type ApiRoute[T database.Validatable] interface {
+type Route[T database.Validatable] interface {
 
 	// Path returns the HttpMethod and route for this ApiRout
 	Path() (method HttpMethod, route string)
@@ -70,15 +40,15 @@ type ApiRoute[T database.Validatable] interface {
 	// valid) or an error and unsuccessful status code (if the request failed
 	// for whatever reason, e.g. invalid body, failed access control checks,
 	// internal server such as database issues, etc.)
-	Handler(request ApiRequest[T]) (response any, statusCode int, error error)
+	Handler(request Request[T]) (response any, statusCode int, error error)
 }
 
-// ApiRequest is a typed struct used to pass in a defined set of parameters to an ApiRoute
-type ApiRequest[T database.Validatable] struct {
+// Request is a typed struct used to pass in a defined set of parameters to a Route
+type Request[T database.Validatable] struct {
 	// PathId is the RecordId parsed out of the path e.g. the `id` from `/user/:id`
 	PathId database.RecordId
 
-	// Body is the request body from the gin.Context, if applicable to the ApiRoute.
+	// Body is the request body from the gin.Context, if applicable to the Route.
 	// This can be validated using the Validatable functions defined for the type
 	Body T
 
@@ -91,7 +61,7 @@ type ApiRequest[T database.Validatable] struct {
 	Context context.Context
 
 	// DatabaseProvider is a DatabaseProvider interface passed to the
-	// ApiRoute if it needs to do something in the database. This will not be
+	// Route if it needs to do something in the database. This will not be
 	// used unless the route is manually using the RouteFamily struct
 	DatabaseProvider database.Provider
 
@@ -102,7 +72,7 @@ type ApiRequest[T database.Validatable] struct {
 // This allows you to create a structured format for query parameters for a
 // given ApiRequest type rather than parsing out key/value pairs manually in a
 // route handler function.
-func (a ApiRequest[T]) ParseQuery(v any) error {
+func (a Request[T]) ParseQuery(v any) error {
 	m := make(map[string]any)
 	for key, value := range a.request.URL.Query() {
 		m[key] = value
@@ -135,7 +105,7 @@ type RouteFamily[T database.Validatable] struct {
 
 // Handle adds one or more ApiRoutes to this RouteFamily and applies the
 // routes to the provided gin.Engine.
-func (r *RouteFamily[T]) Handle(e *gin.RouterGroup, routes ...ApiRoute[T]) {
+func (r *RouteFamily[T]) Handle(e *gin.RouterGroup, routes ...Route[T]) {
 	// create a RouteWrapper for each ApiRoute provided
 	for _, route := range routes {
 		wrapper := &routeWrapper[T]{
@@ -152,7 +122,7 @@ func (r *RouteFamily[T]) Handle(e *gin.RouterGroup, routes ...ApiRoute[T]) {
 
 // addToEngine adds all the routes in the wrapper list to the given gin.Engine.
 // This is a shim layer to convert the RouteFamily syntax into the format
-// needed by a gin.Engine (i.e. getting the method and route from each ApiRoute
+// needed by a gin.Engine (i.e. getting the method and route from each Route
 // and applying the middleware and RouteWrapper.Handle function to the engine)
 func (r *RouteFamily[T]) addToEngine(e *gin.RouterGroup) {
 	// handle each ApiRoute in the family
@@ -170,17 +140,17 @@ func (r *RouteFamily[T]) addToEngine(e *gin.RouterGroup) {
 	}
 }
 
-// routeWrapper is an internal struct that wraps an ApiRoute with a DatabaseProvider
-// and stores whether the given ApiRoute will need authentication. This is used inside
-// the RouteFamily helper functions and applies common DB and auth logic to an ApiRoute
+// routeWrapper is an internal struct that wraps an Route with a DatabaseProvider
+// and stores whether the given Route will need authentication. This is used inside
+// the RouteFamily helper functions and applies common DB and auth logic to an Route
 type routeWrapper[T database.Validatable] struct {
-	Route    ApiRoute[T]
+	Route    Route[T]
 	Database database.Provider
 	UseAuth  bool
 }
 
 // Handle parses a raw request from a gin.Context, gets the token from the request (if
-// necessary) and converts it into a typed ApiRequest which is passed to the ApiRoute's
+// necessary) and converts it into a typed ApiRequest which is passed to the Route's
 // handler function for processing.
 func (r *routeWrapper[T]) Handle(c *gin.Context) {
 	var token *AuthToken
@@ -203,7 +173,7 @@ func (r *routeWrapper[T]) Handle(c *gin.Context) {
 	}
 
 	// get the request into the format that ApiRoute implementers will expect
-	apiRequest := ApiRequest[T]{
+	apiRequest := Request[T]{
 		PathId:           pathId,
 		Token:            token,
 		Context:          c.Request.Context(),
@@ -233,7 +203,7 @@ func (r *routeWrapper[T]) Handle(c *gin.Context) {
 
 // getPathId parses the PathIdField from the raw request (if present) and converts
 // it into a RecordId which will be passed into the ApiRequest provided to the
-// ApiRoute Handler function which processes the request
+// Route Handler function which processes the request
 func (r *routeWrapper[T]) getPathId(c *gin.Context) (database.RecordId, error) {
 	// get the :id field from the request path
 	v, ok := c.Params.Get(PathIdField)

@@ -31,8 +31,8 @@ var CrudWrapperFunctionAll = []CrudWrapperFunctionType{
 	CrudWrapperFunctionDelete,
 }
 
-// genericApiRoute is a generic implementation of the ApiRoute[T] interface
-// and is used to create ApiRoute objects which can be passed into a RouteFamily.
+// genericApiRoute is a generic implementation of the Route[T] interface
+// and is used to create Route objects which can be passed into a RouteFamily.
 // This is used in CrudCommon.HandleRouteTypes to auto-generate API routes from
 // boilerplate CRUD methods defined on CrudCommon
 type genericApiRoute[T database.CrudRecord] struct {
@@ -40,7 +40,7 @@ type genericApiRoute[T database.CrudRecord] struct {
 	path           string
 	requestBody    func() T
 	useRequestBody bool
-	handle         func(route ApiRoute[T], request ApiRequest[T]) (any, int, error)
+	handle         func(route Route[T], request Request[T]) (any, int, error)
 }
 
 func (g genericApiRoute[T]) Path() (HttpMethod, string) {
@@ -51,7 +51,7 @@ func (g genericApiRoute[T]) RequestBody() (T, bool) {
 	return g.requestBody(), g.useRequestBody
 }
 
-func (g genericApiRoute[T]) Handler(request ApiRequest[T]) (any, int, error) {
+func (g genericApiRoute[T]) Handler(request Request[T]) (any, int, error) {
 	return g.handle(g, request)
 }
 
@@ -93,7 +93,7 @@ func NewCrudCommon[T database.CrudRecord](createFunc func() T, userAuth bool, db
 }
 
 // createCrudRecord creates a CrudRecord based on the given ApiRequest
-func (c *CrudCommon[T]) createCrudRecord(route ApiRoute[T], request ApiRequest[T]) (any, int, error) {
+func (c *CrudCommon[T]) createCrudRecord(route Route[T], request Request[T]) (any, int, error) {
 
 	// token must be passed into any create request so that we can assign an owner to the record
 	// for later API requests such as updates, subsequent access-controlled reads and deletes
@@ -123,7 +123,7 @@ func (c *CrudCommon[T]) createCrudRecord(route ApiRoute[T], request ApiRequest[T
 // getCrudRecordById gets a CrudRecord base on the type T that this CrudCommon is configured to use,
 // verifying that the user who made the ApiRequest is allowed to access the record based on the
 // type-specific AccessibleTo logic for the CrudRecord type
-func (c *CrudCommon[T]) getCrudRecordById(route ApiRoute[T], req ApiRequest[T]) (t any, status int, err error) {
+func (c *CrudCommon[T]) getCrudRecordById(route Route[T], req Request[T]) (t any, status int, err error) {
 	// we need to instantiate a record to pass into GetOneById
 	recordType, _ := route.RequestBody()
 
@@ -141,7 +141,7 @@ func (c *CrudCommon[T]) getCrudRecordById(route ApiRoute[T], req ApiRequest[T]) 
 
 // getAllCrudRecordsById gets all CrudRecord of the type T that this CrudCommon is configured to use,
 // which are accessible to the user who made the ApiRequest.
-func (c *CrudCommon[T]) getAllCrudRecords(route ApiRoute[T], req ApiRequest[T]) (t any, status int, err error) {
+func (c *CrudCommon[T]) getAllCrudRecords(route Route[T], req Request[T]) (t any, status int, err error) {
 	wac := database.WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: getTokenUserIdIfExists(req)}
 	v, err := wac.GetAll(req.Context)
 	if err != nil {
@@ -151,7 +151,7 @@ func (c *CrudCommon[T]) getAllCrudRecords(route ApiRoute[T], req ApiRequest[T]) 
 }
 
 // deleteCrudRecordById deletes a CrudRecord by RecordId as long as the user in the provided ApiRequest is able to do so
-func (c *CrudCommon[T]) deleteCrudRecordById(route ApiRoute[T], req ApiRequest[T]) (t any, status int, err error) {
+func (c *CrudCommon[T]) deleteCrudRecordById(route Route[T], req Request[T]) (t any, status int, err error) {
 	if req.Token == nil {
 		return t, http.StatusBadRequest, errors.New("token must be passed into delete route")
 	}
@@ -170,7 +170,7 @@ func (c *CrudCommon[T]) deleteCrudRecordById(route ApiRoute[T], req ApiRequest[T
 	return gin.H{ResourceKey: v}, http.StatusOK, err
 }
 
-func (c *CrudCommon[T]) updateCrudRecord(route ApiRoute[T], request ApiRequest[T]) (t any, status int, err error) {
+func (c *CrudCommon[T]) updateCrudRecord(route Route[T], request Request[T]) (t any, status int, err error) {
 	if request.Token == nil {
 		return t, http.StatusBadRequest, errors.New("token must be passed into delete route")
 	}
@@ -200,7 +200,7 @@ func (c *CrudCommon[T]) HandleRouteTypes(e *gin.RouterGroup, crudRouteTypes ...C
 	}
 
 	// generate as many genericApiRoutes as we need
-	routes := make([]ApiRoute[T], 0, len(crudRouteTypes))
+	routes := make([]Route[T], 0, len(crudRouteTypes))
 	for _, f := range crudRouteTypes {
 		r := genericApiRoute[T]{requestBody: c.CreateRecord}
 		if f == CrudWrapperFunctionGetOne {
@@ -231,7 +231,7 @@ func (c *CrudCommon[T]) HandleRouteTypes(e *gin.RouterGroup, crudRouteTypes ...C
 	f.Handle(e, routes...)
 }
 
-func getTokenUserIdIfExists[T database.CrudRecord](req ApiRequest[T]) database.UserId {
+func getTokenUserIdIfExists[T database.CrudRecord](req Request[T]) database.UserId {
 	userId := database.InvalidUserId
 	if req.Token != nil {
 		userId = req.Token.UserId

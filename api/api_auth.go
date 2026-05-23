@@ -18,18 +18,31 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var AuthTokenHeaderValue = "X-INTRACLUB-TOKEN"
-var JwtCertFile = "token.crt"
-var JwtKeyFile = "token.key"
-var JwtLifetime = time.Hour * 2
+// AuthTokenHeaderValue is the HTTP header name used to carry the JWT auth token.
+const AuthTokenHeaderValue = "X-INTRACLUB-TOKEN"
 
+// JwtCertFile is the filename for the persisted JWT public key certificate.
+const JwtCertFile = "token.crt"
+
+// JwtKeyFile is the filename for the persisted JWT private key.
+const JwtKeyFile = "token.key"
+
+// JwtLifetime is the duration for which issued tokens remain valid.
+const JwtLifetime = time.Hour * 2
+
+// JwtPublicKey holds the loaded ECDSA public key used to verify JWT signatures.
 var JwtPublicKey *ecdsa.PublicKey
+
+// JwtPrivateKey holds the loaded ECDSA private key used to sign JWT tokens.
 var JwtPrivateKey *ecdsa.PrivateKey
 
+// AuthToken represents a validated JWT token containing the authenticated user's ID.
 type AuthToken struct {
 	UserId database.UserId
 }
 
+// GenerateToken creates a new JWT token for the given user ID, signed with the
+// private key and set to expire after JwtLifetime.
 func GenerateToken(userId database.RecordId) (string, error) {
 	token := jwt.New(jwt.SigningMethodES512)
 	token.Claims = jwt.RegisteredClaims{
@@ -46,9 +59,11 @@ func GenerateToken(userId database.RecordId) (string, error) {
 	return tokenStr, nil
 }
 
+// ValidateToken parses and verifies a JWT string using the public key, returning
+// the embedded user ID. Returns an error if the token is malformed, expired, or
+// signed with an unexpected algorithm.
 func ValidateToken(token string) (*AuthToken, error) {
-
-	parse, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+	parsed, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -59,7 +74,7 @@ func ValidateToken(token string) (*AuthToken, error) {
 		return nil, err
 	}
 
-	subject, err := parse.Claims.GetSubject()
+	subject, err := parsed.Claims.GetSubject()
 	if err != nil {
 		return nil, err
 	}
@@ -74,8 +89,12 @@ func ValidateToken(token string) (*AuthToken, error) {
 	}, nil
 }
 
+// UserType is the database record type used to verify that authenticated users still exist.
 var UserType database.CrudRecord
 
+// GetToken extracts the JWT from the request header, validates it, and optionally
+// checks that the user still exists in the database. Returns nil if no token is
+// present, allowing unauthenticated access.
 func GetToken(c *gin.Context, db database.Provider) (*AuthToken, error) {
 	token := c.Request.Header.Get(AuthTokenHeaderValue)
 	if token == "" {
@@ -97,6 +116,7 @@ func GetToken(c *gin.Context, db database.Provider) (*AuthToken, error) {
 	return valid, nil
 }
 
+// doesFileExist checks whether a file exists at the given path.
 func doesFileExist(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err != nil {
@@ -108,6 +128,8 @@ func doesFileExist(path string) (bool, error) {
 	return true, nil
 }
 
+// deleteFileIfExists removes the file at the given path, ignoring errors if it
+// does not exist.
 func deleteFileIfExists(path string) error {
 	_, err := os.Stat(path)
 	if err != nil {
@@ -119,13 +141,15 @@ func deleteFileIfExists(path string) error {
 	return os.Remove(path)
 }
 
+// GenerateJwtKeyPairIfNotExists ensures a JWT key pair is available. If the
+// key files already exist, it loads them. Otherwise, it generates a new ECDSA
+// P-521 key pair and persists it to disk.
 func GenerateJwtKeyPairIfNotExists() error {
 	exists, err := DoesKeyPairExist()
 	if err != nil {
 		return err
 	}
 	if exists {
-		fmt.Println("Already exists")
 		JwtPublicKey, JwtPrivateKey, err = LoadKeyPair()
 		if err != nil {
 			return err
@@ -141,14 +165,16 @@ func GenerateJwtKeyPairIfNotExists() error {
 	return SerializeKeyPair(JwtPublicKey, JwtPrivateKey)
 }
 
+// DeleteKeyPair removes the persisted JWT key files from disk.
 func DeleteKeyPair() error {
-	err := deleteFileIfExists(JwtCertFile)
-	if err != nil {
-
+	if err := deleteFileIfExists(JwtCertFile); err != nil {
+		return err
 	}
 	return deleteFileIfExists(JwtKeyFile)
 }
 
+// DoesKeyPairExist returns true if both the certificate and key files are
+// present on disk.
 func DoesKeyPairExist() (bool, error) {
 	exists, err := doesFileExist(JwtCertFile)
 	if err != nil {
@@ -168,6 +194,8 @@ func DoesKeyPairExist() (bool, error) {
 	return true, nil
 }
 
+// LoadKeyPair reads and deserializes the PEM-encoded public and private keys
+// from disk.
 func LoadKeyPair() (*ecdsa.PublicKey, *ecdsa.PrivateKey, error) {
 	publicKey, err := pemDecodeFromFile(JwtCertFile, false)
 	if err != nil {
@@ -180,8 +208,8 @@ func LoadKeyPair() (*ecdsa.PublicKey, *ecdsa.PrivateKey, error) {
 	return publicKey.(*ecdsa.PublicKey), privateKey.(*ecdsa.PrivateKey), nil
 }
 
+// GenerateKeyPair creates a new ECDSA key pair using the P-521 curve.
 func GenerateKeyPair() (*ecdsa.PublicKey, *ecdsa.PrivateKey, error) {
-	fmt.Println("generating key pair")
 	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 	if err != nil {
 		return nil, nil, err
@@ -191,6 +219,8 @@ func GenerateKeyPair() (*ecdsa.PublicKey, *ecdsa.PrivateKey, error) {
 	return publicKey, privateKey, nil
 }
 
+// SerializeKeyPair writes the public and private keys to disk as PEM-encoded
+// files.
 func SerializeKeyPair(publicKey *ecdsa.PublicKey, privateKey *ecdsa.PrivateKey) error {
 	encoded, err := x509.MarshalPKIXPublicKey(publicKey)
 	if err != nil {
@@ -210,6 +240,8 @@ func SerializeKeyPair(publicKey *ecdsa.PublicKey, privateKey *ecdsa.PrivateKey) 
 	return pemEncodeToFile(encoded, JwtKeyFile, "EC PRIVATE KEY")
 }
 
+// pemEncodeToFile writes DER-encoded bytes to a file as a PEM block with the
+// given type label.
 func pemEncodeToFile(b []byte, filename string, blockType string) error {
 	encoded := pem.EncodeToMemory(&pem.Block{Type: blockType, Bytes: b})
 	f, err := os.Create(filename)
@@ -227,6 +259,8 @@ func pemEncodeToFile(b []byte, filename string, blockType string) error {
 	return nil
 }
 
+// pemDecodeFromFile reads a PEM-encoded file and returns the decoded key. If
+// private is true, it parses as an EC private key; otherwise as a public key.
 func pemDecodeFromFile(filename string, private bool) (any, error) {
 	f, err := os.Open(filename)
 	if err != nil {

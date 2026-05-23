@@ -123,7 +123,7 @@ func TestCrudCommonCreateMissingToken(t *testing.T) {
 		handle:         cc.createCrudRecord,
 	}
 
-	req := ApiRequest[*testCrudRecord]{
+	req := Request[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            nil,
@@ -150,7 +150,7 @@ func TestCrudCommonCreateSuccess(t *testing.T) {
 	}
 
 	ownerId := database.NewRecordId()
-	req := ApiRequest[*testCrudRecord]{
+	req := Request[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            &AuthToken{UserId: database.UserId(ownerId)},
@@ -193,7 +193,7 @@ func TestCrudCommonGetOneSuccess(t *testing.T) {
 		handle:      cc.getCrudRecordById,
 	}
 
-	req := ApiRequest[*testCrudRecord]{
+	req := Request[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            &AuthToken{UserId: database.UserId(ownerId)},
@@ -224,7 +224,7 @@ func TestCrudCommonGetOneNotFound(t *testing.T) {
 		handle:      cc.getCrudRecordById,
 	}
 
-	req := ApiRequest[*testCrudRecord]{
+	req := Request[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            &AuthToken{UserId: database.InvalidUserId},
@@ -259,7 +259,7 @@ func TestCrudCommonGetAllSuccess(t *testing.T) {
 		handle:      cc.getAllCrudRecords,
 	}
 
-	req := ApiRequest[*testCrudRecord]{
+	req := Request[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            &AuthToken{UserId: database.UserId(ownerId)},
@@ -297,7 +297,7 @@ func TestCrudCommonDeleteSuccess(t *testing.T) {
 		handle:      cc.deleteCrudRecordById,
 	}
 
-	req := ApiRequest[*testCrudRecord]{
+	req := Request[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            &AuthToken{UserId: database.UserId(ownerId)},
@@ -328,7 +328,7 @@ func TestCrudCommonDeleteMissingToken(t *testing.T) {
 		handle:      cc.deleteCrudRecordById,
 	}
 
-	req := ApiRequest[*testCrudRecord]{
+	req := Request[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            nil,
@@ -354,7 +354,7 @@ func TestCrudCommonDeleteNotFound(t *testing.T) {
 		handle:      cc.deleteCrudRecordById,
 	}
 
-	req := ApiRequest[*testCrudRecord]{
+	req := Request[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            &AuthToken{UserId: database.UserId(ownerId)},
@@ -388,7 +388,7 @@ func TestCrudCommonUpdateSuccess(t *testing.T) {
 		handle:         cc.updateCrudRecord,
 	}
 
-	req := ApiRequest[*testCrudRecord]{
+	req := Request[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            &AuthToken{UserId: database.UserId(ownerId)},
@@ -425,7 +425,7 @@ func TestCrudCommonUpdateMissingToken(t *testing.T) {
 		handle:         cc.updateCrudRecord,
 	}
 
-	req := ApiRequest[*testCrudRecord]{
+	req := Request[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            nil,
@@ -453,7 +453,7 @@ func TestCrudCommonCreateEmptyValue(t *testing.T) {
 	}
 
 	ownerId := database.NewRecordId()
-	req := ApiRequest[*testCrudRecord]{
+	req := Request[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            &AuthToken{UserId: database.UserId(ownerId)},
@@ -488,7 +488,7 @@ func TestCrudCommonGetOneAccessibleToEveryone(t *testing.T) {
 
 	// Even a "non-owner" user can access it because AccessibleTo returns AccessibleToEveryone
 	nonOwnerId := database.NewRecordId()
-	req := ApiRequest[*testCrudRecord]{
+	req := Request[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            &AuthToken{UserId: database.UserId(nonOwnerId)},
@@ -522,7 +522,7 @@ func TestCrudCommonDeleteUnauthorized(t *testing.T) {
 	}
 
 	unauthorizedId := database.NewRecordId()
-	req := ApiRequest[*testCrudRecord]{
+	req := Request[*testCrudRecord]{
 		Context:          context.Background(),
 		DatabaseProvider: db,
 		Token:            &AuthToken{UserId: database.UserId(unauthorizedId)},

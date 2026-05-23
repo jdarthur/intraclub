@@ -25,7 +25,7 @@ type seasonCompositeQueryParams struct {
 	AsCommissioner []string `json:"as_commissioner"`
 }
 
-func (c GetMySeasons) Handler(req api.ApiRequest[*model.SeasonComposite]) (any, int, error) {
+func (c GetMySeasons) Handler(req api.Request[*model.SeasonComposite]) (any, int, error) {
 	if req.Token == nil {
 		return nil, http.StatusUnauthorized, errors.New("token must be passed into create user route")
 	}
