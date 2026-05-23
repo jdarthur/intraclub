@@ -4,3 +4,5 @@ tmp/
 main
 intraclub
 *.key
+.idea
+.claude
