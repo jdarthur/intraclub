@@ -10,10 +10,20 @@ import (
 	"intraclub/mailer"
 )
 
-// TestSend_Integration actually delivers a message via MX lookup.
-// Skipped unless MAILER_TEST_TO is set, so `go test ./...` stays offline-safe.
+// TestSend_Integration performs a real end-to-end delivery: MX lookup,
+// SMTP handshake, optional STARTTLS upgrade, DKIM signing, and message
+// submission. It is skipped by default so that `go test ./...` remains
+// safe to run without network access or credentials.
 //
-// Run with:
+// Required environment variables:
+//
+//	MAILER_TEST_TO        Comma-separated recipient addresses (e.g. "me@gmail.com")
+//	MAILER_DKIM_KEY       Path to the PEM-encoded DKIM private key
+//	MAILER_FROM_DOMAIN    Sending domain (default: "rcintra.club")
+//	MAILER_HOSTNAME       HELO hostname (default: "mail.rcintra.club")
+//	MAILER_DKIM_SELECTOR  DKIM DNS selector (default: "default")
+//
+// Example:
 //
 //	MAILER_TEST_TO=you@gmail.com \
 //	MAILER_DKIM_KEY=/etc/intraclub/dkim.key \
@@ -52,6 +62,8 @@ func TestSend_Integration(t *testing.T) {
 	}
 }
 
+// envOr returns the value of environment variable k, or def if k is unset
+// or empty.
 func envOr(k, def string) string {
 	if v := os.Getenv(k); v != "" {
 		return v

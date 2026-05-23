@@ -28,19 +28,39 @@ import (
 	"github.com/emersion/go-msgauth/dkim"
 )
 
+// Config holds the settings needed to create a Mailer.
 type Config struct {
-	FromDomain   string // e.g. "rcintra.club" — must match the From address domain
-	Hostname     string // HELO/EHLO name, ideally matches rDNS of the sending IP
-	DKIMSelector string // DNS selector, e.g. "default" for default._domainkey.rcintra.club
-	DKIMKeyPath  string // PEM-encoded RSA private key (PKCS1 or PKCS8)
-	DialTimeout  time.Duration
+	// FromDomain is the sending domain, e.g. "rcintra.club". It must match
+	// the domain portion of the From address in every sent message.
+	FromDomain string
+
+	// Hostname is the HELO/EHLO identifier sent to remote MX servers. For
+	// best deliverability it should match the rDNS (PTR) record of the
+	// sending IP address.
+	Hostname string
+
+	// DKIMSelector is the DNS selector used to look up the DKIM public key.
+	// A value of "default" resolves to default._domainkey.<FromDomain>.
+	DKIMSelector string
+
+	// DKIMKeyPath is the filesystem path to a PEM-encoded RSA or Ed25519
+	// private key. Both PKCS#1 and PKCS#8 formats are accepted.
+	DKIMKeyPath string
+
+	// DialTimeout controls how long to wait when establishing the TCP
+	// connection to a remote MX server. Defaults to 30s if zero.
+	DialTimeout time.Duration
 }
 
+// Mailer is a stateless email sender that delivers messages directly to
+// recipient MX servers with DKIM signatures. It is safe for concurrent use.
 type Mailer struct {
 	cfg    Config
 	signer crypto.Signer
 }
 
+// New creates a Mailer from the given configuration. It validates required
+// fields and loads the DKIM private key from disk.
 func New(cfg Config) (*Mailer, error) {
 	if cfg.FromDomain == "" || cfg.Hostname == "" || cfg.DKIMSelector == "" {
 		return nil, errors.New("mailer: FromDomain, Hostname, DKIMSelector are required")
@@ -55,16 +75,31 @@ func New(cfg Config) (*Mailer, error) {
 	return &Mailer{cfg: cfg, signer: signer}, nil
 }
 
+// Message represents a plain-text email to be sent.
 type Message struct {
-	From    string // e.g. "noreply@rcintra.club"
-	To      []string
+	// From is the sender address, e.g. "noreply@rcintra.club". Its domain
+	// must match the Mailer's FromDomain.
+	From string
+
+	// To is the list of recipient addresses. Messages are grouped by
+	// recipient domain so each MX server receives a single SMTP transaction.
+	To []string
+
+	// Subject is the email subject line.
 	Subject string
-	Text    string // plain UTF-8 body
+
+	// Text is the plain-text (UTF-8) message body. Line endings are
+	// normalized to CRLF per RFC 5322.
+	Text string
 }
 
 // Send delivers msg to every recipient. Recipients are grouped by domain so
-// each MX server sees one SMTP transaction. A failure for one domain does not
-// prevent delivery to others; all errors are joined into the return value.
+// each MX server sees one SMTP transaction. A failure for one recipient
+// domain does not prevent delivery to others; all per-domain errors are
+// joined and returned via errors.Join().
+//
+// The caller should pass a context with a reasonable timeout (e.g. 90s)
+// because MX lookups and SMTP handshakes can be slow.
 func (m *Mailer) Send(ctx context.Context, msg Message) error {
 	if _, err := mail.ParseAddress(msg.From); err != nil {
 		return fmt.Errorf("invalid From: %w", err)
@@ -92,6 +127,8 @@ func (m *Mailer) Send(ctx context.Context, msg Message) error {
 	return errors.Join(errs...)
 }
 
+// buildAndSign assembles a raw RFC 5322 message from msg and attaches a
+// DKIM-Signature header covering the standard tracked headers.
 func (m *Mailer) buildAndSign(msg Message) ([]byte, error) {
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "From: %s\r\n", msg.From)
@@ -103,6 +140,8 @@ func (m *Mailer) buildAndSign(msg Message) ([]byte, error) {
 	buf.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
 	buf.WriteString("Content-Transfer-Encoding: 8bit\r\n")
 	buf.WriteString("\r\n")
+	// Normalize all line endings to CRLF: first collapse \r\n -> \n,
+	// then convert every \n -> \r\n (handles \r-only as well).
 	buf.WriteString(strings.ReplaceAll(strings.ReplaceAll(msg.Text, "\r\n", "\n"), "\n", "\r\n"))
 
 	opts := &dkim.SignOptions{
@@ -122,6 +161,9 @@ func (m *Mailer) buildAndSign(msg Message) ([]byte, error) {
 	return signed.Bytes(), nil
 }
 
+// deliver sends msg to all recipients in to that belong to domain. It
+// performs an MX lookup, sorts results by preference, and attempts
+// delivery to each host in order until one succeeds.
 func (m *Mailer) deliver(ctx context.Context, domain, from string, to []string, msg []byte) error {
 	hosts, err := lookupMX(ctx, domain)
 	if err != nil {
@@ -139,6 +181,9 @@ func (m *Mailer) deliver(ctx context.Context, domain, from string, to []string, 
 	return fmt.Errorf("all MX hosts failed: %w", lastErr)
 }
 
+// deliverTo opens a TCP connection to host:25, performs the full SMTP
+// transaction (EHLO, STARTTLS, MAIL FROM, RCPT TO, DATA), and sends msg.
+// If the connection supports STARTTLS the upgrade is attempted automatically.
 func (m *Mailer) deliverTo(ctx context.Context, host, from string, to []string, msg []byte) error {
 	d := net.Dialer{Timeout: m.cfg.DialTimeout}
 	conn, err := d.DialContext(ctx, "tcp", net.JoinHostPort(host, "25"))
@@ -146,9 +191,11 @@ func (m *Mailer) deliverTo(ctx context.Context, host, from string, to []string, 
 		return err
 	}
 
+	// Set an absolute deadline so the SMTP transaction won't hang
+	// indefinitely. Use the shorter of 2 minutes or the context deadline.
 	deadline := time.Now().Add(2 * time.Minute)
-	if d, ok := ctx.Deadline(); ok && d.Before(deadline) {
-		deadline = d
+	if dl, ok := ctx.Deadline(); ok && dl.Before(deadline) {
+		deadline = dl
 	}
 	_ = conn.SetDeadline(deadline)
 
@@ -159,6 +206,7 @@ func (m *Mailer) deliverTo(ctx context.Context, host, from string, to []string, 
 	}
 	defer c.Close()
 
+	// Override the default HELO with our configured hostname.
 	if err := c.Hello(m.cfg.Hostname); err != nil {
 		return err
 	}
@@ -188,6 +236,9 @@ func (m *Mailer) deliverTo(ctx context.Context, host, from string, to []string, 
 	return c.Quit()
 }
 
+// lookupMX resolves the MX records for domain, sorted by preference. Per
+// RFC 5321 §5.1, if no MX records exist it falls back to the domain's A/AAAA
+// record, returning the domain itself as the host to connect to.
 func lookupMX(ctx context.Context, domain string) ([]string, error) {
 	var r net.Resolver
 	mx, err := r.LookupMX(ctx, domain)
@@ -210,6 +261,8 @@ func lookupMX(ctx context.Context, domain string) ([]string, error) {
 	return hosts, nil
 }
 
+// groupByDomain parses each address in addrs and groups them by lowercase
+// domain. The result maps "example.com" -> ["a@example.com", "b@example.com"].
 func groupByDomain(addrs []string) (map[string][]string, error) {
 	out := map[string][]string{}
 	for _, a := range addrs {
@@ -227,6 +280,9 @@ func groupByDomain(addrs []string) (map[string][]string, error) {
 	return out, nil
 }
 
+// loadPrivateKey reads a PEM-encoded private key from path and returns it
+// as a crypto.Signer. Both PKCS#1 (RSA) and PKCS#8 (RSA or Ed25519) formats
+// are supported.
 func loadPrivateKey(path string) (crypto.Signer, error) {
 	if path == "" {
 		return nil, errors.New("DKIMKeyPath is empty")
@@ -252,6 +308,8 @@ func loadPrivateKey(path string) (crypto.Signer, error) {
 	return nil, errors.New("unsupported key format (need PKCS1 or PKCS8 RSA/Ed25519)")
 }
 
+// newMessageID returns a random 32-hex-character string suitable for use
+// as the local-part of a Message-ID header.
 func newMessageID() string {
 	var b [16]byte
 	_, _ = rand.Read(b[:])
