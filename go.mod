@@ -3,8 +3,7 @@ module intraclub
 go 1.26
 
 require (
-	github.com/emersion/go-sasl v0.0.0-20241020182733-b788ff22d5a6
-	github.com/emersion/go-smtp v0.24.0
+	github.com/emersion/go-msgauth v0.7.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/stretchr/testify v1.11.1
