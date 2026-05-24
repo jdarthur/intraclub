@@ -88,13 +88,13 @@ func (t *testCrudRecord) NewRecord() database.CrudRecord {
 
 func TestNewCrudCommon(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	if cc.CreateRecord == nil {
 		t.Fatal("CreateRecord should be set")
 	}
-	if !cc.UseAuth {
-		t.Fatal("UseAuth should be true")
+	if cc.NoAuth {
+		t.Fatal("NoAuth should be false")
 	}
 	if cc.DatabaseProvider != db {
 		t.Fatal("DatabaseProvider should be set")
@@ -106,16 +106,16 @@ func TestNewCrudCommon(t *testing.T) {
 
 func TestNewCrudCommonNoAuth(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, false, db)
+	cc := NewCrudCommon(newTestCrudRecord, true, db)
 
-	if cc.UseAuth {
-		t.Fatal("UseAuth should be false")
+	if !cc.NoAuth {
+		t.Fatal("NoAuth should be true")
 	}
 }
 
 func TestCrudCommonCreateMissingToken(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	route := genericApiRoute[*testCrudRecord]{
 		requestBody:    newTestCrudRecord,
@@ -141,7 +141,7 @@ func TestCrudCommonCreateMissingToken(t *testing.T) {
 
 func TestCrudCommonCreateSuccess(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	route := genericApiRoute[*testCrudRecord]{
 		requestBody:    newTestCrudRecord,
@@ -177,7 +177,7 @@ func TestCrudCommonCreateSuccess(t *testing.T) {
 
 func TestCrudCommonGetOneSuccess(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	// Create a record first
 	ownerId := database.NewRecordId()
@@ -217,7 +217,7 @@ func TestCrudCommonGetOneSuccess(t *testing.T) {
 
 func TestCrudCommonGetOneNotFound(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	route := genericApiRoute[*testCrudRecord]{
 		requestBody: newTestCrudRecord,
@@ -242,7 +242,7 @@ func TestCrudCommonGetOneNotFound(t *testing.T) {
 
 func TestCrudCommonGetAllSuccess(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	ownerId := database.NewRecordId()
 	for i := 0; i < 3; i++ {
@@ -282,7 +282,7 @@ func TestCrudCommonGetAllSuccess(t *testing.T) {
 
 func TestCrudCommonDeleteSuccess(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
@@ -321,7 +321,7 @@ func TestCrudCommonDeleteSuccess(t *testing.T) {
 
 func TestCrudCommonDeleteMissingToken(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	route := genericApiRoute[*testCrudRecord]{
 		requestBody: newTestCrudRecord,
@@ -346,7 +346,7 @@ func TestCrudCommonDeleteMissingToken(t *testing.T) {
 
 func TestCrudCommonDeleteNotFound(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	ownerId := database.NewRecordId()
 	route := genericApiRoute[*testCrudRecord]{
@@ -372,7 +372,7 @@ func TestCrudCommonDeleteNotFound(t *testing.T) {
 
 func TestCrudCommonUpdateSuccess(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
@@ -417,7 +417,7 @@ func TestCrudCommonUpdateSuccess(t *testing.T) {
 
 func TestCrudCommonUpdateMissingToken(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	route := genericApiRoute[*testCrudRecord]{
 		requestBody:    newTestCrudRecord,
@@ -444,7 +444,7 @@ func TestCrudCommonUpdateMissingToken(t *testing.T) {
 
 func TestCrudCommonCreateEmptyValue(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	route := genericApiRoute[*testCrudRecord]{
 		requestBody:    func() *testCrudRecord { r := newTestCrudRecord(); r.Value = ""; return r },
@@ -471,7 +471,7 @@ func TestCrudCommonCreateEmptyValue(t *testing.T) {
 
 func TestCrudCommonGetOneAccessibleToEveryone(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
@@ -506,7 +506,7 @@ func TestCrudCommonGetOneAccessibleToEveryone(t *testing.T) {
 
 func TestCrudCommonDeleteUnauthorized(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	cc := NewCrudCommon(newTestCrudRecord, true, db)
+	cc := NewCrudCommon(newTestCrudRecord, false, db)
 
 	ownerId := database.NewRecordId()
 	v := newTestCrudRecord()
@@ -548,7 +548,7 @@ func TestCrudCommonHandleRouteTypesPanicOnNilCreateRecord(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	cc := &CrudCommon[*testCrudRecord]{
 		CreateRecord:     nil,
-		UseAuth:          true,
+		NoAuth:           false,
 		DatabaseProvider: db,
 		baseRoute:        "/test",
 	}

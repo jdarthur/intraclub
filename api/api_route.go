@@ -89,8 +89,9 @@ func (a Request[T]) ParseQuery(v any) error {
 // but this helper can be used for, e.g., special one-off routes or routes
 // which don't conform to the normal constraints around CRUD access/edit rights
 type RouteFamily[T database.Validatable] struct {
-	// UseAuth requires all requests to this RouteFamily to be sent with a valid JWT (if true)
-	UseAuth bool
+	// NoAuth skips authentication for all requests to this RouteFamily (if true)
+	// Default is false, meaning authentication is required
+	NoAuth bool
 
 	// DatabaseProvider is the DatabaseProvider that the Handler functions will use
 	DatabaseProvider database.Provider
@@ -111,7 +112,7 @@ func (r *RouteFamily[T]) Handle(e *gin.RouterGroup, routes ...Route[T]) {
 		wrapper := &routeWrapper[T]{
 			Route:    route,
 			Database: r.DatabaseProvider,
-			UseAuth:  r.UseAuth,
+			NoAuth:   r.NoAuth,
 		}
 		r.wrappers = append(r.wrappers, wrapper)
 	}
@@ -146,7 +147,7 @@ func (r *RouteFamily[T]) addToEngine(e *gin.RouterGroup) {
 type routeWrapper[T database.Validatable] struct {
 	Route    Route[T]
 	Database database.Provider
-	UseAuth  bool
+	NoAuth   bool
 }
 
 // Handle parses a raw request from a gin.Context, gets the token from the request (if
@@ -157,7 +158,7 @@ func (r *routeWrapper[T]) Handle(c *gin.Context) {
 	var err error
 
 	// get the token from request if configured for this route
-	if r.UseAuth {
+	if !r.NoAuth {
 		token, err = GetToken(c, r.Database)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})

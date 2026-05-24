@@ -37,10 +37,10 @@ func main() {
 	rg := r.Group("/api")
 
 	// noAuth for self-register
-	createUser := api.RouteFamily[*model.User]{DatabaseProvider: db}
+	createUser := api.RouteFamily[*model.User]{NoAuth: true, DatabaseProvider: db}
 	createUser.Handle(rg, route.SelfRegister{})
 
-	whoAmI := api.RouteFamily[*model.User]{UseAuth: true, DatabaseProvider: db}
+	whoAmI := api.RouteFamily[*model.User]{DatabaseProvider: db}
 	whoAmI.Handle(rg, route.WhoAmI{})
 
 	importHandler := &route.CsvImportHandler{DatabaseProvider: db}
@@ -52,30 +52,27 @@ func main() {
 
 	// no auth for get user by ID / get all users functions
 
-	getUsers := api.NewCrudCommon(model.NewUser, false, db)
+	getUsers := api.NewCrudCommon(model.NewUser, true, db)
 	getUsers.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
 
 	// use auth for user deletion / update endpoints
-	updateOrDeleteUsers := api.NewCrudCommon(model.NewUser, true, db)
+	updateOrDeleteUsers := api.NewCrudCommon(model.NewUser, false, db)
 	updateOrDeleteUsers.HandleRouteTypes(rg, api.CrudWrapperFunctionDelete, api.CrudWrapperFunctionUpdate)
 
-	facilities := api.NewCrudCommon(model.NewFacility, true, db)
+	facilities := api.NewCrudCommon(model.NewFacility, false, db)
 	facilities.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
 
 	rg.GET("/score_counting_types", model.GetScoreCountingTypes)
-	scoringStructures := api.NewCrudCommon(model.NewScoringStructure, true, db)
+	scoringStructures := api.NewCrudCommon(model.NewScoringStructure, false, db)
 	scoringStructures.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
 
-	ratings := api.NewCrudCommon(model.NewRating, true, db)
+	ratings := api.NewCrudCommon(model.NewRating, false, db)
 	ratings.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
 
-	formats := api.NewCrudCommon(model.NewFormat, true, db)
+	formats := api.NewCrudCommon(model.NewFormat, false, db)
 	formats.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
 
 	rg.GET("/draft_order_patterns", model.GetDraftOrderPatterns)
-
-	seasonComposite := api.RouteFamily[*model.SeasonComposite]{UseAuth: true, DatabaseProvider: db}
-	seasonComposite.Handle(rg, route.GetMySeasons{})
 
 	err = r.Run("127.0.0.1:8080")
 	if err != nil {
