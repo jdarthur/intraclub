@@ -63,7 +63,7 @@ func (g genericApiRoute[T]) Handler(request Request[T]) (any, int, error) {
 // common format at the model's BaseRoute and assign them to the router
 type CrudCommon[T database.CrudRecord] struct {
 	CreateRecord func() T
-	UseAuth      bool
+	NoAuth       bool
 
 	// Middleware is a list of gin.HandlerFunc functions that will be
 	// run before the common methods (e.g. getCrudRecordById) are run
@@ -81,11 +81,11 @@ type CrudCommon[T database.CrudRecord] struct {
 	baseRoute string
 }
 
-func NewCrudCommon[T database.CrudRecord](createFunc func() T, userAuth bool, db database.Provider) *CrudCommon[T] {
+func NewCrudCommon[T database.CrudRecord](createFunc func() T, noAuth bool, db database.Provider) *CrudCommon[T] {
 	baseRoute := createFunc().Type()
 	return &CrudCommon[T]{
 		CreateRecord: createFunc,
-		UseAuth:      userAuth,
+		NoAuth:       noAuth,
 		// baseRoute is automatically set up based on the table name of the provided createFunc
 		baseRoute:        fmt.Sprintf("/%s", baseRoute),
 		DatabaseProvider: db,
@@ -196,7 +196,7 @@ func (c *CrudCommon[T]) HandleRouteTypes(e *gin.RouterGroup, crudRouteTypes ...C
 
 	// create a RouteFamily for this CrudCommon
 	f := RouteFamily[T]{
-		UseAuth: c.UseAuth,
+		NoAuth: c.NoAuth,
 	}
 
 	// generate as many genericApiRoutes as we need

@@ -103,7 +103,7 @@ func TestRouteFamilyHandle(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	family := RouteFamily[*testRouteRecord]{
 		DatabaseProvider: db,
-		UseAuth:          false,
+		NoAuth:           true,
 	}
 
 	gin.SetMode(gin.TestMode)
@@ -120,8 +120,8 @@ func TestRouteFamilyHandle(t *testing.T) {
 	if wrapper.Database != db {
 		t.Fatal("wrapper should have the same DatabaseProvider")
 	}
-	if wrapper.UseAuth != false {
-		t.Fatal("wrapper.UseAuth should match RouteFamily")
+	if wrapper.NoAuth != true {
+		t.Fatal("wrapper.NoAuth should match RouteFamily")
 	}
 }
 
@@ -129,7 +129,7 @@ func TestRouteFamilyWithAuth(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	family := RouteFamily[*testRouteRecord]{
 		DatabaseProvider: db,
-		UseAuth:          true,
+		NoAuth:           false,
 	}
 
 	gin.SetMode(gin.TestMode)
@@ -138,8 +138,8 @@ func TestRouteFamilyWithAuth(t *testing.T) {
 	family.Handle(group, simpleRoute{})
 
 	wrapper := family.wrappers[0]
-	if wrapper.UseAuth != true {
-		t.Fatal("wrapper.UseAuth should be true")
+	if wrapper.NoAuth != false {
+		t.Fatal("wrapper.NoAuth should be false")
 	}
 }
 
@@ -163,7 +163,7 @@ func TestRouteWrapperHandleNoAuth(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	family := RouteFamily[*testRouteRecord]{
 		DatabaseProvider: db,
-		UseAuth:          false,
+		NoAuth:           true,
 	}
 
 	gin.SetMode(gin.TestMode)
@@ -185,7 +185,7 @@ func TestRouteWrapperHandleWithPathId(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	family := RouteFamily[*testRouteRecord]{
 		DatabaseProvider: db,
-		UseAuth:          false,
+		NoAuth:           true,
 	}
 
 	gin.SetMode(gin.TestMode)
@@ -215,7 +215,7 @@ func TestRouteWrapperHandleWithBody(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	family := RouteFamily[*testRouteRecord]{
 		DatabaseProvider: db,
-		UseAuth:          false,
+		NoAuth:           true,
 	}
 
 	gin.SetMode(gin.TestMode)
@@ -242,7 +242,7 @@ func TestRouteFamilyWithMiddleware(t *testing.T) {
 
 	family := RouteFamily[*testRouteRecord]{
 		DatabaseProvider: db,
-		UseAuth:          false,
+		NoAuth:           true,
 		Middleware: []gin.HandlerFunc{
 			func(c *gin.Context) {
 				middlewareCalled = true
