@@ -37,7 +37,10 @@ func main() {
 	r := gin.Default()
 	rg := r.Group("/api")
 
-	// noAuth for self-register
+	// noAuth for self-register and verify-email
+	verifyEmail := api.RouteFamily[*user.VerifyEmailBody]{NoAuth: true, DatabaseProvider: db}
+	verifyEmail.Handle(rg, user.VerifyEmail{})
+
 	createUser := api.RouteFamily[*model.User]{NoAuth: true, DatabaseProvider: db}
 	createUser.Handle(rg, user.SelfRegister{})
 
