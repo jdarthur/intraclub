@@ -13,7 +13,9 @@ import (
 )
 
 // SelfRegister allows a user to self-register to the system
-type SelfRegister struct{}
+type SelfRegister struct {
+	Hostname string
+}
 
 func (c SelfRegister) Path() (api.HttpMethod, string) {
 	return api.HttpMethodPost, BaseRoute
@@ -31,7 +33,7 @@ func (c SelfRegister) Handler(req api.Request[*model.User]) (any, int, error) {
 		return nil, http.StatusBadRequest, errors.New("token must not be passed into create user route")
 	}
 
-	user, err := selfRegister(req.Context, req.DatabaseProvider, req.Body, c.f)
+	user, err := selfRegister(req.Context, req.DatabaseProvider, req.Body, c.sendTokenEmail)
 
 	if err != nil {
 		// check for uniqueness constraint error
@@ -44,30 +46,53 @@ func (c SelfRegister) Handler(req api.Request[*model.User]) (any, int, error) {
 	return user, http.StatusCreated, nil
 }
 
-func (c SelfRegister) f(ctx context.Context, u *model.User, t *model.EmailToken) error {
+func (c SelfRegister) sendTokenEmail(ctx context.Context, u *model.User, t *model.EmailToken) error {
 	fmt.Println("send token to email:", u.Email)
 
+	baseURL := "https://" + c.Hostname
+
 	cfg := mailer.Config{
-		FromDomain:   "rcintra.club",
-		Hostname:     "mail.rcintra.club",
-		DKIMSelector: "default",
-		DKIMKeyPath:  "/etc/intraclub/dkim.key",
+		FromDomain: c.Hostname,
+		Hostname:   "mail." + c.Hostname,
 	}
 	m, err := mailer.New(cfg)
 	if err != nil {
 		return err
 	}
 
-	message := newEmailMessage(u.Email, t)
+	message := newEmailMessage(u.Email, t, baseURL)
 	return m.Send(ctx, message)
 }
 
-func newEmailMessage(addr model.EmailAddress, t *model.EmailToken) mailer.Message {
+func newEmailMessage(addr model.EmailAddress, t *model.EmailToken, baseURL string) mailer.Message {
+	verifyURL := fmt.Sprintf("%s/verify?token=%s", baseURL, t.Token)
+	body := fmt.Sprintf(
+		`<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 40px; }
+  .container { max-width: 600px; margin: auto; background: #fff; padding: 30px; border-radius: 8px; }
+  .button { display: inline-block; padding: 14px 28px; background: #4CAF50; color: #fff; text-decoration: none; border-radius: 4px; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h2>Verify Your Email</h2>
+    <p>Thank you for signing up to rcintra.club! Please click the button below to verify your email address and activate your account.</p>
+    <p><a href="%s" class="button">Verify Email</a></p>
+    <p>If the button doesn't work, copy and paste this link into your browser:</p>
+    <p>%s</p>
+  </div>
+</body>
+</html>`,
+		verifyURL, verifyURL,
+	)
 	return mailer.Message{
 		From:    "noreply@rcintra.club",
 		To:      []string{string(addr)},
-		Subject: "Verify your account",
-		Text:    "",
+		Subject: "Verify your Intraclub account",
+		Text:    body,
 	}
 }
 
