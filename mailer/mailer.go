@@ -28,6 +28,12 @@ import (
 	"github.com/emersion/go-msgauth/dkim"
 )
 
+// Default DKIM settings. These can be overridden per-config if needed.
+const (
+	DefaultDKIMSelector = "default"
+	DefaultDKIMKeyPath  = "/etc/intraclub/dkim.key"
+)
+
 // Config holds the settings needed to create a Mailer.
 type Config struct {
 	// FromDomain is the sending domain, e.g. "rcintra.club". It must match
@@ -41,10 +47,12 @@ type Config struct {
 
 	// DKIMSelector is the DNS selector used to look up the DKIM public key.
 	// A value of "default" resolves to default._domainkey.<FromDomain>.
+	// Defaults to DefaultDKIMSelector ("default") if empty.
 	DKIMSelector string
 
 	// DKIMKeyPath is the filesystem path to a PEM-encoded RSA or Ed25519
 	// private key. Both PKCS#1 and PKCS#8 formats are accepted.
+	// Defaults to DefaultDKIMKeyPath ("/etc/intraclub/dkim.key") if empty.
 	DKIMKeyPath string
 
 	// DialTimeout controls how long to wait when establishing the TCP
@@ -62,15 +70,21 @@ type Mailer struct {
 // New creates a Mailer from the given configuration. It validates required
 // fields and loads the DKIM private key from disk.
 func New(cfg Config) (*Mailer, error) {
-	if cfg.FromDomain == "" || cfg.Hostname == "" || cfg.DKIMSelector == "" {
-		return nil, errors.New("mailer: FromDomain, Hostname, DKIMSelector are required")
+	if cfg.FromDomain == "" || cfg.Hostname == "" {
+		return nil, errors.New("mailer: FromDomain, Hostname are required")
 	}
 	if cfg.DialTimeout == 0 {
 		cfg.DialTimeout = 30 * time.Second
 	}
+	if cfg.DKIMSelector == "" {
+		cfg.DKIMSelector = DefaultDKIMSelector
+	}
+	if cfg.DKIMKeyPath == "" {
+		cfg.DKIMKeyPath = DefaultDKIMKeyPath
+	}
 	signer, err := loadPrivateKey(cfg.DKIMKeyPath)
 	if err != nil {
-		return nil, fmt.Errorf("mailer: dkim key: %w", err)
+		return nil, fmt.Errorf("mailer: DKIM key loading error: %w", err)
 	}
 	return &Mailer{cfg: cfg, signer: signer}, nil
 }
