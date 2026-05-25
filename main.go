@@ -8,6 +8,7 @@ import (
 	"intraclub/database"
 	"intraclub/model"
 	"intraclub/route"
+	"intraclub/route/user"
 
 	"github.com/gin-gonic/gin"
 )
@@ -38,10 +39,10 @@ func main() {
 
 	// noAuth for self-register
 	createUser := api.RouteFamily[*model.User]{NoAuth: true, DatabaseProvider: db}
-	createUser.Handle(rg, route.SelfRegister{})
+	createUser.Handle(rg, user.SelfRegister{})
 
 	whoAmI := api.RouteFamily[*model.User]{DatabaseProvider: db}
-	whoAmI.Handle(rg, route.WhoAmI{})
+	whoAmI.Handle(rg, user.WhoAmI{})
 
 	importHandler := &route.CsvImportHandler{DatabaseProvider: db}
 	rg.Handle(api.HttpMethodPost.String(), "/import_users_from_csv", importHandler.HandleCsvImport)

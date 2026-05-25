@@ -14,21 +14,19 @@ type User struct {
 	LastName    string          `json:"last_name"`
 	PhoneNumber PhoneNumber     `json:"phone_number"`
 	Email       EmailAddress    `json:"email"`
+	Verified    bool            `json:"verified"`
 }
 
 func (u *User) GetOwner() database.UserId {
-	// TODO implement me
-	panic("implement me")
+	return u.ID
 }
 
 func (u *User) UniquenessEquivalent(other *User) error {
 	if u.Email == other.Email {
 		return fmt.Errorf("user with email address %s already exists", u.Email)
-	}
-	if u.FirstName == other.FirstName && u.LastName == other.LastName {
+	} else if u.FirstName == other.FirstName && u.LastName == other.LastName {
 		return fmt.Errorf("user with name %s %s already exists", u.FirstName, u.LastName)
-	}
-	if u.PhoneNumber != "" && u.PhoneNumber == other.PhoneNumber {
+	} else if u.PhoneNumber != "" && u.PhoneNumber == other.PhoneNumber {
 		return fmt.Errorf("user with phone number %s already exists", u.PhoneNumber)
 	}
 	return nil

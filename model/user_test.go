@@ -91,3 +91,73 @@ func TestDuplicateUserPhoneNumber(t *testing.T) {
 	}
 	fmt.Println(err)
 }
+
+func TestUniquenessEquivalent_MatchingEmail(t *testing.T) {
+	user1 := &User{Email: "test@example.com", FirstName: "John", LastName: "Doe", PhoneNumber: "123-456-7890"}
+	user2 := &User{Email: "test@example.com", FirstName: "Jane", LastName: "Smith", PhoneNumber: "098-765-4321"}
+
+	err := user1.UniquenessEquivalent(user2)
+	if err == nil {
+		t.Fatal("expected error for matching email")
+	}
+}
+
+func TestUniquenessEquivalent_DifferentEmail(t *testing.T) {
+	user1 := &User{Email: "john@example.com", FirstName: "John", LastName: "Doe", PhoneNumber: "123-456-7890"}
+	user2 := &User{Email: "jane@example.com", FirstName: "Jane", LastName: "Smith", PhoneNumber: "098-765-4321"}
+
+	err := user1.UniquenessEquivalent(user2)
+	if err != nil {
+		t.Fatalf("expected no error for different email/name/phone, got: %v", err)
+	}
+}
+
+func TestUniquenessEquivalent_MatchingName(t *testing.T) {
+	user1 := &User{Email: "john@example.com", FirstName: "John", LastName: "Doe", PhoneNumber: "123-456-7890"}
+	user2 := &User{Email: "jane@example.com", FirstName: "John", LastName: "Doe", PhoneNumber: "098-765-4321"}
+
+	err := user1.UniquenessEquivalent(user2)
+	if err == nil {
+		t.Fatal("expected error for matching first and last name")
+	}
+}
+
+func TestUniquenessEquivalent_FirstNameOnlyMatch(t *testing.T) {
+	user1 := &User{Email: "john@example.com", FirstName: "John", LastName: "Doe", PhoneNumber: "123-456-7890"}
+	user2 := &User{Email: "johnsmith@example.com", FirstName: "John", LastName: "Smith", PhoneNumber: "098-765-4321"}
+
+	err := user1.UniquenessEquivalent(user2)
+	if err != nil {
+		t.Fatalf("expected no error for matching first name only, got: %v", err)
+	}
+}
+
+func TestUniquenessEquivalent_LastNameOnlyMatch(t *testing.T) {
+	user1 := &User{Email: "john@example.com", FirstName: "John", LastName: "Doe", PhoneNumber: "123-456-7890"}
+	user2 := &User{Email: "janedoe@example.com", FirstName: "Jane", LastName: "Doe", PhoneNumber: "098-765-4321"}
+
+	err := user1.UniquenessEquivalent(user2)
+	if err != nil {
+		t.Fatalf("expected no error for matching last name only, got: %v", err)
+	}
+}
+
+func TestUniquenessEquivalent_MatchingPhoneNumber(t *testing.T) {
+	user1 := &User{Email: "john@example.com", FirstName: "John", LastName: "Doe", PhoneNumber: "123-456-7890"}
+	user2 := &User{Email: "jane@example.com", FirstName: "Jane", LastName: "Smith", PhoneNumber: "123-456-7890"}
+
+	err := user1.UniquenessEquivalent(user2)
+	if err == nil {
+		t.Fatal("expected error for matching phone number")
+	}
+}
+
+func TestUniquenessEquivalent_EmptyFields(t *testing.T) {
+	user1 := &User{Email: "", FirstName: "", LastName: "", PhoneNumber: ""}
+	user2 := &User{Email: "", FirstName: "", LastName: "", PhoneNumber: ""}
+
+	err := user1.UniquenessEquivalent(user2)
+	if err == nil {
+		t.Fatal("expected error for matching empty fields")
+	}
+}
