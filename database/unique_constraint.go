@@ -2,8 +2,11 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 )
+
+var ErrUniquenessConstraintViolated = errors.New("uniqueness constraint violated")
 
 type UniquenessConstraint[T CrudRecord] interface {
 	UniquenessEquivalent(other T) error
@@ -20,7 +23,7 @@ func ValidateUniqueConstraint[T CrudRecord](ctx context.Context, db Provider, c 
 		for _, other := range otherRecords {
 			err = u.UniquenessEquivalent(other)
 			if err != nil {
-				return fmt.Errorf("uniqueness constraint violated for %T: %s", c, err)
+				return fmt.Errorf("%w: type %T: %w", ErrUniquenessConstraintViolated, c, err)
 			}
 		}
 		return err
