@@ -1,4 +1,4 @@
-package route
+package user
 
 import (
 	"errors"
@@ -9,13 +9,11 @@ import (
 	"intraclub/model"
 )
 
-var UserBaseRoute = "/user"
-
 // SelfRegister allows a user to self-register to the system
 type SelfRegister struct{}
 
 func (c SelfRegister) Path() (api.HttpMethod, string) {
-	return api.HttpMethodPost, UserBaseRoute
+	return api.HttpMethodPost, BaseRoute
 }
 
 func (c SelfRegister) RequestBody() (*model.User, bool) {
