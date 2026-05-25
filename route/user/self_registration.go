@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 
 	"intraclub/api"
 	"intraclub/database"
@@ -15,7 +14,7 @@ import (
 
 // SelfRegister allows a user to self-register to the system
 type SelfRegister struct {
-	BaseURL string
+	Hostname string
 }
 
 func (c SelfRegister) Path() (api.HttpMethod, string) {
@@ -34,7 +33,7 @@ func (c SelfRegister) Handler(req api.Request[*model.User]) (any, int, error) {
 		return nil, http.StatusBadRequest, errors.New("token must not be passed into create user route")
 	}
 
-	user, err := selfRegister(req.Context, req.DatabaseProvider, req.Body, c.f)
+	user, err := selfRegister(req.Context, req.DatabaseProvider, req.Body, c.sendTokenEmail)
 
 	if err != nil {
 		// check for uniqueness constraint error
@@ -47,24 +46,21 @@ func (c SelfRegister) Handler(req api.Request[*model.User]) (any, int, error) {
 	return user, http.StatusCreated, nil
 }
 
-func (c SelfRegister) f(ctx context.Context, u *model.User, t *model.EmailToken) error {
+func (c SelfRegister) sendTokenEmail(ctx context.Context, u *model.User, t *model.EmailToken) error {
 	fmt.Println("send token to email:", u.Email)
 
-	appURL, err := url.Parse(c.BaseURL)
-	if err != nil {
-		return err
-	}
+	baseURL := "https://" + c.Hostname
 
 	cfg := mailer.Config{
-		FromDomain: appURL.Host,
-		Hostname:   "mail." + appURL.Host,
+		FromDomain: c.Hostname,
+		Hostname:   "mail." + c.Hostname,
 	}
 	m, err := mailer.New(cfg)
 	if err != nil {
 		return err
 	}
 
-	message := newEmailMessage(u.Email, t, c.BaseURL)
+	message := newEmailMessage(u.Email, t, baseURL)
 	return m.Send(ctx, message)
 }
 
@@ -83,7 +79,7 @@ func newEmailMessage(addr model.EmailAddress, t *model.EmailToken, baseURL strin
 <body>
   <div class="container">
     <h2>Verify Your Email</h2>
-    <p>Thank you for signing up! Please click the button below to verify your email address and activate your account.</p>
+    <p>Thank you for signing up to rcintra.club! Please click the button below to verify your email address and activate your account.</p>
     <p><a href="%s" class="button">Verify Email</a></p>
     <p>If the button doesn't work, copy and paste this link into your browser:</p>
     <p>%s</p>
@@ -95,7 +91,7 @@ func newEmailMessage(addr model.EmailAddress, t *model.EmailToken, baseURL strin
 	return mailer.Message{
 		From:    "noreply@rcintra.club",
 		To:      []string{string(addr)},
-		Subject: "Verify your account",
+		Subject: "Verify your Intraclub account",
 		Text:    body,
 	}
 }
