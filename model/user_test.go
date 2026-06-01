@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"intraclub/database"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func randomEmail() EmailAddress {
@@ -160,4 +162,164 @@ func TestUniquenessEquivalent_EmptyFields(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for matching empty fields")
 	}
+}
+
+func TestUserGetOwner(t *testing.T) {
+	userId := database.UserId(database.NewRecordId())
+	user := &User{ID: userId}
+
+	assert.Equal(t, userId, user.GetOwner())
+}
+
+func TestUserSetOwner(t *testing.T) {
+	user := &User{ID: database.UserId(123)}
+	userId := database.UserId(456)
+
+	user.SetOwner(userId)
+
+	assert.Equal(t, database.UserId(123), user.GetOwner())
+}
+
+func TestUserSetOwner_DoesNotChangeId(t *testing.T) {
+	originalId := database.UserId(789)
+	user := &User{ID: originalId}
+
+	user.SetOwner(database.UserId(456))
+	user.SetOwner(database.UserId(999))
+
+	assert.Equal(t, originalId, user.GetOwner())
+}
+
+func TestUserEditableBy(t *testing.T) {
+	ctx := context.Background()
+	db := database.NewUnitTestDBProvider()
+
+	userId := database.UserId(database.NewRecordId())
+	user := &User{ID: userId}
+
+	editableBy := user.EditableBy(ctx, db)
+	require.Len(t, editableBy, 2)
+	assert.Equal(t, userId, editableBy[0])
+	assert.Equal(t, database.SysAdminUserId, editableBy[1])
+}
+
+func TestUserAccessibleTo(t *testing.T) {
+	ctx := context.Background()
+	db := database.NewUnitTestDBProvider()
+
+	user := &User{}
+
+	accessibleTo := user.AccessibleTo(ctx, db)
+	require.Len(t, accessibleTo, 1)
+	assert.Equal(t, database.EveryoneUserId, accessibleTo[0])
+}
+
+func TestUserNewRecord(t *testing.T) {
+	user := &User{}
+	record := user.NewRecord()
+
+	require.NotNil(t, record)
+	newUser, ok := record.(*User)
+	assert.True(t, ok)
+	assert.NotNil(t, newUser)
+}
+
+func TestUserTrimValues(t *testing.T) {
+	user := &User{
+		FirstName:   "  John  ",
+		LastName:    "  Doe  ",
+		Email:       "  JOHN@Example.COM  ",
+		PhoneNumber: "1234567890",
+	}
+
+	user.TrimValues()
+
+	assert.Equal(t, "John", user.FirstName)
+	assert.Equal(t, "Doe", user.LastName)
+	assert.Equal(t, EmailAddress("john@example.com"), user.Email)
+	assert.Equal(t, PhoneNumber("123-456-7890"), user.PhoneNumber)
+}
+
+func TestUserTrimValues_EmptyPhoneNumber(t *testing.T) {
+	user := &User{
+		FirstName:   "John",
+		LastName:    "Doe",
+		Email:       "john@example.com",
+		PhoneNumber: "",
+	}
+
+	user.TrimValues()
+
+	assert.Equal(t, PhoneNumber(""), user.PhoneNumber)
+}
+
+func TestUserStaticallyValid_Valid(t *testing.T) {
+	user := &User{
+		FirstName:   "John",
+		LastName:    "Doe",
+		Email:       "john@example.com",
+		PhoneNumber: "123-456-7890",
+	}
+
+	err := user.StaticallyValid()
+	assert.NoError(t, err)
+}
+
+func TestUserStaticallyValid_EmptyFirstName(t *testing.T) {
+	user := &User{
+		FirstName:   "",
+		LastName:    "Doe",
+		Email:       "john@example.com",
+		PhoneNumber: "123-456-7890",
+	}
+
+	err := user.StaticallyValid()
+	assert.Error(t, err)
+	assert.Equal(t, "first name must not be empty", err.Error())
+}
+
+func TestUserStaticallyValid_EmptyLastName(t *testing.T) {
+	user := &User{
+		FirstName:   "John",
+		LastName:    "",
+		Email:       "john@example.com",
+		PhoneNumber: "123-456-7890",
+	}
+
+	err := user.StaticallyValid()
+	assert.Error(t, err)
+	assert.Equal(t, "last name must not be empty", err.Error())
+}
+
+func TestUserStaticallyValid_InvalidEmail(t *testing.T) {
+	user := &User{
+		FirstName:   "John",
+		LastName:    "Doe",
+		Email:       "invalid-email",
+		PhoneNumber: "123-456-7890",
+	}
+
+	err := user.StaticallyValid()
+	assert.Error(t, err)
+}
+
+func TestUserStaticallyValid_InvalidPhoneNumber(t *testing.T) {
+	user := &User{
+		FirstName:   "John",
+		LastName:    "Doe",
+		Email:       "john@example.com",
+		PhoneNumber: "123456789012345",
+	}
+
+	err := user.StaticallyValid()
+	assert.Error(t, err)
+}
+
+func TestUserDynamicallyValid(t *testing.T) {
+	ctx := context.Background()
+	db := database.NewUnitTestDBProvider()
+
+	user := &User{}
+	err := user.DynamicallyValid(ctx, db)
+	assert.NoError(t, err)
 }
