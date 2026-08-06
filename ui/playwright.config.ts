@@ -17,9 +17,23 @@ export default defineConfig({
 			use: { ...devices['Desktop Chrome'] }
 		}
 	],
-	webServer: {
-		command: 'npm run dev -- --host 127.0.0.1',
-		url: 'http://127.0.0.1:5173',
-		reuseExistingServer: !process.env.CI
-	}
+	webServer: [
+		{
+			// Build to tmp/ (gitignored, same convention as .air.toml) rather than using
+			// `go run`, which leaves the compiled child holding :8080 on teardown.
+			// --dev-token seeds dev data and returns login tokens in API responses.
+			command: 'go build -o ./tmp/intraclub-e2e . && ./tmp/intraclub-e2e --dev-token',
+			cwd: '..',
+			// Every route is mounted under /api, so `/` 404s and never reads as ready.
+			url: 'http://127.0.0.1:8080/api/score_counting_types',
+			reuseExistingServer: !process.env.CI,
+			timeout: 120_000
+		},
+		{
+			command: 'npm run dev -- --host 127.0.0.1',
+			url: 'http://127.0.0.1:5173',
+			reuseExistingServer: !process.env.CI,
+			timeout: 120_000
+		}
+	]
 });

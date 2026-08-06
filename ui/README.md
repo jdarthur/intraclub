@@ -54,13 +54,22 @@ npm run check
 
 Playwright is used for end-to-end (UI) automation. Tests live in the `e2e/` directory.
 
-First-time setup installs the Playwright browser binaries:
+Most UI tests need the Go API as well as the UI, so Playwright starts both servers itself:
+
+- the Vite dev server on `http://127.0.0.1:5173`
+- the Go backend on `http://127.0.0.1:8080`, built to `../tmp/intraclub-e2e` and run with
+  `--dev-token` so that dev data is seeded and login tokens are returned in API responses
+
+The dev server proxies `/api` to the backend (see `vite.config.ts`), so the app's relative
+`fetch('/api/...')` calls work unchanged under test.
+
+First-time setup requires Go on your `PATH` and the Playwright browser binaries:
 
 ```sh
 npx playwright install chromium
 ```
 
-Run the E2E tests (this starts the Vite dev server automatically):
+Run the E2E tests (this starts both servers automatically):
 
 ```sh
 npm run test:e2e
