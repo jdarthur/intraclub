@@ -6,6 +6,9 @@ import (
 	"testing"
 
 	"intraclub/database"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newStoredCommissionerProposalForSeason(t *testing.T, db database.Provider, season *Season, mustBeUnanimous bool) *CommissionerProposal {
@@ -200,7 +203,6 @@ func copyProposal(p *CommissionerProposal) *CommissionerProposal {
 		ID:              p.ID,
 		Description:     p.Description,
 		SeasonId:        p.SeasonId,
-		Votes:           p.Votes,
 		MustBeUnanimous: p.MustBeUnanimous,
 	}
 }
@@ -215,4 +217,102 @@ func TestCommissionerProposalUnanimousConstraintCannotBeUpdated(t *testing.T) {
 		t.Fatal("expected error when updating unanimous constraint")
 	}
 	fmt.Println(err)
+}
+
+func TestCommissionerProposalVoteRoundTrip(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	season, prop := newStoredCommissionerProposal(t, db, false)
+	commissioners, err := season.GetCommissioners(context.Background(), db)
+	require.NoError(t, err)
+
+	row := &CommissionerProposalVote{
+		ProposalId: prop.ID,
+		UserId:     commissioners[0],
+		Vote:       true,
+	}
+	created, err := database.CreateOne(context.Background(), db, row)
+	require.NoError(t, err)
+
+	got, exists, err := database.GetOneById(context.Background(), db, &CommissionerProposalVote{}, created.GetId())
+	require.NoError(t, err)
+	require.True(t, exists)
+	assert.Equal(t, prop.ID, got.ProposalId)
+	assert.Equal(t, commissioners[0], got.UserId)
+	assert.True(t, got.Vote)
+}
+
+func TestCommissionerProposalVoteUniquenessConstraint(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	season, prop := newStoredCommissionerProposal(t, db, false)
+	commissioners, err := season.GetCommissioners(context.Background(), db)
+	require.NoError(t, err)
+
+	row1 := &CommissionerProposalVote{ProposalId: prop.ID, UserId: commissioners[0], Vote: true}
+	_, err = database.CreateOne(context.Background(), db, row1)
+	require.NoError(t, err)
+
+	// a second vote for the same (proposal, user) must be rejected
+	row2 := &CommissionerProposalVote{ProposalId: prop.ID, UserId: commissioners[0], Vote: false}
+	_, err = database.CreateOne(context.Background(), db, row2)
+	assert.Error(t, err)
+}
+
+func TestCommissionerProposalVoteDynamicallyValid(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	season, prop := newStoredCommissionerProposal(t, db, false)
+	commissioners, err := season.GetCommissioners(context.Background(), db)
+	require.NoError(t, err)
+
+	valid := &CommissionerProposalVote{ProposalId: prop.ID, UserId: commissioners[0], Vote: true}
+	assert.NoError(t, valid.DynamicallyValid(context.Background(), db))
+
+	// invalid proposal ID
+	badProp := &CommissionerProposalVote{ProposalId: database.InvalidRecordId, UserId: commissioners[0], Vote: true}
+	assert.Error(t, badProp.DynamicallyValid(context.Background(), db))
+
+	// invalid user ID
+	badUser := &CommissionerProposalVote{ProposalId: prop.ID, UserId: database.InvalidUserId, Vote: true}
+	assert.Error(t, badUser.DynamicallyValid(context.Background(), db))
+}
+
+func TestCommissionerProposalVoteViaVoteMethod(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	season, prop := newStoredCommissionerProposal(t, db, false)
+	commissioners, err := season.GetCommissioners(context.Background(), db)
+	require.NoError(t, err)
+
+	err = prop.Vote(context.Background(), db, commissioners[0], true)
+	require.NoError(t, err)
+
+	votes, err := prop.GetVotes(context.Background(), db)
+	require.NoError(t, err)
+	assert.Len(t, votes, 1)
+	assert.True(t, votes[commissioners[0]])
+}
+
+func TestCommissionerProposalVoteCanChange(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	season, prop := newStoredCommissionerProposal(t, db, false)
+	commissioners, err := season.GetCommissioners(context.Background(), db)
+	require.NoError(t, err)
+
+	err = prop.Vote(context.Background(), db, commissioners[0], true)
+	require.NoError(t, err)
+	err = prop.Vote(context.Background(), db, commissioners[0], false)
+	require.NoError(t, err)
+
+	// the voter's existing relationship row is updated, not duplicated
+	votes, err := prop.GetVotes(context.Background(), db)
+	require.NoError(t, err)
+	assert.Len(t, votes, 1)
+	assert.False(t, votes[commissioners[0]])
+}
+
+func TestCommissionerProposalGetVotesEmpty(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	_, prop := newStoredCommissionerProposal(t, db, false)
+
+	votes, err := prop.GetVotes(context.Background(), db)
+	require.NoError(t, err)
+	assert.Len(t, votes, 0)
 }
