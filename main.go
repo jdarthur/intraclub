@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"net"
 
 	"intraclub/api"
 	"intraclub/database"
@@ -21,7 +23,7 @@ func main() {
 	db := database.NewUnitTestDBProvider()
 
 	// parse command-line flags
-	parseFlags()
+	addr := parseFlags()
 
 	// seed data for development mode
 	if model.UseDevTokenMode {
@@ -78,18 +80,42 @@ func main() {
 
 	rg.GET("/draft_order_patterns", model.GetDraftOrderPatterns)
 
-	err = r.Run("127.0.0.1:8080")
+	err = r.Run(addr)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func parseFlags() {
+func parseFlags() string {
 	useDevTokenMode := flag.Bool("dev-token", false, "Use development token mode")
+	addr := flag.String("addr", "127.0.0.1:8080", "Address to listen on, e.g. 127.0.0.1:8080")
 	flag.Parse()
 
 	if useDevTokenMode != nil && *useDevTokenMode == true {
 		model.UseDevTokenMode = true
 		fmt.Println("Using development token mode")
 	}
+
+	if model.UseDevTokenMode && !isLoopbackAddress(*addr) {
+		log.Fatalf("--dev-token mode is DEV MODE ONLY and bypasses authentication; it may only be used when the server is bound to a loopback address (127.0.0.1 / localhost), but got %q", *addr)
+	}
+
+	return *addr
+}
+
+// isLoopbackAddress reports whether addr's host is a loopback interface
+// (127.0.0.1 / localhost). This guards dev mode, which bypasses auth gating.
+func isLoopbackAddress(addr string) bool {
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		// e.g. "localhost" or "127.0.0.1" with no port
+		host = addr
+	}
+
+	// an empty host binds all interfaces (e.g. ":8080"), which is not loopback
+	if host == "" {
+		return false
+	}
+
+	return host == "localhost" || net.ParseIP(host).IsLoopback()
 }
