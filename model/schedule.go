@@ -20,7 +20,6 @@ func (id ScheduleId) String() string {
 type Schedule struct {
 	ID       ScheduleId
 	SeasonId SeasonId
-	Matchups []WeeklyMatchupId
 }
 
 func (s *Schedule) GetOwner() database.UserId {
@@ -75,12 +74,19 @@ func (s *Schedule) DynamicallyValid(ctx context.Context, db database.Provider) e
 		return err
 	}
 
-	for _, m := range s.Matchups {
-		weeklyMatchup, err := database.GetExistingRecordById(ctx, db, &WeeklyMatchup{}, m.RecordId())
-		if err != nil {
-			return err
-		}
-		err = weeklyMatchup.DynamicallyValid(ctx, db)
+	// Validate each assigned weekly matchup. Matchups are separate records
+	// (ScheduleMatchup) with a FK to this schedule, so they are created after
+	// the Schedule record itself; skip the check when none are assigned yet.
+	matchups, err := s.GetMatchups(ctx, db)
+	if err != nil {
+		return err
+	}
+	if len(matchups) == 0 {
+		return nil
+	}
+
+	for _, m := range matchups {
+		err = m.DynamicallyValid(ctx, db)
 		if err != nil {
 			return err
 		}
@@ -113,7 +119,86 @@ func (s *Schedule) IsScheduleComplete(ctx context.Context, db database.Provider)
 	if err != nil {
 		return false, err
 	}
-	return len(weeks) == len(s.Matchups), nil
+	matchups, err := s.GetMatchups(ctx, db)
+	if err != nil {
+		return false, err
+	}
+	return len(weeks) == len(matchups), nil
+}
+
+// GetMatchups retrieves all WeeklyMatchup records assigned to this Schedule by
+// querying the ScheduleMatchup relationship table, sorted by Position.
+func (s *Schedule) GetMatchups(ctx context.Context, db database.Provider) ([]*WeeklyMatchup, error) {
+	records, err := database.GetAllWhere[*ScheduleMatchup](ctx, db, func(_ context.Context, sm *ScheduleMatchup) bool {
+		return sm.ScheduleId == s.ID
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// Sort by Position to preserve ordering
+	for i := 0; i < len(records); i++ {
+		for j := i + 1; j < len(records); j++ {
+			if records[j].Position < records[i].Position {
+				records[i], records[j] = records[j], records[i]
+			}
+		}
+	}
+
+	matchups := make([]*WeeklyMatchup, 0, len(records))
+	for _, sm := range records {
+		weeklyMatchup, err := database.GetExistingRecordById(ctx, db, &WeeklyMatchup{}, sm.WeeklyMatchupId.RecordId())
+		if err != nil {
+			return nil, err
+		}
+		matchups = append(matchups, weeklyMatchup)
+	}
+	return matchups, nil
+}
+
+// SetMatchups replaces all weekly matchups assigned to this Schedule.
+// It deletes existing ScheduleMatchup records and creates new ones.
+func (s *Schedule) SetMatchups(ctx context.Context, db database.Provider, matchups []WeeklyMatchupId) error {
+	// Delete existing matchup records
+	existing, err := database.GetAllWhere[*ScheduleMatchup](ctx, db, func(_ context.Context, sm *ScheduleMatchup) bool {
+		return sm.ScheduleId == s.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, sm := range existing {
+		_, _, err = database.DeleteOneById(ctx, db, &ScheduleMatchup{}, sm.ID.RecordId())
+		if err != nil {
+			return err
+		}
+	}
+
+	// Create new matchup records
+	for i, m := range matchups {
+		sm := NewScheduleMatchup(s.ID, m, i)
+		_, err = database.CreateOne(ctx, db, sm)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// PreDelete cascades deletion to all associated ScheduleMatchup records.
+func (s *Schedule) PreDelete(ctx context.Context, db database.Provider) error {
+	existing, err := database.GetAllWhere[*ScheduleMatchup](ctx, db, func(_ context.Context, sm *ScheduleMatchup) bool {
+		return sm.ScheduleId == s.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, sm := range existing {
+		_, _, err = database.DeleteOneById(ctx, db, &ScheduleMatchup{}, sm.ID.RecordId())
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Schedule) NewRecord() database.CrudRecord {
