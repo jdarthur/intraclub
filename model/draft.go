@@ -76,10 +76,17 @@ type Draft struct {
 	Name              string            `json:"name"`                // descriptive name for the draft, e.g. "2025 Men's Intraclub". this will become the default name of the Season post-draft
 	Owner             database.UserId   `json:"owner"`               // This will be the commissioner of the league
 	Format            FormatId          `json:"format"`              // Format in which the Season associated with this draft will be played
-	RatingCutoffs     map[RatingId]int  `json:"rating_cutoffs"`      // map from rating ID to the last selection index matching that ID
 	CompletedAt       time.Time         `json:"completed_at"`        // timestamp when the draft was completed
 	DraftOrderPattern DraftOrderPattern `json:"draft_order_pattern"` // draft order pattern, e.g. snake, straight-up, etc.
 }
+
+// API/JSON shape decision: the former inline `rating_cutoffs` field
+// (`map[RatingId]int`) has been removed from `Draft` and normalized into the
+// `DraftRatingCutoff` join table (draft_rating_cutoff collection). Draft
+// records are not currently exposed via a REST CRUD route (see main.go), so
+// removing the field is not a breaking wire change; in-process reads can
+// reassemble the relationship rows into the old map shape via
+// `Draft.GetRatingCutoffs`.
 
 func (d *Draft) SetOwner(userId database.UserId) {
 	d.Owner = userId
@@ -122,12 +129,16 @@ func (d *Draft) DynamicallyValid(ctx context.Context, db database.Provider) erro
 		return err
 	}
 
-	if d.RatingCutoffs != nil {
-		// if the ratings cutoff are set, validate them, i.e.
-		// we have an increasing rating cutoff for each possible
-		// rating in the format, and that the last rating does not
-		// have a cutoff assigned to it
-		err = d.ValidateRatingsCutoff(format.PossibleRatings)
+	// if the rating cutoffs are set, validate them, i.e.
+	// we have an increasing rating cutoff for each possible
+	// rating in the format, and that the last rating does not
+	// have a cutoff assigned to it
+	ratingCutoffs, err := d.GetRatingCutoffs(ctx, db)
+	if err != nil {
+		return err
+	}
+	if len(ratingCutoffs) > 0 {
+		err = d.ValidateRatingsCutoff(format.PossibleRatings, ratingCutoffs)
 		if err != nil {
 			return err
 		}
@@ -389,7 +400,10 @@ func (d *Draft) Select(ctx context.Context, player database.UserId, db database.
 
 	// Get the rating for this pick
 	format, _ := database.GetExistingRecordById(getDraftContext(), db, &Format{}, d.Format.RecordId())
-	rating := d.GetRatingForPick(format.PossibleRatings, len(picks))
+	rating, err := d.GetRatingForPick(getDraftContext(), db, format.PossibleRatings, len(picks))
+	if err != nil {
+		return err
+	}
 
 	// Create the pick record
 	draftPick := &DraftPick{
@@ -400,7 +414,7 @@ func (d *Draft) Select(ctx context.Context, player database.UserId, db database.
 		Pick:    pick,
 		Rating:  rating,
 	}
-	_, err := database.CreateOne(ctx, db, draftPick)
+	_, err = database.CreateOne(ctx, db, draftPick)
 	return err
 }
 
@@ -468,27 +482,68 @@ func (d *Draft) GetDraftSelectionsByCaptainId(ctx context.Context, db database.P
 	return d.getDraftSelectionsByTeamIndex(getDraftContext(), db, teamIndex)
 }
 
+// getRatingCutoffRows returns all DraftRatingCutoff relationship rows assigned
+// to this draft.
+func (d *Draft) getRatingCutoffRows(ctx context.Context, db database.Provider) ([]*DraftRatingCutoff, error) {
+	filter := func(_ context.Context, drc *DraftRatingCutoff) bool {
+		return drc.DraftId == d.ID
+	}
+	return database.GetAllWhere[*DraftRatingCutoff](ctx, db, filter)
+}
+
+// GetRatingCutoffs reassembles the relationship rows into the former inline map
+// shape (rating -> cutoff index) for in-process reads.
+func (d *Draft) GetRatingCutoffs(ctx context.Context, db database.Provider) (map[RatingId]int, error) {
+	rows, err := d.getRatingCutoffRows(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[RatingId]int, len(rows))
+	for _, row := range rows {
+		result[row.RatingId] = row.CutoffIndex
+	}
+	return result, nil
+}
+
+// AssignRatingCutoff creates the relationship row that assigns the given cutoff
+// index to the given rating for this Draft.
+func (d *Draft) AssignRatingCutoff(ctx context.Context, db database.Provider, rating RatingId, cutoff int) (*DraftRatingCutoff, error) {
+	row := &DraftRatingCutoff{
+		DraftId:     d.ID,
+		RatingId:    rating,
+		CutoffIndex: cutoff,
+	}
+	return database.CreateOne(ctx, db, row)
+}
+
 // GetRatingForPick returns the rating assigned to a pick based on the draft's rating cutoffs.
 // The rating is determined by comparing the pick number against the stored cutoffs.
-func (d *Draft) GetRatingForPick(ratings []RatingId, pick int) RatingId {
+func (d *Draft) GetRatingForPick(ctx context.Context, db database.Provider, ratings []RatingId, pick int) (RatingId, error) {
+	cutoffs, err := d.GetRatingCutoffs(ctx, db)
+	if err != nil {
+		return RatingId(0), err
+	}
+
 	// check if this pick is below one of the cutoffs
 	for _, rating := range ratings[:len(ratings)-1] {
-		cutoff := d.RatingCutoffs[rating]
+		cutoff := cutoffs[rating]
 		if pick <= cutoff {
-			return rating
+			return rating, nil
 		}
 	}
 	// if not, this pick is assigned the lowest rating
-	return ratings[len(ratings)-1]
+	return ratings[len(ratings)-1], nil
 }
 
-func (d *Draft) ValidateRatingsCutoff(ratings []RatingId) error {
+// ValidateRatingsCutoff validates the draft's rating cutoffs (queried from the
+// DraftRatingCutoff relationship table) against the format's possible ratings.
+func (d *Draft) ValidateRatingsCutoff(ratings []RatingId, cutoffs map[RatingId]int) error {
 	allButOneRatings := ratings[:len(ratings)-1]
 	lastRating := ratings[len(ratings)-1]
 
 	cutoffBefore := -1
 	for _, rating := range allButOneRatings {
-		v, ok := d.RatingCutoffs[rating]
+		v, ok := cutoffs[rating]
 		if !ok {
 			return fmt.Errorf("rating cutoff for rating %s not found", rating)
 		}
@@ -503,7 +558,7 @@ func (d *Draft) ValidateRatingsCutoff(ratings []RatingId) error {
 		cutoffBefore = v
 	}
 
-	_, ok := d.RatingCutoffs[lastRating]
+	_, ok := cutoffs[lastRating]
 	if ok {
 		return fmt.Errorf("lowest rating %s must not have a rating cutoff", lastRating)
 	}
