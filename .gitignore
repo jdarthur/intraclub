@@ -6,3 +6,5 @@ intraclub
 *.key
 .idea
 .claude
+.reasonix
+reasonix.toml
