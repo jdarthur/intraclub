@@ -54,9 +54,8 @@ linuxpackage: linux
 
 tests:
 	$(info Running golang unit tests)
-	@go test ./lib
-	@go test ./controllers
-	@go test ./common
+	@go test ./...
+	@go vet ./...
 
 gocommon:
 	$(info Synchronizing go-common code)
@@ -74,6 +73,14 @@ docker:
 dockertest:
 	$(info Building docker test image with name: $(TEST_DOCKER_NAME))
 	@docker build -t $(TEST_DOCKER_NAME) -f Dockerfile.test .
+
+e2e:
+	$(info Running Playwright e2e tests (headless, from ./ui))
+	@cd ui && npm run test:e2e
+
+e2e-ui:
+	$(info Running Playwright e2e tests in UI mode (from ./ui))
+	@cd ui && npm run test:e2e:ui
 
 clean:
 	@rm -f $(BINARY_NAME)
