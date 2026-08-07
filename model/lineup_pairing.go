@@ -122,6 +122,11 @@ func (l *LineupPairing) GetFormat(ctx context.Context, db database.Provider) (*F
 	return lineup.GetFormat(ctx, db)
 }
 
+// ValidatePlayerRatings verifies that both players in the pairing have the
+// rating expected by their format line. Previously the inline `RatingsMap`
+// silently returned a zero rating for players without an assignment; now a
+// player with no TeamRating is treated as an error, since such a player is
+// not valid for lineup validation.
 func (l *LineupPairing) ValidatePlayerRatings(ctx context.Context, db database.Provider) error {
 	format, err := l.GetFormat(ctx, db)
 	if err != nil {
@@ -131,20 +136,22 @@ func (l *LineupPairing) ValidatePlayerRatings(ctx context.Context, db database.P
 	if err != nil {
 		return err
 	}
-	return l._validatePlayerRatings(format, team)
-}
-
-func (l *LineupPairing) _validatePlayerRatings(format *Format, team *Team) error {
 	line := format.Lines[l.FormatLineIndex]
 
-	rating1 := team.RatingsMap[l.Player1]
+	rating1, err := team.GetRating(ctx, db, l.Player1)
+	if err != nil {
+		return err
+	}
 	if rating1 != line.Player1Rating {
-		return fmt.Errorf("player 1 has rating %s, expected %s for line index %d for format", line.Player1Rating, rating1, l.FormatLineIndex)
+		return fmt.Errorf("player 1 has rating %s, expected %s for line index %d for format", rating1, line.Player1Rating, l.FormatLineIndex)
 	}
 
-	rating2 := team.RatingsMap[l.Player2]
+	rating2, err := team.GetRating(ctx, db, l.Player2)
+	if err != nil {
+		return err
+	}
 	if rating2 != line.Player2Rating {
-		return fmt.Errorf("player 2 has rating %s, expected %s for line index %d for format", line.Player2Rating, rating2, l.FormatLineIndex)
+		return fmt.Errorf("player 2 has rating %s, expected %s for line index %d for format", rating2, line.Player2Rating, l.FormatLineIndex)
 	}
 	return nil
 }
