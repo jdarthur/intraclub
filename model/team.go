@@ -135,15 +135,94 @@ func (a *TeamAssignment) NewRecord() database.CrudRecord {
 	return new(TeamAssignment)
 }
 
+// TeamRating is a join table record that assigns a RatingId to a UserId
+// on a particular Team. This replaces the former denormalized
+// `Team.RatingsMap` inline map (user -> rating), enabling the relationship
+// to be queried/indexed individually and stored in its own collection/table.
+//
+// API/JSON shape decision: `Team.RatingsMap` (the `ratings_map` JSON field)
+// has been removed from `Team`. Team records are not currently exposed via a
+// REST CRUD route (see main.go), so removing the field is not a breaking wire
+// change; in-process reads can reassemble the relationship rows into the old
+// map shape via `Team.GetRatingsMap`. `TeamRating` is stored in its own
+// collection (`team_rating`) with FKs to team/user/rating and a natural unique
+// constraint on (TeamId, UserId). When the #36 SQLite provider lands, this
+// becomes a `team_ratings` table with a migration/backfill.
+type TeamRating struct {
+	ID       database.RecordId `json:"id"`
+	TeamId   TeamId            `json:"team_id"`
+	UserId   database.UserId   `json:"user_id"`
+	RatingId RatingId          `json:"rating_id"`
+}
+
+func (r *TeamRating) GetOwner() database.UserId {
+	return database.InvalidUserId
+}
+
+func (r *TeamRating) SetOwner(userId database.UserId) {}
+
+func (r *TeamRating) Type() string {
+	return "team_rating"
+}
+
+func (r *TeamRating) GetId() database.RecordId {
+	return r.ID
+}
+
+func (r *TeamRating) SetId(id database.RecordId) {
+	r.ID = id
+}
+
+func (r *TeamRating) StaticallyValid() error {
+	return nil
+}
+
+func (r *TeamRating) DynamicallyValid(ctx context.Context, db database.Provider) error {
+	if err := database.ExistsById(ctx, db, &Team{}, r.TeamId.RecordId()); err != nil {
+		return err
+	}
+
+	if err := database.ExistsById(ctx, db, &User{}, r.UserId.RecordId()); err != nil {
+		return err
+	}
+
+	_, err := database.GetExistingRecordById(ctx, db, &Rating{}, r.RatingId.RecordId())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *TeamRating) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
+	return database.AccessibleToEveryone
+}
+
+func (r *TeamRating) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
+	return []database.UserId{database.SysAdminUserId}
+}
+
+func (r *TeamRating) NewRecord() database.CrudRecord {
+	return new(TeamRating)
+}
+
+// UniquenessEquivalent enforces the natural unique constraint on (TeamId, UserId):
+// a user may only have one assigned rating per team.
+func (r *TeamRating) UniquenessEquivalent(other *TeamRating) error {
+	if r.TeamId == other.TeamId && r.UserId == other.UserId {
+		return fmt.Errorf("user %s already has a rating assigned on team %s", r.UserId, r.TeamId)
+	}
+	return nil
+}
+
 type Team struct {
-	ID          TeamId                       `json:"id"`
-	Name        string                       `json:"name"`
-	Color       TeamColor                    `json:"color"`
-	RatingsMap  map[database.UserId]RatingId `json:"ratings_map"`
-	tempCaptain database.UserId              `json:"-"`
-	CreatedAt   time.Time                    `json:"created_at"`
-	UpdatedAt   time.Time                    `json:"updated_at"`
-	DeletedAt   *time.Time                   `json:"deleted_at"`
+	ID          TeamId          `json:"id"`
+	Name        string          `json:"name"`
+	Color       TeamColor       `json:"color"`
+	tempCaptain database.UserId `json:"-"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+	DeletedAt   *time.Time      `json:"deleted_at"`
 }
 
 func (t *Team) GetOwner() database.UserId {
@@ -158,9 +237,7 @@ func (t *Team) SetOwner(userId database.UserId) {
 }
 
 func NewTeam() *Team {
-	return &Team{
-		RatingsMap: make(map[database.UserId]RatingId),
-	}
+	return &Team{}
 }
 
 func NewDefaultTeam(captain database.UserId, name string) *Team {
@@ -179,6 +256,43 @@ func (t *Team) getAssignments(ctx context.Context, db database.Provider) ([]*Tea
 		return a.TeamId == t.ID
 	}
 	return database.GetAllWhere[*TeamAssignment](ctx, db, filter)
+}
+
+// getRatings returns all TeamRating relationship rows for this team.
+func (t *Team) getRatings(ctx context.Context, db database.Provider) ([]*TeamRating, error) {
+	filter := func(_ context.Context, r *TeamRating) bool {
+		return r.TeamId == t.ID
+	}
+	return database.GetAllWhere[*TeamRating](ctx, db, filter)
+}
+
+// GetRating returns the RatingId assigned to the given UserId on this team,
+// or an error if no rating assignment exists for that user.
+func (t *Team) GetRating(ctx context.Context, db database.Provider, userId database.UserId) (RatingId, error) {
+	ratings, err := t.getRatings(ctx, db)
+	if err != nil {
+		return 0, err
+	}
+	for _, r := range ratings {
+		if r.UserId == userId {
+			return r.RatingId, nil
+		}
+	}
+	return 0, fmt.Errorf("no rating assigned for user %s on team %s", userId, t.ID)
+}
+
+// GetRatingsMap reassembles the relationship rows into a user->rating map.
+// This preserves the former Team.RatingsMap shape for in-process reads.
+func (t *Team) GetRatingsMap(ctx context.Context, db database.Provider) (map[database.UserId]RatingId, error) {
+	ratings, err := t.getRatings(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+	result := make(map[database.UserId]RatingId, len(ratings))
+	for _, r := range ratings {
+		result[r.UserId] = r.RatingId
+	}
+	return result, nil
 }
 
 func (t *Team) GetCaptain(ctx context.Context, db database.Provider) (database.UserId, error) {

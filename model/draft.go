@@ -657,8 +657,16 @@ func (d *Draft) AssignDraftedPlayersToTeams(ctx context.Context, db database.Pro
 				if err != nil {
 					return err
 				}
-				// also add to ratings map
-				team.RatingsMap[result.User.ID] = result.Rating
+				// assign this player's rating to the team as a TeamRating record
+				teamRating := &TeamRating{
+					TeamId:   team.ID,
+					UserId:   result.User.ID,
+					RatingId: result.Rating,
+				}
+				_, err = database.CreateOne(ctx, db, teamRating)
+				if err != nil {
+					return err
+				}
 			}
 		}
 

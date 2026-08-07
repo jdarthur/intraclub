@@ -426,6 +426,42 @@ func TestTeamAssignmentAfterDraft(t *testing.T) {
 	}
 }
 
+func TestTeamRatingCreatedOnAssignDraftedPlayersToTeams(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	draft := doRandomDraft(t, db, 100, 4)
+
+	err := draft.AssignDraftedPlayersToTeams(context.Background(), db)
+	require.NoError(t, err)
+
+	captains, _ := draft.GetCaptains(context.Background(), db)
+	captainIds := make(map[database.UserId]bool)
+	for _, a := range captains {
+		captainIds[a.CaptainId] = true
+	}
+
+	totalRatings := 0
+	for _, assignment := range captains {
+		team, err := database.GetExistingRecordById(context.Background(), db, &Team{}, assignment.TeamId.RecordId())
+		require.NoError(t, err)
+
+		// every drafted (non-captain) player on the team should have a TeamRating row
+		members, err := team.GetMembers(context.Background(), db)
+		require.NoError(t, err)
+		for _, member := range members {
+			if captainIds[member] {
+				// captains draft themselves but are already members, so no rating is assigned
+				continue
+			}
+			rating, err := team.GetRating(context.Background(), db, member)
+			require.NoError(t, err, "expected a rating for every drafted team member")
+			assert.NotEqual(t, RatingId(0), rating)
+			totalRatings++
+		}
+	}
+	// all 96 drafted non-captain players (100 total minus 4 captains) should have a rating
+	assert.Equal(t, 96, totalRatings)
+}
+
 func TestDoubleInitializeDraft(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	draft := newRandomDraft(t, db, 100, 4)
