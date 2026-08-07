@@ -269,7 +269,9 @@ func (m *StartLoginTokenManager) OneTimePassword(c *gin.Context) {
 	}
 
 	if UseDevTokenMode {
-		c.JSON(http.StatusCreated, gin.H{"token": token})
+		// DEV MODE ONLY: return the magic-link token in the response body instead of
+		// emailing it. The UI renders this as a clickable link.
+		c.JSON(http.StatusCreated, gin.H{"token": token.Token})
 	} else {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	}

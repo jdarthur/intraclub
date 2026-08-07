@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { setToken } from '$lib/auth';
-
 	let email = $state('');
 	let message = $state('');
 	let error = $state('');
+	let devLink = $state('');
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		message = '';
 		error = '';
+		devLink = '';
 
 		const res = await fetch('/api/one_time_password', {
 			method: 'POST',
@@ -22,7 +22,15 @@
 			return;
 		}
 
-		message = 'Check your email for the login link.';
+		const body = await res.json();
+		if (body?.token) {
+			// DEV MODE ONLY: the API returned the magic-link token in the response
+			// instead of emailing it. Render it as a clickable link.
+			devLink = `/auth/callback?token=${encodeURIComponent(body.token)}`;
+			message = 'DEV MODE ONLY — no email was sent. Use the magic link below to log in.';
+		} else {
+			message = 'Check your email for the login link.';
+		}
 	}
 </script>
 
@@ -42,6 +50,12 @@
 
 {#if message}
 	<p>{message}</p>
+{/if}
+
+{#if devLink}
+	<p>
+		<a href={devLink}>Log in</a>
+	</p>
 {/if}
 
 {#if error}
