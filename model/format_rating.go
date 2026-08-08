@@ -10,10 +10,15 @@ import (
 // FormatRating is a join table record that links a Format to a Rating.
 // This enables efficient reverse lookups from Rating to Formats without
 // scanning the entire Format collection.
+//
+// RatingIndex preserves the ordering of possible ratings within a format
+// (highest-skill to lowest-skill), replacing the former inline
+// `Format.PossibleRatings` slice ordering.
 type FormatRating struct {
-	ID       database.RecordId `json:"id"`
-	FormatId FormatId          `json:"format_id"`
-	RatingId RatingId          `json:"rating_id"`
+	ID          database.RecordId `json:"id"`
+	FormatId    FormatId          `json:"format_id"`
+	RatingId    RatingId          `json:"rating_id"`
+	RatingIndex int               `json:"rating_index"`
 }
 
 func (f *FormatRating) GetOwner() database.UserId {

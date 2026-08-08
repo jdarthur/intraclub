@@ -103,9 +103,14 @@ func (l *LineupPairing) DynamicallyValid(ctx context.Context, db database.Provid
 		return err
 	}
 
+	lines, err := format.GetLines(ctx, db)
+	if err != nil {
+		return err
+	}
+
 	// check that the line index for this pairing is within the bounds of the format
-	if l.FormatLineIndex >= len(format.Lines) {
-		return fmt.Errorf("format line index out of range: %d, max %d", l.FormatLineIndex, len(format.Lines)-1)
+	if l.FormatLineIndex >= len(lines) {
+		return fmt.Errorf("format line index out of range: %d, max %d", l.FormatLineIndex, len(lines)-1)
 	}
 	return nil
 }
@@ -132,11 +137,15 @@ func (l *LineupPairing) ValidatePlayerRatings(ctx context.Context, db database.P
 	if err != nil {
 		return err
 	}
+	lines, err := format.GetLines(ctx, db)
+	if err != nil {
+		return err
+	}
 	team, err := database.GetExistingRecordById(ctx, db, &Team{}, l.TeamId.RecordId())
 	if err != nil {
 		return err
 	}
-	line := format.Lines[l.FormatLineIndex]
+	line := lines[l.FormatLineIndex]
 
 	rating1, err := team.GetRating(ctx, db, l.Player1)
 	if err != nil {

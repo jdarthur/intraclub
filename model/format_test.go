@@ -8,17 +8,7 @@ import (
 	"intraclub/database"
 )
 
-func newStoredFormat(t *testing.T, db database.Provider, lines []FormatLine) *Format {
-	f := NewFormat()
-	f.Lines = lines
-
-	v, err := database.CreateOne(context.Background(), db, f)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return v
-}
-
+// newLine creates a FormatLine referencing two stored ratings.
 func newLine(t *testing.T, db database.Provider) FormatLine {
 	return FormatLine{
 		Player1Rating: newStoredRating(t, db).ID,
@@ -26,41 +16,64 @@ func newLine(t *testing.T, db database.Provider) FormatLine {
 	}
 }
 
+// appendUniqueRating appends r to ratings unless it is already present.
+func appendUniqueRating(ratings RatingList, r RatingId) RatingList {
+	for _, existing := range ratings {
+		if existing == r {
+			return ratings
+		}
+	}
+	return append(ratings, r)
+}
+
+// newDefaultFormat creates and stores a format with two lines, whose unique
+// ratings become the format's possible ratings (stored in the format_rating /
+// format_line join tables).
 func newDefaultFormat(t *testing.T, db database.Provider) *Format {
 	user := newStoredUser(t, db)
 	f := NewFormat()
 	f.UserId = user.ID
+	f.Name = "default format"
+
+	created, err := database.CreateOne(context.Background(), db, f)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	lines := []FormatLine{
 		newLine(t, db),
 		newLine(t, db),
 	}
-
-	f.Name = "default format"
-	f.Lines = lines
-	f.PossibleRatings = []RatingId{
-		lines[0].Player1Rating,
-		lines[0].Player2Rating,
-		lines[1].Player1Rating,
-		lines[1].Player2Rating,
+	var ratings RatingList
+	for _, l := range lines {
+		ratings = appendUniqueRating(ratings, l.Player1Rating)
+		ratings = appendUniqueRating(ratings, l.Player2Rating)
 	}
-	return f
+	if err := created.SetPossibleRatings(context.Background(), db, ratings); err != nil {
+		t.Fatal(err)
+	}
+	if err := created.SetLines(context.Background(), db, lines); err != nil {
+		t.Fatal(err)
+	}
+	return created
 }
 
 func newDefaultStoredFormat(t *testing.T, db database.Provider) *Format {
-	f := newDefaultFormat(t, db)
-	v, err := database.CreateOne(context.Background(), db, f)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return v
+	return newDefaultFormat(t, db)
 }
 
 func TestFormatDuplicateLine(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
+	ctx := context.Background()
 
-	format := newDefaultFormat(t, db)
-	format.Lines = []FormatLine{format.Lines[0], format.Lines[0]}
-	err := format.StaticallyValid()
+	format := newDefaultStoredFormat(t, db)
+	lines, err := format.GetLines(ctx, db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dup := lines[0]
+
+	err = format.SetLines(ctx, db, []FormatLine{dup, dup})
 	if err == nil {
 		t.Fatal("Expected duplicate line to fail")
 	}
@@ -69,13 +82,17 @@ func TestFormatDuplicateLine(t *testing.T) {
 
 func TestFormatReversedValueDuplicateLine(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	format := newDefaultFormat(t, db)
+	ctx := context.Background()
 
-	line1 := format.Lines[0]
+	format := newDefaultStoredFormat(t, db)
+	lines, err := format.GetLines(ctx, db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	line1 := lines[0]
 	line2 := FormatLine{Player1Rating: line1.Player2Rating, Player2Rating: line1.Player1Rating}
 
-	format.Lines = []FormatLine{line1, line2}
-	err := format.StaticallyValid()
+	err = format.SetLines(ctx, db, []FormatLine{line1, line2})
 	if err == nil {
 		t.Fatal("Expected duplicate line to fail")
 	}
@@ -107,8 +124,8 @@ func TestFormatNameWhitespace(t *testing.T) {
 func TestFormatHasEmptyPossibleRatings(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	format := newDefaultStoredFormat(t, db)
-	format.PossibleRatings = []RatingId{}
-	err := format.StaticallyValid()
+
+	err := format.SetPossibleRatings(context.Background(), db, nil)
 	if err == nil {
 		t.Fatal("Expected empty possible ratings to fail")
 	}
@@ -117,7 +134,7 @@ func TestFormatHasEmptyPossibleRatings(t *testing.T) {
 
 func TestFormatHasInvalidUserId(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	format := newDefaultFormat(t, db)
+	format := newDefaultStoredFormat(t, db)
 
 	format.UserId = database.InvalidUserId
 	err := format.DynamicallyValid(context.Background(), db)
@@ -130,8 +147,8 @@ func TestFormatHasInvalidUserId(t *testing.T) {
 func TestFormatHasEmptyLines(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	format := newDefaultStoredFormat(t, db)
-	format.Lines = []FormatLine{}
-	err := format.StaticallyValid()
+
+	err := format.SetLines(context.Background(), db, nil)
 	if err == nil {
 		t.Fatal("Expected empty lines to fail")
 	}
@@ -141,12 +158,13 @@ func TestFormatHasEmptyLines(t *testing.T) {
 func TestFormatHasLineRatingsNotInPossibleLinesList(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	format := newDefaultStoredFormat(t, db)
-	format.Lines = []FormatLine{
-		newLine(t, db),
-	}
-	err := format.StaticallyValid()
+
+	other := newStoredRating(t, db)
+	err := format.SetLines(context.Background(), db, []FormatLine{
+		{Player1Rating: other.ID, Player2Rating: other.ID},
+	})
 	if err == nil {
-		t.Fatal("Expected empty lines to fail")
+		t.Fatal("Expected line ratings not in possible list to fail")
 	}
 	fmt.Println(err)
 }
@@ -170,8 +188,6 @@ func TestFormatCannotBeEditedWhenInUse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	newRating := newStoredRating(t, db)
-	format.PossibleRatings = append(format.PossibleRatings, newRating.ID)
 	err = database.UpdateOne(context.Background(), db, format)
 	if err == nil {
 		t.Fatal("Expected in-use format edit to fail")
@@ -183,54 +199,60 @@ func TestFormatCanBeEditedWhenNotInUse(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	f := newDefaultStoredFormat(t, db)
 
-	newRating := newStoredRating(t, db)
-	f.PossibleRatings = append(f.PossibleRatings, newRating.ID)
-
+	f.Name = "renamed format"
 	err := database.UpdateOne(context.Background(), db, f)
 	if err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestFormatPostCreateCreatesFormatRatings(t *testing.T) {
+func TestFormatSetPossibleRatingsCreatesFormatRatings(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	format := newDefaultStoredFormat(t, db)
+	ctx := context.Background()
 
-	formatRatings, err := database.GetAllWhere[*FormatRating](context.Background(), db, func(_ context.Context, fr *FormatRating) bool {
+	format := newDefaultFormat(t, db)
+	got, err := format.GetPossibleRatings(ctx, db)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	formatRatings, err := database.GetAllWhere[*FormatRating](ctx, db, func(_ context.Context, fr *FormatRating) bool {
 		return fr.FormatId == format.ID
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(formatRatings) != len(format.PossibleRatings) {
-		t.Fatalf("Expected %d FormatRating records, got %d", len(format.PossibleRatings), len(formatRatings))
+	if len(formatRatings) != len(got) {
+		t.Fatalf("Expected %d FormatRating records, got %d", len(got), len(formatRatings))
 	}
 }
 
-func TestFormatPostUpdateAddsNewRating(t *testing.T) {
+func TestFormatSetPossibleRatingsAddsNewRating(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
+	ctx := context.Background()
+
 	format := newDefaultStoredFormat(t, db)
+	before, err := format.GetPossibleRatings(ctx, db)
+	if err != nil {
+		t.Fatal(err)
+	}
 	newRating := newStoredRating(t, db)
-
-	format.PossibleRatings = append(format.PossibleRatings, newRating.ID)
-	err := database.UpdateOne(context.Background(), db, format)
-	if err != nil {
+	after := append(append(RatingList{}, before...), newRating.ID)
+	if err := format.SetPossibleRatings(ctx, db, after); err != nil {
 		t.Fatal(err)
 	}
 
-	formatRatings, err := database.GetAllWhere[*FormatRating](context.Background(), db, func(_ context.Context, fr *FormatRating) bool {
-		return fr.FormatId == format.ID
-	})
+	got, err := format.GetPossibleRatings(ctx, db)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(formatRatings) != len(format.PossibleRatings) {
-		t.Fatalf("Expected %d FormatRating records, got %d", len(format.PossibleRatings), len(formatRatings))
+	if len(got) != len(after) {
+		t.Fatalf("Expected %d FormatRating records, got %d", len(after), len(got))
 	}
 
 	found := false
-	for _, fr := range formatRatings {
-		if fr.RatingId == newRating.ID {
+	for _, r := range got {
+		if r == newRating.ID {
 			found = true
 			break
 		}
@@ -240,45 +262,36 @@ func TestFormatPostUpdateAddsNewRating(t *testing.T) {
 	}
 }
 
-func TestFormatPostUpdateRemovesOldRating(t *testing.T) {
+func TestFormatSetPossibleRatingsRemovesOldRating(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
+	ctx := context.Background()
+
 	format := newDefaultStoredFormat(t, db)
+	before, err := format.GetPossibleRatings(ctx, db)
+	if err != nil {
+		t.Fatal(err)
+	}
 	extraRating := newStoredRating(t, db)
-
-	format.PossibleRatings = append(format.PossibleRatings, extraRating.ID)
-	err := database.UpdateOne(context.Background(), db, format)
-	if err != nil {
+	withExtra := append(append(RatingList{}, before...), extraRating.ID)
+	if err := format.SetPossibleRatings(ctx, db, withExtra); err != nil {
 		t.Fatal(err)
 	}
 
-	formatRatings, err := database.GetAllWhere[*FormatRating](context.Background(), db, func(_ context.Context, fr *FormatRating) bool {
-		return fr.FormatId == format.ID
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(formatRatings) != 5 {
-		t.Fatalf("Expected 5 FormatRating records after add, got %d", len(formatRatings))
-	}
-
-	format.PossibleRatings = format.PossibleRatings[:4]
-	err = database.UpdateOne(context.Background(), db, format)
-	if err != nil {
+	withoutExtra := withExtra[:len(withExtra)-1]
+	if err := format.SetPossibleRatings(ctx, db, withoutExtra); err != nil {
 		t.Fatal(err)
 	}
 
-	formatRatings, err = database.GetAllWhere[*FormatRating](context.Background(), db, func(_ context.Context, fr *FormatRating) bool {
-		return fr.FormatId == format.ID
-	})
+	got, err := format.GetPossibleRatings(ctx, db)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(formatRatings) != 4 {
-		t.Fatalf("Expected 4 FormatRating records after remove, got %d", len(formatRatings))
+	if len(got) != len(withoutExtra) {
+		t.Fatalf("Expected %d FormatRating records after remove, got %d", len(withoutExtra), len(got))
 	}
 
-	for _, fr := range formatRatings {
-		if fr.RatingId == extraRating.ID {
+	for _, r := range got {
+		if r == extraRating.ID {
 			t.Fatal("Expected removed rating to not be in FormatRating records")
 		}
 	}
@@ -337,8 +350,9 @@ func TestFormatRatingDuplicateFails(t *testing.T) {
 	})
 
 	duplicate := &FormatRating{
-		FormatId: format.ID,
-		RatingId: formatRatings[0].RatingId,
+		FormatId:    format.ID,
+		RatingId:    formatRatings[0].RatingId,
+		RatingIndex: formatRatings[0].RatingIndex,
 	}
 	_, err := database.CreateOne(context.Background(), db, duplicate)
 	if err == nil {

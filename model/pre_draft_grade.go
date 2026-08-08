@@ -112,14 +112,18 @@ func (p *PreDraftGrade) DynamicallyValid(ctx context.Context, db database.Provid
 		return err
 	}
 
-	if !format.IsRatingValidForFormat(p.Rating) {
+	valid, err := format.IsRatingValidForFormat(ctx, db, p.Rating)
+	if err != nil {
+		return err
+	}
+	if !valid {
 		return fmt.Errorf("rating %s is not a valid rating for draft's format %s", p.Rating, draft.Format.RecordId())
 	}
 	return nil
 }
 
 // NumericRating calculates a numeric rating for this PreDraftGrade based
-// on the provided Format
+// on the provided possible-ratings list (in the draft's format)
 //
 // rating base value is calculated as
 //   - no rating: 0
@@ -139,10 +143,10 @@ func (p *PreDraftGrade) DynamicallyValid(ctx context.Context, db database.Provid
 //   - a WeakModifier 1 would get a 7 numeric rating
 //   - an AverageModifier 1 would get an 8 numeric rating
 //   - a StrongModifier 1 would get a 9 numeric rating
-func (p *PreDraftGrade) NumericRating(format *Format) float64 {
+func (p *PreDraftGrade) NumericRating(possibleRatings []RatingId) float64 {
 
 	ratingIndex := -1
-	for i, rating := range format.PossibleRatings {
+	for i, rating := range possibleRatings {
 		if p.Rating == rating {
 			ratingIndex = i
 			break
@@ -156,7 +160,7 @@ func (p *PreDraftGrade) NumericRating(format *Format) float64 {
 	// 3 * (len - 1 - ratingIndex) <--- so that a weak 2 is 1 higher than a strong 3
 	// + 1                         <--- so that an unrated player is lower than the weakest 3
 	// + modifier                  <--- so that a strong 3 is higher than a weak or average 3
-	ratingBaseValue := (len(format.PossibleRatings)-ratingIndex-1)*3 + 1
+	ratingBaseValue := (len(possibleRatings)-ratingIndex-1)*3 + 1
 	return float64(ratingBaseValue + p.Modifier.Int())
 }
 
@@ -182,7 +186,7 @@ func GetPreDraftGradesByDraftId(ctx context.Context, db database.Provider, draft
 	})
 }
 
-func GetDraftAggregateForPlayer(allGrades []*PreDraftGrade, format *Format, id database.UserId) PreDraftAggregate {
+func GetDraftAggregateForPlayer(allGrades []*PreDraftGrade, possibleRatings []RatingId, id database.UserId) PreDraftAggregate {
 
 	// filter down to only the grades for this particular player ID
 	gradesForThisPlayer := make([]*PreDraftGrade, 0)
@@ -195,7 +199,7 @@ func GetDraftAggregateForPlayer(allGrades []*PreDraftGrade, format *Format, id d
 	// get the numeric value of each grade
 	numeric := 0.0
 	for _, grade := range gradesForThisPlayer {
-		numeric += grade.NumericRating(format)
+		numeric += grade.NumericRating(possibleRatings)
 	}
 	// get the average of all numeric ratings
 	if len(gradesForThisPlayer) > 0 {
@@ -222,6 +226,10 @@ func GetSortedListOfAllPreDraftGradesDescending(ctx context.Context, db database
 	if err != nil {
 		return nil, err
 	}
+	possibleRatings, err := format.GetPossibleRatings(ctx, db)
+	if err != nil {
+		return nil, err
+	}
 
 	// for each player in the available-to-draft list, get their pre-draft aggregate
 	aggregates := make([]PreDraftAggregate, 0)
@@ -231,7 +239,7 @@ func GetSortedListOfAllPreDraftGradesDescending(ctx context.Context, db database
 	}
 	for _, player := range availablePlayers {
 		// get pre-draft aggregate for each player in the list
-		a := GetDraftAggregateForPlayer(allGrades, format, player)
+		a := GetDraftAggregateForPlayer(allGrades, possibleRatings, player)
 		aggregates = append(aggregates, a)
 	}
 

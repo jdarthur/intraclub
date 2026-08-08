@@ -62,11 +62,14 @@ func seedDevScoringStructures(db database.Provider, u database.UserId) {
 		WinThreshold: 2,
 		MustWinBy:    1,
 	}
-	scoringStructure2.SecondaryScoringStructures = ScoringStructureList{
-		v.ID, v.ID, v.ID,
+	v2, err := database.CreateOne(ctx, db, scoringStructure2)
+	if err != nil {
+		panic(err)
 	}
 
-	_, err = database.CreateOne(ctx, db, scoringStructure2)
+	err = v2.SetSecondaryScoringStructures(ctx, db, ScoringStructureList{
+		v.ID, v.ID, v.ID,
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -124,22 +127,29 @@ func seedDevFormat(db database.Provider, u database.UserId) {
 		return ratings[i].Name < ratings[j].Name
 	})
 
+	possibleRatings := make(RatingList, 0, len(ratings))
+	lines := make([]FormatLine, 0)
 	for i, rating := range ratings {
 		// add possible ratings
-		format.PossibleRatings = append(format.PossibleRatings, rating.ID)
+		possibleRatings = append(possibleRatings, rating.ID)
 
 		// create lines
 		for _, rating2 := range ratings[i:] {
-			format.Lines = append(format.Lines, FormatLine{
+			lines = append(lines, FormatLine{
 				Player1Rating: rating.ID,
 				Player2Rating: rating2.ID,
 			})
 		}
-
 	}
 
-	_, err = database.CreateOne(ctx, db, format)
+	created, err := database.CreateOne(ctx, db, format)
 	if err != nil {
+		panic(err)
+	}
+	if err := created.SetPossibleRatings(ctx, db, possibleRatings); err != nil {
+		panic(err)
+	}
+	if err := created.SetLines(ctx, db, lines); err != nil {
 		panic(err)
 	}
 }

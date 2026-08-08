@@ -36,20 +36,25 @@ var TennisTiebreakThirdSet = ScoringStructure{
 	},
 }
 
+var testScoringSeq int
+
 func newDefaultStoredScoringStructure(t *testing.T, db database.Provider) *ScoringStructure {
 
 	s := newDefaultStoredSetScoringStructure(t, db)
-	matchScoringStructure := &TennisMatchScoringStructure
+	testScoringSeq++
+	matchScoringStructure := TennisMatchScoringStructure
 	matchScoringStructure.Owner = s.Owner
-	matchScoringStructure.Name = "test-match-scoring"
-	matchScoringStructure.SecondaryScoringStructures = []ScoringStructureId{
-		s.ID,
-		s.ID,
-		s.ID,
-	}
+	matchScoringStructure.Name = fmt.Sprintf("test-match-scoring-%d", testScoringSeq)
 
-	m, err := database.CreateOne(context.Background(), db, matchScoringStructure)
+	m, err := database.CreateOne(context.Background(), db, &matchScoringStructure)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.SetSecondaryScoringStructures(context.Background(), db, ScoringStructureList{
+		s.ID,
+		s.ID,
+		s.ID,
+	}); err != nil {
 		t.Fatal(err)
 	}
 	return m
@@ -60,17 +65,20 @@ func newThirdSetTiebreakScoringStructure(t *testing.T, db database.Provider) *Sc
 	s := newDefaultStoredSetScoringStructure(t, db)
 	s2 := newTenPointTiebreakSetScoringStructure(t, db)
 
-	matchScoringStructure := &TennisMatchScoringStructure
+	testScoringSeq++
+	matchScoringStructure := TennisMatchScoringStructure
 	matchScoringStructure.Owner = s.Owner
-	matchScoringStructure.Name = "test-tiebreak-match-scoring"
-	matchScoringStructure.SecondaryScoringStructures = []ScoringStructureId{
+	matchScoringStructure.Name = fmt.Sprintf("test-tiebreak-match-scoring-%d", testScoringSeq)
+
+	m, err := database.CreateOne(context.Background(), db, &matchScoringStructure)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := m.SetSecondaryScoringStructures(context.Background(), db, ScoringStructureList{
 		s.ID,
 		s.ID,
 		s2.ID,
-	}
-
-	m, err := database.CreateOne(context.Background(), db, matchScoringStructure)
-	if err != nil {
+	}); err != nil {
 		t.Fatal(err)
 	}
 	return m
@@ -175,17 +183,21 @@ func TestWinByConstraintIsZero(t *testing.T) {
 
 func TestIncorrectAmountOfSecondaryScoringStructures(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
+	ctx := context.Background()
 	ref := newDefaultStoredSetScoringStructure(t, db)
 
-	s := ScoringStructure{}
-	s.WinConditionCountingType = Set
-	s.WinCondition = WinCondition{
-		WinThreshold: 2,
-		MustWinBy:    1,
+	s := TennisMatchScoringStructure
+	s.Owner = newStoredUser(t, db).ID
+	s.Name = "bad-count"
+	created, err := database.CreateOne(ctx, db, &s)
+	if err != nil {
+		t.Fatal(err)
 	}
-	s.SecondaryScoringStructures = []ScoringStructureId{ref.ID}
+	if err := created.SetSecondaryScoringStructures(ctx, db, ScoringStructureList{ref.ID}); err != nil {
+		t.Fatal(err)
+	}
 
-	err := s.StaticallyValid()
+	err = created.DynamicallyValid(ctx, db)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -194,6 +206,7 @@ func TestIncorrectAmountOfSecondaryScoringStructures(t *testing.T) {
 
 func TestIndeterminateWinConditionWithSecondaryScoringStructures(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
+	ctx := context.Background()
 	ref := newDefaultStoredSetScoringStructure(t, db)
 
 	s := ScoringStructure{}
@@ -202,9 +215,17 @@ func TestIndeterminateWinConditionWithSecondaryScoringStructures(t *testing.T) {
 		WinThreshold: 6,
 		MustWinBy:    2,
 	}
-	s.SecondaryScoringStructures = []ScoringStructureId{ref.ID}
+	s.Owner = newStoredUser(t, db).ID
+	s.Name = "indeterminate"
+	created, err := database.CreateOne(ctx, db, &s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := created.SetSecondaryScoringStructures(ctx, db, ScoringStructureList{ref.ID}); err != nil {
+		t.Fatal(err)
+	}
 
-	err := s.StaticallyValid()
+	err = created.DynamicallyValid(ctx, db)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -213,15 +234,15 @@ func TestIndeterminateWinConditionWithSecondaryScoringStructures(t *testing.T) {
 
 func TestInvalidSecondaryScoreReference(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
-	s := ScoringStructure{}
-	s.WinConditionCountingType = Set
-	s.WinCondition = WinCondition{
-		WinThreshold: 6,
-		MustWinBy:    2,
-	}
-	s.SecondaryScoringStructures = []ScoringStructureId{ScoringStructureId(database.InvalidRecordId)}
+	ctx := context.Background()
+	s := newDefaultStoredScoringStructure(t, db)
 
-	err := s.DynamicallyValid(context.Background(), db)
+	bad := &ScoringStructureSecondary{
+		ScoringStructureId:          s.ID,
+		SecondaryScoringStructureId: ScoringStructureId(database.InvalidRecordId),
+		SecondaryIndex:              99,
+	}
+	_, err := database.CreateOne(ctx, db, bad)
 	if err == nil {
 		t.Fatal("expected error")
 	}
