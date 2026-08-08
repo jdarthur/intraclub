@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 
 	"intraclub/database"
@@ -408,6 +409,9 @@ func TestWeeklyMatchupTeamMatchupRecord(t *testing.T) {
 	}
 
 	// Verify Position field preserves ordering
+	slices.SortFunc(records, func(a, b *WeeklyMatchupTeamMatchup) int {
+		return a.Position - b.Position
+	})
 	if records[0].Position != 0 {
 		t.Fatalf("Expected position 0, got %d", records[0].Position)
 	}
