@@ -20,13 +20,16 @@ import (
 // always "id" and is handled via GetId/SetId; all other scalar fields are
 // mapped by reflection using their JSON tag (snake_case) as the column name.
 //
-// Encoding conventions (refined per model in #55-61):
-//   - string kinds -> TEXT
-//   - bool          -> INTEGER (0/1)
-//   - int kinds     -> INTEGER
-//   - uint/uint64   -> TEXT hex (ID family, avoids signed-64 overflow)
-//   - time.Time     -> RFC3339 TEXT
-//   - pointers      -> nullable (NULL when nil)
+// Encoding conventions are defined in docs/schema-conventions.md (see #54):
+//   - ID-family uint kinds -> TEXT hex (avoids signed-64 overflow)
+//   - string kinds         -> TEXT
+//   - bool                 -> INTEGER (0/1)
+//   - int kinds            -> INTEGER
+//   - time.Time            -> RFC3339 TEXT
+//   - pointers             -> nullable (NULL when nil)
+//
+// Tables are created by model subtask migrations (#55+) layered on the
+// skeleton migration; see database/migrations and docs/schema-conventions.md.
 type SqliteDbProvider struct {
 	db   *sql.DB
 	path string

@@ -1,0 +1,12 @@
+-- 0001_schema_skeleton.sql
+--
+-- Skeleton migration: establishes the schema baseline and proves the migration
+-- pipeline works before any model tables exist.
+--
+-- It intentionally creates no tables. Model subtasks (#55+) add their own
+-- `CREATE TABLE` migrations on top of this one, so a new model table is a pure
+-- DDL addition and never needs to touch this file.
+--
+-- See docs/schema-conventions.md for the column-type encoding conventions every
+-- subsequent migration must follow (hex TEXT primary keys, RFC3339 timestamps,
+-- INTEGER bool/enums, full normalization of maps and struct slices).

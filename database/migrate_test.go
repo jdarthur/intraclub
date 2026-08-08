@@ -116,7 +116,7 @@ func TestEmbeddedMigrations(t *testing.T) {
 	if len(migs) == 0 {
 		t.Fatal("expected at least one embedded migration")
 	}
-	if migs[0].Name != "0001_create_users.sql" {
-		t.Fatalf("first migration = %q, want 0001_create_users.sql", migs[0].Name)
+	if migs[0].Name != "0001_schema_skeleton.sql" {
+		t.Fatalf("first migration = %q, want 0001_schema_skeleton.sql", migs[0].Name)
 	}
 }
