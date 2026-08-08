@@ -44,12 +44,12 @@ func (s StartTime) String() string {
 }
 
 type Season struct {
-	ID               SeasonId           // unique identifier for this Season
+	ID               SeasonId           `json:"id"` // unique identifier for this Season
 	Name             string             // descriptive name for this season, e.g. _Men's Intraclub 2025_
 	Facility         FacilityId         // ID of the Facility at which this Season is played
 	StartTime        StartTime          // time of day when the first matches kick off (e.g. _8:30 AM_)
 	DraftId          DraftId            // Draft results for this Season
-	ScheduleID       ScheduleId         // ID of the Schedule for this Season
+	ScheduleID       ScheduleId         `json:"schedule_id"` // ID of the Schedule for this Season
 	PlayoffStructure PlayoffStructureId // ID of the PlayoffStructure for the Season
 	Owner            database.UserId    // commissioner who owns this season
 }

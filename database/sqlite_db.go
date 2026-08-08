@@ -236,24 +236,50 @@ func insertParts(record CrudRecord) ([]string, []any, error) {
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
+
+	err := walkFields(v, "", func(colName string, field reflect.Value) error {
+		if colName == "id" {
+			return nil
+		}
+		val, err := encodeValue(field)
+		if err != nil {
+			return fmt.Errorf("column %q: %w", colName, err)
+		}
+		cols = append(cols, colName)
+		vals = append(vals, val)
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return cols, vals, nil
+}
+
+// walkFields visits every scalar field of a struct, flattening nested (non-time)
+// struct fields into prefixed column names (e.g. Team.Color.Name -> "color_name").
+// emit is called with the final column name and the leaf reflect.Value for each
+// scalar field. This lets a single value-struct like TeamColor live in the same
+// table as flattened columns rather than a child table.
+func walkFields(v reflect.Value, prefix string, emit func(colName string, field reflect.Value) error) error {
 	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 		if field.PkgPath != "" { // unexported
 			continue
 		}
-		name := columnName(field)
-		if name == "id" {
+		colName := prefix + columnName(field)
+		fv := v.Field(i)
+		if !isTimeLike(fv.Type()) && fv.Kind() == reflect.Struct {
+			if err := walkFields(fv, colName+"_", emit); err != nil {
+				return err
+			}
 			continue
 		}
-		val, err := encodeValue(v.Field(i))
-		if err != nil {
-			return nil, nil, fmt.Errorf("column %q: %w", name, err)
+		if err := emit(colName, fv); err != nil {
+			return err
 		}
-		cols = append(cols, name)
-		vals = append(vals, val)
 	}
-	return cols, vals, nil
+	return nil
 }
 
 // scanRow scans the current row into record, mapping columns back to struct
@@ -291,27 +317,37 @@ func scanRow(rows *sql.Rows, cols []string, record CrudRecord) error {
 }
 
 // fieldByColumn returns a map from JSON-tag column name to the struct's
-// settable field value (excluding the id column).
+// settable leaf field value (excluding the id column). Nested non-time struct
+// fields are flattened into prefixed column names, mirroring insertParts.
 func fieldByColumn(record CrudRecord) map[string]reflect.Value {
 	v := reflect.ValueOf(record)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
-	t := v.Type()
 
 	out := map[string]reflect.Value{}
+	walkFieldMap(v, "", out)
+	return out
+}
+
+func walkFieldMap(v reflect.Value, prefix string, out map[string]reflect.Value) {
+	t := v.Type()
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 		if field.PkgPath != "" {
 			continue
 		}
-		name := columnName(field)
-		if name == "id" {
+		colName := prefix + columnName(field)
+		fv := v.Field(i)
+		if !isTimeLike(fv.Type()) && fv.Kind() == reflect.Struct {
+			walkFieldMap(fv, colName+"_", out)
 			continue
 		}
-		out[name] = v.Field(i)
+		if colName == "id" {
+			continue
+		}
+		out[colName] = fv
 	}
-	return out
 }
 
 // columnName returns the DB column name for a struct field: its JSON tag (if
@@ -324,6 +360,14 @@ func columnName(field reflect.StructField) string {
 		}
 	}
 	return snakeCase(field.Name)
+}
+
+// isTimeLike reports whether t is time.Time or a defined type over time.Time
+// (e.g. model.StartTime). Such structs are stored as RFC3339 TEXT columns; all
+// other structs are treated as nested value-structs and flattened by
+// walkFields / walkFieldMap.
+func isTimeLike(t reflect.Type) bool {
+	return t.Kind() == reflect.Struct && t.ConvertibleTo(reflect.TypeOf(time.Time{}))
 }
 
 func snakeCase(s string) string {
@@ -363,8 +407,9 @@ func encodeValue(field reflect.Value) (any, error) {
 		// ID family: store as 16-hex TEXT to avoid signed-64 overflow.
 		return fmt.Sprintf("%016x", field.Uint()), nil
 	case reflect.Struct:
-		if field.Type() == reflect.TypeOf(time.Time{}) {
-			return field.Interface().(time.Time).UTC().Format(time.RFC3339Nano), nil
+		if isTimeLike(field.Type()) {
+			ts := field.Convert(reflect.TypeOf(time.Time{})).Interface().(time.Time)
+			return ts.UTC().Format(time.RFC3339Nano), nil
 		}
 		return nil, fmt.Errorf("unsupported struct field %s", field.Type())
 	default:
@@ -400,12 +445,12 @@ func setField(field reflect.Value, raw any) error {
 		}
 		field.SetUint(u)
 	case reflect.Struct:
-		if field.Type() == reflect.TypeOf(time.Time{}) {
+		if isTimeLike(field.Type()) {
 			ts, err := time.Parse(time.RFC3339Nano, asString(raw))
 			if err != nil {
 				return err
 			}
-			field.Set(reflect.ValueOf(ts))
+			field.Set(reflect.ValueOf(ts).Convert(field.Type()))
 			return nil
 		}
 		return fmt.Errorf("unsupported struct field %s", field.Type())
