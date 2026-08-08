@@ -21,7 +21,7 @@ type Migration struct {
 
 // EmbeddedMigrations loads every migration from the embedded migrations/
 // directory, sorted by file name (which should be zero-padded and ordered,
-// e.g. 0001_create_users.sql). Adding a new migration file to that directory
+// e.g. 0001_schema_skeleton.sql). Adding a new migration file to that directory
 // is the documented path for a schema change.
 func EmbeddedMigrations() ([]Migration, error) {
 	entries, err := migrationsFS.ReadDir("migrations")
