@@ -75,6 +75,13 @@ fields and prefixes each with the parent column name, e.g. `Team.Color`
 `team` table. `time.Time` and defined types over it (e.g. `StartTime`) are
 stored as single RFC3339 `TEXT` columns, never flattened.
 
+An **interface-valued field** (e.g. `Draft.DraftOrderPattern`) is stored as a
+single `TEXT` column holding the concrete value's stable `Name()` string. On
+read, the record reconstructs the concrete value through the optional
+`database.InterfaceFieldSetter` hook (`SetInterfaceField`), since the database
+package cannot import the model packages. Only `Draft` currently has such a
+field.
+
 ## Naming
 
 - Table name = `record.Type()` (snake_case plural of the model, e.g. `users`,

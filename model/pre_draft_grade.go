@@ -21,7 +21,7 @@ func (p PreDraftRatingModifier) Int() int {
 }
 
 type PreDraftGrade struct {
-	ID       database.RecordId      // unique ID of this PreDraftGrade
+	ID       database.RecordId      `json:"id"` // unique ID of this PreDraftGrade
 	PlayerId database.UserId        // ID of the User who is being graded
 	DraftId  DraftId                // ID of the Draft that this PreDraftGrade pertains to
 	GraderId database.UserId        // ID of the User providing a Grade
