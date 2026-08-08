@@ -102,6 +102,28 @@ func NewDraft() *Draft {
 	}
 }
 
+// SetInterfaceField reconstructs the DraftOrderPattern interface field from its
+// persisted string name. The SQLite mapper calls this for interface-valued
+// columns (see database.InterfaceFieldSetter), since it cannot reflect on the
+// concrete type across the model/database package boundary.
+func (d *Draft) SetInterfaceField(field, value string) error {
+	if field != "draft_order_pattern" {
+		return fmt.Errorf("unsupported interface field %q", field)
+	}
+	// A nil interface is persisted as an empty string; leave the current
+	// pattern in place (NewDraft defaults to DraftOrderPatternSnake) rather
+	// than failing to reconstruct it.
+	if value == "" {
+		return nil
+	}
+	pattern, err := DraftOrderPatternFromString(value)
+	if err != nil {
+		return err
+	}
+	d.DraftOrderPattern = pattern
+	return nil
+}
+
 func (d *Draft) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
 	return []database.UserId{d.Owner}
 }

@@ -309,6 +309,17 @@ func scanRow(rows *sql.Rows, cols []string, record CrudRecord) error {
 			// column exists in the table but not on the struct; skip it
 			continue
 		}
+		if field.Kind() == reflect.Interface {
+			// Interface-valued field (e.g. Draft.DraftOrderPattern): let the
+			// record reconstruct the concrete value from its stored string.
+			if setter, ok := record.(InterfaceFieldSetter); ok {
+				if err := setter.SetInterfaceField(name, asString(raw[i])); err != nil {
+					return fmt.Errorf("column %q: %w", name, err)
+				}
+				continue
+			}
+			return fmt.Errorf("column %q: unsupported interface field %s", name, field.Type())
+		}
 		if err := setField(field, raw[i]); err != nil {
 			return fmt.Errorf("column %q: %w", name, err)
 		}
@@ -412,9 +423,37 @@ func encodeValue(field reflect.Value) (any, error) {
 			return ts.UTC().Format(time.RFC3339Nano), nil
 		}
 		return nil, fmt.Errorf("unsupported struct field %s", field.Type())
+	case reflect.Interface:
+		// Interface fields are persisted as a single TEXT column holding a
+		// stable string identity. Concrete values exposing Name() (e.g.
+		// model.DraftOrderPattern) are encoded by name; nil interfaces are
+		// stored as an empty string.
+		if field.IsNil() {
+			return "", nil
+		}
+		if n, ok := field.Interface().(StringKeyed); ok {
+			return n.Name(), nil
+		}
+		return nil, fmt.Errorf("unsupported interface field %s", field.Type())
 	default:
 		return nil, fmt.Errorf("unsupported field kind %s", field.Kind())
 	}
+}
+
+// StringKeyed is implemented by interface values whose concrete types expose a
+// stable string name (e.g. model.DraftOrderPattern). The SQLite mapper stores
+// such interface fields as a single TEXT column holding Name().
+type StringKeyed interface {
+	Name() string
+}
+
+// InterfaceFieldSetter is optionally implemented by CrudRecords that contain an
+// interface-valued field (e.g. Draft.DraftOrderPattern) persisted as a TEXT
+// column. On read, the mapper calls SetInterfaceField so the record can
+// reconstruct the concrete value from its stored string. It is needed because
+// the database package cannot import the model packages (import cycle).
+type InterfaceFieldSetter interface {
+	SetInterfaceField(field, value string) error
 }
 
 func setField(field reflect.Value, raw any) error {
