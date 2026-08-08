@@ -21,7 +21,7 @@ func (id WeekId) String() string {
 }
 
 type Week struct {
-	ID      WeekId
+	ID      WeekId `json:"id"`
 	DraftId DraftId
 	Date    time.Time
 	Note    string

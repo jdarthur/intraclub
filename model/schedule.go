@@ -18,7 +18,7 @@ func (id ScheduleId) String() string {
 }
 
 type Schedule struct {
-	ID       ScheduleId
+	ID       ScheduleId `json:"id"`
 	SeasonId SeasonId
 }
 

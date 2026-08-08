@@ -69,7 +69,7 @@ func teamMatchupFromRecord(wmtm *WeeklyMatchupTeamMatchup) *TeamMatchup {
 // during a Season's Schedule. The individual matchups are stored as separate
 // WeeklyMatchupTeamMatchup records rather than inline.
 type WeeklyMatchup struct {
-	ID       WeeklyMatchupId
+	ID       WeeklyMatchupId `json:"id"`
 	WeekId   WeekId   // Week that this WeeklyMatchup corresponds to, i.e. a particular date
 	SeasonId SeasonId // Season that this WeeklyMatchup corresponds to
 }

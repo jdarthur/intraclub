@@ -67,6 +67,14 @@ The schema uses **full normalization**:
   `WeeklyMatchupTeamMatchup`, `ScheduleMatchup`, `DraftRatingCutoff`,
   `CommissionerProposalVote`, …).
 
+A **single value-struct field** (not a map or slice) is *not* normalized into a
+child table; instead it is **flattened** into prefixed columns in its parent's
+table. The reflection mapper in `database/sqlite_db.go` walks nested struct
+fields and prefixes each with the parent column name, e.g. `Team.Color`
+(`TeamColor{Name, Hex}`) becomes the `color_name` / `color_hex` columns of the
+`team` table. `time.Time` and defined types over it (e.g. `StartTime`) are
+stored as single RFC3339 `TEXT` columns, never flattened.
+
 ## Naming
 
 - Table name = `record.Type()` (snake_case plural of the model, e.g. `users`,
