@@ -60,7 +60,7 @@ func (r Role) Valid() bool {
 }
 
 type UserRoleAssignment struct {
-	ID          database.RecordId // ID of this assignment
+	ID          database.RecordId `json:"id"`    // ID of this assignment
 	UserId      database.UserId   // ID of the User being assigned a role
 	Role        Role              // Role being assigned to this user
 	ReferenceId database.RecordId // ID of referenced record base on role, e.g. Team ID for a TeamMember role
