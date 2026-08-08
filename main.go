@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"net"
+	"os"
 
 	"intraclub/api"
 	"intraclub/database"
@@ -19,11 +21,14 @@ func main() {
 	database.SysAdminCheck = model.IsUserSystemAdministrator
 	api.UserType = &model.User{}
 
-	// set up the default database provider
-	db := database.NewUnitTestDBProvider()
-
 	// parse command-line flags
-	addr := parseFlags()
+	cfg := parseFlags()
+
+	// construct, open, and migrate the requested database provider
+	db, err := database.NewProvider(context.Background(), cfg.providerConfig())
+	if err != nil {
+		log.Fatalf("failed to initialize database provider: %v", err)
+	}
 
 	// seed data for development mode
 	if model.UseDevTokenMode {
@@ -31,7 +36,7 @@ func main() {
 	}
 
 	// generate or load JWT key pair
-	err := api.GenerateJwtKeyPairIfNotExists()
+	err = api.GenerateJwtKeyPairIfNotExists()
 	if err != nil {
 		panic(err)
 	}
@@ -80,15 +85,36 @@ func main() {
 
 	rg.GET("/draft_order_patterns", model.GetDraftOrderPatterns)
 
-	err = r.Run(addr)
+	err = r.Run(cfg.addr)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func parseFlags() string {
+// serverConfig holds the settings parsed from command-line flags and
+// environment variables that configure the running server.
+type serverConfig struct {
+	addr   string
+	dbKind database.ProviderKind
+	dbPath string
+}
+
+// providerConfig converts the server's parsed database settings into the
+// database.ProviderConfig consumed by database.NewProvider.
+func (c serverConfig) providerConfig() database.ProviderConfig {
+	return database.ProviderConfig{Kind: c.dbKind, Path: c.dbPath}
+}
+
+func parseFlags() serverConfig {
 	useDevTokenMode := flag.Bool("dev-token", false, "Use development token mode")
 	addr := flag.String("addr", "127.0.0.1:8080", "Address to listen on, e.g. 127.0.0.1:8080")
+
+	// defaultDBKind is the provider used at startup. It is set to the
+	// in-memory provider until the SQLite provider (issue #53) lands; the
+	// default flips to database.ProviderSqlite once that provider is wired.
+	defaultDBKind := database.ProviderMemory
+	dbKind := flag.String("db", string(defaultDBKind), "Database provider (memory | sqlite)")
+	dbPath := flag.String("db-path", "", "Path to the SQLite database file; falls back to INTRACLUB_DB_PATH env")
 	flag.Parse()
 
 	if useDevTokenMode != nil && *useDevTokenMode == true {
@@ -100,7 +126,21 @@ func parseFlags() string {
 		log.Fatalf("--dev-token mode is DEV MODE ONLY and bypasses authentication; it may only be used when the server is bound to a loopback address (127.0.0.1 / localhost), but got %q", *addr)
 	}
 
-	return *addr
+	// resolve the database path from the flag or the environment variable
+	return serverConfig{
+		addr:   *addr,
+		dbKind: database.ProviderKind(*dbKind),
+		dbPath: resolveDBPath(*dbPath),
+	}
+}
+
+// resolveDBPath returns the SQLite database file path, preferring the
+// explicit --db-path flag and falling back to the INTRACLUB_DB_PATH env var.
+func resolveDBPath(flagPath string) string {
+	if flagPath != "" {
+		return flagPath
+	}
+	return os.Getenv("INTRACLUB_DB_PATH")
 }
 
 // isLoopbackAddress reports whether addr's host is a loopback interface
