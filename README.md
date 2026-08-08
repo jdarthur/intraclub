@@ -1,1 +1,126 @@
 # intraclub
+
+A web application for running and managing an intra-club recreational sports
+league. The club organizes players into teams through a **draft**, then runs a
+**season** of weekly head-to-head matches, tracks availability, lineups, and
+scoring, and manages the club's rules through commissioner proposals.
+
+> **Note:** this is a work in progress. Many features are partially implemented;
+> see [`creation-sequence.md`](./creation-sequence.md) for a running checklist
+> of what's done and what's still open.
+
+## Overview
+
+The system models the full lifecycle of an intra-club season:
+
+1. **Users & auth** — self-registration with email verification, "magic link"
+   one-time-password login, and JWT-based authentication.
+2. **League setup** — facilities, rating types, formats (how drafted players are
+   grouped by skill), and playoff structures.
+3. **Draft** — a commissioner starts a draft, captains take turns selecting
+   players, and players can be pre-graded. The completed draft seeds a season.
+4. **Season** — made up of weeks with schedules and team matchups, a playoff
+   structure, availability input, weekly lineups, and recorded individual
+   matches with scoring.
+5. **Club governance** — rulesets, rule amendments, and commissioner proposals.
+
+The domain is described in detail in [`creation-sequence.md`](./creation-sequence.md),
+and the authorization model is documented in [`api/authorization.md`](./api/authorization.md).
+
+## Tech stack
+
+**Backend**
+
+- [Go](https://go.dev/) with the [Gin](https://github.com/gin-gonic/gin) web
+  framework — the REST API lives under `/api`.
+- [JWT](https://github.com/golang-jwt/jwt) (ECDSA P-521 / ES512 keypair) for
+  stateless auth, with email-based one-time-password ("magic link") login via
+  [go-msgauth](https://github.com/emersion/go-msgauth).
+- Generic, type-safe CRUD abstraction over a `database.Provider` interface
+  (`database/database_provider.go`), with pluggable backends:
+  - **MongoDB** via the [mongo-driver](https://github.com/mongodb/mongo-go-driver)
+    (the historical store, started through `docker-compose.yml`).
+  - **SQLite** via [modernc.org/sqlite](https://gitlab.com/cznic/sqlite)
+    (pure-Go, no CGO) with a migration runner (`database/migrations/`).
+  - An in-memory provider used for tests and dev.
+- Provider selection is configurable via the `--db` / `--db-path` flags or the
+  `INTRACLUB_DB_PATH` environment variable.
+
+**Frontend**
+
+- [SvelteKit](https://kit.svelte.dev/) (Svelte 5) built with
+  [Vite](https://vitejs.dev/), TypeScript, and [Playwright](https://playwright.dev/)
+  for end-to-end tests — all in the [`ui/`](./ui) directory.
+
+## Repository layout
+
+```
+api/          Gin route handlers, auth, and generic CRUD route wiring
+database/     Database provider abstraction, migrations, SQLite & access control
+model/        Domain models (draft, season, schedule, team, user, ...) + tests
+route/        Non-CRUD HTTP handlers (CSV import, self-registration, verify email)
+mailer/       Email sending for verification / login tokens
+ui/           SvelteKit frontend (see ui/README.md)
+main.go       Server entrypoint & flag parsing
+```
+
+## Getting started
+
+### Prerequisites
+
+- [Go](https://go.dev/dl/) (1.26)
+- [Node.js](https://nodejs.org/) and npm (for the UI)
+- [Docker](https://docs.docker.com/engine/install/) — only if using MongoDB
+
+### Backend
+
+From the repository root:
+
+```sh
+# build a binary named `main` and run it in dev mode
+make standard
+./main --dev-token
+```
+
+The `--dev-token` flag enables development token mode (loopback-only, bypasses
+auth gating) and seeds sample data. The API listens on `http://127.0.0.1:8080`.
+
+To use SQLite instead of the default provider:
+
+```sh
+./main --db sqlite --db-path /path/to/intraclub.db
+# or
+INTRACLUB_DB_PATH=/path/to/intraclub.db ./main --db sqlite
+```
+
+### Frontend
+
+See [`ui/README.md`](./ui/README.md) for full instructions. In short:
+
+```sh
+cd ui
+npm install
+npm run dev
+```
+
+The UI proxies `/api` to the backend on port `8080` in development (see
+`ui/vite.config.ts`).
+
+## Common commands
+
+The [`Makefile`](./Makefile) wraps the common tasks:
+
+| Command            | Description                                            |
+| ------------------ | ------------------------------------------------------ |
+| `make standard`    | Build the backend binary (`main`)                      |
+| `make tests`       | Run Go unit tests and `go vet ./...`                   |
+| `make watch`       | Live-reload the backend with `air`                     |
+| `make e2e`         | Run Playwright end-to-end tests (starts both servers)  |
+| `make e2e-ui`      | Run Playwright e2e tests in interactive UI mode        |
+| `make clean`       | Remove build artifacts                                  |
+
+## Testing
+
+- **Backend unit tests:** `make tests` (or `go test ./...`) — extensive `_test.go`
+  coverage alongside each model.
+- **Frontend e2e:** Playwright tests in [`ui/e2e/`](./ui/e2e), run via `make e2e`.
