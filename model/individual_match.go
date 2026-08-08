@@ -69,6 +69,7 @@ type IndividualMatch struct {
 	_structure     *ScoringStructure   `json:"-" bson:"-"`
 	_subStructures []*ScoringStructure `json:"-" bson:"-"`
 	_completed     []CompletedSecondary
+	_isComposite   bool `json:"-" bson:"-"`
 }
 
 func (s *IndividualMatch) GetOwner() database.UserId {
@@ -154,14 +155,17 @@ func (s *IndividualMatch) Initialize(ctx context.Context, db database.Provider) 
 
 		// if the scoring structure is composite, we need to retrieve all
 		// the sub-structures referenced by it as well
-		if v.IsComposite() {
-			for _, id := range v.SecondaryScoringStructures {
-				sub, err := database.GetExistingRecordById(ctx, db, &ScoringStructure{}, id.RecordId())
-				if err != nil {
-					return err
-				}
-				s._subStructures = append(s._subStructures, sub)
+		secondary, err := v.GetSecondaryScoringStructures(ctx, db)
+		if err != nil {
+			return err
+		}
+		s._isComposite = len(secondary) > 0
+		for _, id := range secondary {
+			sub, err := database.GetExistingRecordById(ctx, db, &ScoringStructure{}, id.RecordId())
+			if err != nil {
+				return err
 			}
+			s._subStructures = append(s._subStructures, sub)
 		}
 	}
 	return nil
@@ -185,7 +189,7 @@ func (s *IndividualMatch) WonSecondary(opp *IndividualMatch) bool {
 	if s._structure == nil {
 		panic("match._structure is not initialized")
 	}
-	if !s._structure.IsComposite() {
+	if !s._isComposite {
 		panic("match._structure is not composite, WonSecondary does not make sense to call")
 	} else {
 		if len(s._subStructures) == 0 {

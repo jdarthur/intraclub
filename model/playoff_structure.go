@@ -20,7 +20,7 @@ func (id PlayoffStructureId) String() string {
 }
 
 type PlayoffStructure struct {
-	ID            PlayoffStructureId // unique ID for this record
+	ID            PlayoffStructureId `json:"id"` // unique ID for this record
 	UserId        database.UserId
 	Byes          int // number of teams which get a bye week
 	NumberOfTeams int // number of teams which make the playoffs

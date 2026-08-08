@@ -118,7 +118,11 @@ func TestRatingCannotBeDeletedWhenInUse(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	format := newDefaultStoredFormat(t, db)
 
-	ratingId := format.PossibleRatings[0].RecordId()
+	possibleRatings, err := format.GetPossibleRatings(context.Background(), db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ratingId := possibleRatings[0].RecordId()
 	rating, err := database.GetExistingRecordById(context.Background(), db, &Rating{}, ratingId)
 	if err != nil {
 		t.Fatal(err)

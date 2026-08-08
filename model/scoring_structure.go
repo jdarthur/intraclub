@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	"intraclub/api"
 	"intraclub/database"
@@ -154,7 +155,6 @@ type ScoringStructureList []ScoringStructureId
 
 func (s *ScoringStructureList) UnmarshalJSON(bytes []byte) error {
 	s2 := make([]string, 0)
-	fmt.Println(string(bytes))
 	err := json.Unmarshal(bytes, &s2)
 	if err != nil {
 		return err
@@ -198,23 +198,16 @@ type ScoringStructure struct {
 	// threshold that a team instantly wins at, bypassing the
 	// win-by-X constraint
 	WinCondition WinCondition `json:"win_condition"`
-
-	// SecondaryScoringStructures is a list of ScoringStructure
-	// references that are used as a secondary mechanism to increment
-	// the WinConditionCountingType. For example in a standard tennis
-	// scoring structure, the primary win condition is winning 2 out
-	// of 3 sets. But to win a _set_, you must first win a requisite
-	// number of _games_, i.e. first to 6, win-by-two
-	//
-	// You could theoretically make the scoring even further nested
-	// by specifying that _games_ must be won by winning a requisite
-	// number of _points_, but this requires very active score-keeping
-	// during a match and does not provide a lot of extra value for
-	// the most part (i.e. a 6-0, 6-0 match does not gain much explanatory
-	// context by recording that individual games were typically won
-	// from a 40-15 or 40-love score)
-	SecondaryScoringStructures ScoringStructureList `json:"secondary_scoring_structures"`
 }
+
+// API/JSON shape decision: the former inline `secondary_scoring_structures`
+// (`ScoringStructureList`) field has been removed from `ScoringStructure` and
+// normalized into the `ScoringStructureSecondary` join table
+// (scoring_structure_secondary collection). In-process reads reassemble the
+// ordered references via `ScoringStructure.GetSecondaryScoringStructures`, and
+// composite-ness is determined by `ScoringStructure.IsComposite`. This matches
+// the join-table normalization of Format (format_rating / format_line) and
+// Draft (draft_rating_cutoff).
 
 func (c *ScoringStructure) UniquenessEquivalent(other *ScoringStructure) error {
 	if c.Name == other.Name {
@@ -255,7 +248,64 @@ func (c *ScoringStructure) SetOwner(userId database.UserId) {
 	c.Owner = userId
 }
 
-func (c *ScoringStructure) MaximumScoreCountingUnitsPlayed() (int, error) {
+// GetSecondaryScoringStructures returns this scoring structure's secondary
+// scoring structure references, ordered by ScoringStructureSecondary.SecondaryIndex.
+func (c *ScoringStructure) GetSecondaryScoringStructures(ctx context.Context, db database.Provider) (ScoringStructureList, error) {
+	rows, err := database.GetAllWhere[*ScoringStructureSecondary](ctx, db, func(_ context.Context, s *ScoringStructureSecondary) bool {
+		return s.ScoringStructureId == c.ID
+	})
+	if err != nil {
+		return nil, err
+	}
+	slices.SortFunc(rows, func(a, b *ScoringStructureSecondary) int {
+		return a.SecondaryIndex - b.SecondaryIndex
+	})
+	list := make(ScoringStructureList, 0, len(rows))
+	for _, r := range rows {
+		list = append(list, r.SecondaryScoringStructureId)
+	}
+	return list, nil
+}
+
+// SetSecondaryScoringStructures replaces this scoring structure's secondary
+// references with the provided list, preserving order as SecondaryIndex values
+// in the ScoringStructureSecondary join table. The scoring structure must
+// already have an assigned ID (i.e. be created).
+func (c *ScoringStructure) SetSecondaryScoringStructures(ctx context.Context, db database.Provider, list ScoringStructureList) error {
+	existing, err := database.GetAllWhere[*ScoringStructureSecondary](ctx, db, func(_ context.Context, s *ScoringStructureSecondary) bool {
+		return s.ScoringStructureId == c.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, s := range existing {
+		if _, _, err := database.DeleteOneById(ctx, db, s, s.ID); err != nil {
+			return err
+		}
+	}
+	for i, id := range list {
+		if _, err := database.CreateOne(ctx, db, &ScoringStructureSecondary{
+			ScoringStructureId:          c.ID,
+			SecondaryScoringStructureId: id,
+			SecondaryIndex:              i,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// IsComposite reports whether this scoring structure has any secondary scoring
+// structures (i.e. it is a composite scoring structure).
+func (c *ScoringStructure) IsComposite(ctx context.Context, db database.Provider) (bool, error) {
+	list, err := c.GetSecondaryScoringStructures(ctx, db)
+	if err != nil {
+		return false, err
+	}
+	return len(list) > 0, nil
+}
+
+func (c *ScoringStructure) MaximumScoreCountingUnitsPlayed(secondaryCount int) (int, error) {
 	if c.WinCondition.HasInstantWinThreshold() {
 		// if we have an instant win at e.g. 3 sets, we can play at most (3 * 2) - 1 = 5 total sets
 		return (c.WinCondition.InstantWinThreshold * 2) - 1, nil
@@ -264,7 +314,7 @@ func (c *ScoringStructure) MaximumScoreCountingUnitsPlayed() (int, error) {
 	normalWinThreshold := (c.WinCondition.WinThreshold * 2) - 1
 
 	if c.WinCondition.WinByTwoOrMore() {
-		if c.IsComposite() {
+		if secondaryCount > 0 {
 			return normalWinThreshold, fmt.Errorf("composite scoring structure does not support win-by-two-or-more constraint without instant win threshold")
 		} else {
 			return -1, nil
@@ -273,63 +323,58 @@ func (c *ScoringStructure) MaximumScoreCountingUnitsPlayed() (int, error) {
 	return normalWinThreshold, nil
 }
 
-func (c *ScoringStructure) IsComposite() bool {
-	return len(c.SecondaryScoringStructures) > 0
-}
-
+// StaticallyValid validates this scoring structure's scalar fields (win
+// condition counting type and win condition). Composite-specific validation
+// (which requires querying the secondary scoring structure relationships) is
+// performed by DynamicallyValid.
 func (c *ScoringStructure) StaticallyValid() error {
 	// make sure the win condition counting type is legitimate
 	err := c.WinConditionCountingType.StaticallyValid()
 	if err != nil {
 		return err
 	}
+	return c.WinCondition.StaticallyValid()
+}
 
-	err = c.WinCondition.StaticallyValid()
+func (c *ScoringStructure) DynamicallyValid(ctx context.Context, db database.Provider) error {
+	secondary, err := c.GetSecondaryScoringStructures(ctx, db)
 	if err != nil {
 		return err
 	}
 
-	if c.IsComposite() {
+	// validate each secondary reference: it must exist and use the expected
+	// score-counting type for a secondary of this structure
+	for _, id := range secondary {
+		secondaryStructure, err := database.GetExistingRecordById(ctx, db, &ScoringStructure{}, id.RecordId())
+		if err != nil {
+			return err
+		}
 
+		if secondaryStructure.WinConditionCountingType != c.WinConditionCountingType.Secondary() {
+			return fmt.Errorf("cannot use %s-based secondary scoring structure in %s-based win condition", secondaryStructure.WinConditionCountingType, c.WinConditionCountingType)
+		}
+	}
+
+	// composite-specific validation
+	if len(secondary) > 0 {
 		if c.WinConditionCountingType == Point {
 			return fmt.Errorf("cannot use point-based win condition in a composite scoring structure")
 		}
 
-		// get the maximum number of win-condition scoring units that we might play.
-		// e.g. in a first-to-2 sets "standard tennis" scoring structure the max
-		// amount of sets you can play is 3. In a "first to 10 points, straight up"
-		// scoring structure, the maximum amount of total points would be in a 10 to 9
-		// victory, so 19 total points.
-		maxUnits, err := c.MaximumScoreCountingUnitsPlayed()
+		maxUnits, err := c.MaximumScoreCountingUnitsPlayed(len(secondary))
 		if err != nil {
 			return err
 		}
 
-		l := len(c.SecondaryScoringStructures)
-		if l != maxUnits {
-
+		if len(secondary) != maxUnits {
 			// we must have the same length of secondary scoring structures as the max amount of
 			// main score-counting units in the scoring win-condition scoring configuration. For
 			// example, if we can play a max number of 3 sets in this scoring structure, we must
 			// have a way to score all three of those sets using a ScoringStructure reference.
-			return fmt.Errorf("secondary scoring structures length is %d, but we can play %d max %ss in this structure", l, maxUnits, c.WinConditionCountingType)
+			return fmt.Errorf("secondary scoring structures length is %d, but we can play %d max %ss in this structure", len(secondary), maxUnits, c.WinConditionCountingType)
 		}
 	}
-	return nil
-}
 
-func (c *ScoringStructure) DynamicallyValid(ctx context.Context, db database.Provider) error {
-	for _, id := range c.SecondaryScoringStructures {
-		secondary, err := database.GetExistingRecordById(ctx, db, &ScoringStructure{}, id.RecordId())
-		if err != nil {
-			return err
-		}
-
-		if secondary.WinConditionCountingType != c.WinConditionCountingType.Secondary() {
-			return fmt.Errorf("cannot use %s-based secondary scoring structure in %s-based win condition", secondary.WinConditionCountingType, c.WinConditionCountingType)
-		}
-
-	}
 	return database.ExistsById(ctx, db, &User{}, c.Owner.RecordId())
 }
 

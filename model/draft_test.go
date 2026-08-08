@@ -264,14 +264,17 @@ func TestGetRatingForSelection(t *testing.T) {
 	format := newDefaultFormat(t, db)
 	draft := newRandomDraft(t, db, 100, 4)
 
+	possibleRatings, err := format.GetPossibleRatings(context.Background(), db)
+	require.NoError(t, err)
+
 	// assign rating cutoffs via the relationship table
 	cutoffs := []struct {
 		rating RatingId
 		cutoff int
 	}{
-		{format.PossibleRatings[0], 20},
-		{format.PossibleRatings[1], 40},
-		{format.PossibleRatings[2], 70},
+		{possibleRatings[0], 20},
+		{possibleRatings[1], 40},
+		{possibleRatings[2], 70},
 	}
 	for _, c := range cutoffs {
 		_, err := draft.AssignRatingCutoff(context.Background(), db, c.rating, c.cutoff)
@@ -279,27 +282,27 @@ func TestGetRatingForSelection(t *testing.T) {
 	}
 
 	for i := 0; i <= 20; i++ {
-		rating, err := draft.GetRatingForPick(context.Background(), db, format.PossibleRatings, i)
+		rating, err := draft.GetRatingForPick(context.Background(), db, possibleRatings, i)
 		require.NoError(t, err)
-		assert.Equal(t, format.PossibleRatings[0], rating)
+		assert.Equal(t, possibleRatings[0], rating)
 	}
 
 	for i := 21; i <= 40; i++ {
-		rating, err := draft.GetRatingForPick(context.Background(), db, format.PossibleRatings, i)
+		rating, err := draft.GetRatingForPick(context.Background(), db, possibleRatings, i)
 		require.NoError(t, err)
-		assert.Equal(t, format.PossibleRatings[1], rating)
+		assert.Equal(t, possibleRatings[1], rating)
 	}
 
 	for i := 41; i <= 70; i++ {
-		rating, err := draft.GetRatingForPick(context.Background(), db, format.PossibleRatings, i)
+		rating, err := draft.GetRatingForPick(context.Background(), db, possibleRatings, i)
 		require.NoError(t, err)
-		assert.Equal(t, format.PossibleRatings[2], rating)
+		assert.Equal(t, possibleRatings[2], rating)
 	}
 
 	for i := 71; i <= 100; i++ {
-		rating, err := draft.GetRatingForPick(context.Background(), db, format.PossibleRatings, i)
+		rating, err := draft.GetRatingForPick(context.Background(), db, possibleRatings, i)
 		require.NoError(t, err)
-		assert.Equal(t, format.PossibleRatings[3], rating)
+		assert.Equal(t, possibleRatings[3], rating)
 	}
 }
 
@@ -307,10 +310,12 @@ func TestRatingWithCutoffBelowPrevious(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	format := newDefaultFormat(t, db)
 	draft := newRandomDraft(t, db, 100, 4)
+	possibleRatings, err := format.GetPossibleRatings(context.Background(), db)
+	require.NoError(t, err)
 	assignRatingCutoffs(t, db, draft, format, map[RatingId]int{
-		format.PossibleRatings[0]: 20,
-		format.PossibleRatings[1]: 10,
-		format.PossibleRatings[2]: 70,
+		possibleRatings[0]: 20,
+		possibleRatings[1]: 10,
+		possibleRatings[2]: 70,
 	})
 
 	assert.Error(t, draft.DynamicallyValid(context.Background(), db), "Expected draft to be invalid")
@@ -321,10 +326,12 @@ func TestRatingCutoffIsZero(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	format := newDefaultFormat(t, db)
 	draft := newRandomDraft(t, db, 100, 4)
+	possibleRatings, err := format.GetPossibleRatings(context.Background(), db)
+	require.NoError(t, err)
 	assignRatingCutoffs(t, db, draft, format, map[RatingId]int{
-		format.PossibleRatings[0]: 0,
-		format.PossibleRatings[1]: 10,
-		format.PossibleRatings[2]: 70,
+		possibleRatings[0]: 0,
+		possibleRatings[1]: 10,
+		possibleRatings[2]: 70,
 	})
 
 	assert.Error(t, draft.DynamicallyValid(context.Background(), db), "Expected draft to be invalid")
@@ -335,9 +342,11 @@ func TestRatingCutoffIsMissing(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	format := newDefaultFormat(t, db)
 	draft := newRandomDraft(t, db, 100, 4)
+	possibleRatings, err := format.GetPossibleRatings(context.Background(), db)
+	require.NoError(t, err)
 	assignRatingCutoffs(t, db, draft, format, map[RatingId]int{
-		format.PossibleRatings[0]: 5,
-		format.PossibleRatings[1]: 10,
+		possibleRatings[0]: 5,
+		possibleRatings[1]: 10,
 	})
 
 	assert.Error(t, draft.DynamicallyValid(context.Background(), db), "Expected draft to be invalid")
@@ -348,11 +357,13 @@ func TestRatingCutoffForLastRatingIdIsPresent(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	format := newDefaultFormat(t, db)
 	draft := newRandomDraft(t, db, 100, 4)
+	possibleRatings, err := format.GetPossibleRatings(context.Background(), db)
+	require.NoError(t, err)
 	assignRatingCutoffs(t, db, draft, format, map[RatingId]int{
-		format.PossibleRatings[0]: 5,
-		format.PossibleRatings[1]: 10,
-		format.PossibleRatings[2]: 70,
-		format.PossibleRatings[3]: 80,
+		possibleRatings[0]: 5,
+		possibleRatings[1]: 10,
+		possibleRatings[2]: 70,
+		possibleRatings[3]: 80,
 	})
 
 	assert.Error(t, draft.DynamicallyValid(context.Background(), db), "Expected draft to be invalid")

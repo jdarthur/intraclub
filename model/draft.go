@@ -160,7 +160,11 @@ func (d *Draft) DynamicallyValid(ctx context.Context, db database.Provider) erro
 		return err
 	}
 	if len(ratingCutoffs) > 0 {
-		err = d.ValidateRatingsCutoff(format.PossibleRatings, ratingCutoffs)
+		possibleRatings, err := format.GetPossibleRatings(ctx, db)
+		if err != nil {
+			return err
+		}
+		err = d.ValidateRatingsCutoff(possibleRatings, ratingCutoffs)
 		if err != nil {
 			return err
 		}
@@ -422,7 +426,11 @@ func (d *Draft) Select(ctx context.Context, player database.UserId, db database.
 
 	// Get the rating for this pick
 	format, _ := database.GetExistingRecordById(getDraftContext(), db, &Format{}, d.Format.RecordId())
-	rating, err := d.GetRatingForPick(getDraftContext(), db, format.PossibleRatings, len(picks))
+	possibleRatings, err := format.GetPossibleRatings(getDraftContext(), db)
+	if err != nil {
+		return err
+	}
+	rating, err := d.GetRatingForPick(getDraftContext(), db, possibleRatings, len(picks))
 	if err != nil {
 		return err
 	}
@@ -620,7 +628,7 @@ func (d *Draft) GetAvailableRatings(ctx context.Context, db database.Provider) (
 	if err != nil {
 		return nil, err
 	}
-	return format.PossibleRatings, nil
+	return format.GetPossibleRatings(ctx, db)
 }
 
 func (d *Draft) Initialize(ctx context.Context, db database.Provider, captains []database.UserId) error {
