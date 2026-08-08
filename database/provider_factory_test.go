@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"testing"
 )
 
@@ -19,15 +20,23 @@ func TestNewProviderMemory(t *testing.T) {
 	}
 }
 
-func TestNewProviderSqliteNotImplemented(t *testing.T) {
-	// NOTE: this branch is implemented in issue #53; this test should be
-	// updated to assert a working provider once the SQLite provider lands.
-	_, err := NewProvider(context.Background(), ProviderConfig{Kind: ProviderSqlite, Path: ":memory:"})
-	if err == nil {
-		t.Fatal("NewProvider(sqlite) returned nil error, want not-implemented error")
+func TestNewProviderSqlite(t *testing.T) {
+	db, err := NewProvider(context.Background(), ProviderConfig{
+		Kind: ProviderSqlite,
+		Path: filepath.Join(t.TempDir(), "test.db"),
+	})
+	if err != nil {
+		t.Fatalf("NewProvider(sqlite) returned error: %v", err)
 	}
-	if !errors.Is(err, ErrSqliteNotImplemented) {
-		t.Fatalf("NewProvider(sqlite) error = %v, want ErrSqliteNotImplemented", err)
+	if db == nil {
+		t.Fatal("NewProvider(sqlite) returned nil provider")
+	}
+	p, ok := db.(*SqliteDbProvider)
+	if !ok {
+		t.Fatalf("NewProvider(sqlite) returned %T, want *SqliteDbProvider", db)
+	}
+	if err := p.Disconnect(); err != nil {
+		t.Fatalf("Disconnect: %v", err)
 	}
 }
 

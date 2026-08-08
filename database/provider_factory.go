@@ -33,10 +33,6 @@ type ProviderConfig struct {
 // ProviderKind is not a known provider.
 var ErrUnknownProvider = errors.New("unknown database provider")
 
-// ErrSqliteNotImplemented is returned by NewProvider when the SQLite provider
-// is selected before it has been implemented (issue #53).
-var ErrSqliteNotImplemented = errors.New("sqlite database provider is not implemented")
-
 // NewProvider constructs, opens, and (for persistent providers) runs any
 // pending migrations on the requested Provider, returning the ready-to-use
 // Provider. The Provider interface has no Connect/Disconnect, so connection
@@ -47,9 +43,7 @@ func NewProvider(ctx context.Context, cfg ProviderConfig) (Provider, error) {
 	case ProviderMemory:
 		return NewUnitTestDBProvider(), nil
 	case ProviderSqlite:
-		// TODO(#53): construct + open the SQLite provider here and run
-		// pending migrations (issue #52) before returning it.
-		return nil, fmt.Errorf("%w (see issue #53): %q", ErrSqliteNotImplemented, ProviderSqlite)
+		return NewSqliteDbProvider(cfg.Path)
 	default:
 		return nil, fmt.Errorf("%w: %q (expected %q or %q)", ErrUnknownProvider, cfg.Kind, ProviderMemory, ProviderSqlite)
 	}
