@@ -7,7 +7,7 @@ import (
 )
 
 type staticFailRecord struct {
-	ID    RecordId
+	ID    RecordId `json:"id"`
 	Value string
 }
 
@@ -53,7 +53,7 @@ func (s *staticFailRecord) NewRecord() CrudRecord {
 }
 
 type dynamicFailRecord struct {
-	ID    RecordId
+	ID    RecordId `json:"id"`
 	Value string
 }
 
@@ -98,8 +98,7 @@ func (d *dynamicFailRecord) NewRecord() CrudRecord {
 	return new(dynamicFailRecord)
 }
 
-func TestValidateStaticFails(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testValidateStaticFails(t *testing.T, db Provider) {
 	record := &staticFailRecord{
 		Value: "",
 	}
@@ -110,8 +109,7 @@ func TestValidateStaticFails(t *testing.T) {
 	}
 }
 
-func TestValidateDynamicFails(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testValidateDynamicFails(t *testing.T, db Provider) {
 	record := &dynamicFailRecord{
 		Value: "invalid",
 	}
@@ -122,8 +120,7 @@ func TestValidateDynamicFails(t *testing.T) {
 	}
 }
 
-func TestValidateBothPass(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testValidateBothPass(t *testing.T, db Provider) {
 	record := &staticFailRecord{
 		Value: "good",
 	}
@@ -134,8 +131,7 @@ func TestValidateBothPass(t *testing.T) {
 	}
 }
 
-func TestValidateDynamicFailsAfterStaticPasses(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testValidateDynamicFailsAfterStaticPasses(t *testing.T, db Provider) {
 	record := &dynamicFailRecord{
 		Value: "invalid",
 	}
@@ -144,4 +140,15 @@ func TestValidateDynamicFailsAfterStaticPasses(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected validation error for 'invalid' value")
 	}
+}
+
+// TestValidatableContract runs every TestValidatableContract test body against every database.Provider kind
+// (memory, SQLite in-memory, SQLite on-disk) via runContractTests (issue #62).
+func TestValidatableContract(t *testing.T) {
+	runContractTests(t, []contractTest{
+		{name: "TestValidateStaticFails", fn: testValidateStaticFails},
+		{name: "TestValidateDynamicFails", fn: testValidateDynamicFails},
+		{name: "TestValidateBothPass", fn: testValidateBothPass},
+		{name: "TestValidateDynamicFailsAfterStaticPasses", fn: testValidateDynamicFailsAfterStaticPasses},
+	})
 }

@@ -8,7 +8,7 @@ import (
 )
 
 type testRecord struct {
-	ID        RecordId
+	ID        RecordId `json:"id"`
 	Owner     UserId
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -34,7 +34,7 @@ func (t *testRecord) Copy() *testRecord {
 }
 
 func (t *testRecord) Type() string {
-	return "test record"
+	return "test_record"
 }
 
 func (t *testRecord) GetId() RecordId {
@@ -85,8 +85,7 @@ func (t *testRecord) NewRecord() CrudRecord {
 	return new(testRecord)
 }
 
-func TestCreateDataIsSetOnCreate(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testCreateDataIsSetOnCreate(t *testing.T, db Provider) {
 	v := newTestRecord()
 	created, err := CreateOne(context.Background(), db, v)
 	if err != nil {
@@ -99,8 +98,7 @@ func TestCreateDataIsSetOnCreate(t *testing.T) {
 	fmt.Println(created)
 }
 
-func TestCreateDateIsImmutable(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testCreateDateIsImmutable(t *testing.T, db Provider) {
 	v := newTestRecord()
 	created, err := CreateOne(context.Background(), db, v)
 	if err != nil {
@@ -113,13 +111,12 @@ func TestCreateDateIsImmutable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if copied.CreatedAt != created.CreatedAt {
+	if !copied.CreatedAt.Equal(created.CreatedAt) {
 		t.Error("Created timestamp is not immutable")
 	}
 }
 
-func TestGetOneByIdSuccess(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetOneByIdSuccess(t *testing.T, db Provider) {
 	v := newTestRecord()
 	created, err := CreateOne(context.Background(), db, v)
 	if err != nil {
@@ -138,8 +135,7 @@ func TestGetOneByIdSuccess(t *testing.T) {
 	}
 }
 
-func TestGetOneByIdNotFound(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetOneByIdNotFound(t *testing.T, db Provider) {
 	nonExistentId := NewRecordId()
 
 	result, exists, err := GetOneById(context.Background(), db, &testRecord{}, nonExistentId)
@@ -154,8 +150,7 @@ func TestGetOneByIdNotFound(t *testing.T) {
 	}
 }
 
-func TestGetExistingRecordByIdSuccess(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetExistingRecordByIdSuccess(t *testing.T, db Provider) {
 	v := newTestRecord()
 	created, err := CreateOne(context.Background(), db, v)
 	if err != nil {
@@ -171,8 +166,7 @@ func TestGetExistingRecordByIdSuccess(t *testing.T) {
 	}
 }
 
-func TestGetExistingRecordByIdNotFound(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetExistingRecordByIdNotFound(t *testing.T, db Provider) {
 	nonExistentId := NewRecordId()
 
 	_, err := GetExistingRecordById(context.Background(), db, &testRecord{}, nonExistentId)
@@ -181,8 +175,7 @@ func TestGetExistingRecordByIdNotFound(t *testing.T) {
 	}
 }
 
-func TestExistsByIdExists(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testExistsByIdExists(t *testing.T, db Provider) {
 	v := newTestRecord()
 	created, err := CreateOne(context.Background(), db, v)
 	if err != nil {
@@ -195,8 +188,7 @@ func TestExistsByIdExists(t *testing.T) {
 	}
 }
 
-func TestExistsByIdNotFound(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testExistsByIdNotFound(t *testing.T, db Provider) {
 	nonExistentId := NewRecordId()
 
 	err := ExistsById(context.Background(), db, &testRecord{}, nonExistentId)
@@ -205,8 +197,7 @@ func TestExistsByIdNotFound(t *testing.T) {
 	}
 }
 
-func TestGetAllEmpty(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetAllEmpty(t *testing.T, db Provider) {
 
 	results, err := GetAll[*testRecord](context.Background(), db)
 	if err != nil {
@@ -217,8 +208,7 @@ func TestGetAllEmpty(t *testing.T) {
 	}
 }
 
-func TestGetAllWithRecords(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetAllWithRecords(t *testing.T, db Provider) {
 
 	for i := 0; i < 5; i++ {
 		_, err := CreateOne(context.Background(), db, newTestRecord())
@@ -236,8 +226,7 @@ func TestGetAllWithRecords(t *testing.T) {
 	}
 }
 
-func TestGetAllWhereWithFilter(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetAllWhereWithFilter(t *testing.T, db Provider) {
 
 	ownerId1 := UserId(NewRecordId())
 	ownerId2 := UserId(NewRecordId())
@@ -270,8 +259,7 @@ func TestGetAllWhereWithFilter(t *testing.T) {
 	}
 }
 
-func TestGetAllWhereNoResults(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetAllWhereNoResults(t *testing.T, db Provider) {
 
 	_, err := CreateOne(context.Background(), db, newTestRecord())
 	if err != nil {
@@ -289,8 +277,7 @@ func TestGetAllWhereNoResults(t *testing.T) {
 	}
 }
 
-func TestGetAllWhereNilFilter(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetAllWhereNilFilter(t *testing.T, db Provider) {
 
 	for i := 0; i < 3; i++ {
 		_, err := CreateOne(context.Background(), db, newTestRecord())
@@ -308,8 +295,7 @@ func TestGetAllWhereNilFilter(t *testing.T) {
 	}
 }
 
-func TestDeleteOneByIdSuccess(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testDeleteOneByIdSuccess(t *testing.T, db Provider) {
 	v := newTestRecord()
 	created, err := CreateOne(context.Background(), db, v)
 	if err != nil {
@@ -334,8 +320,7 @@ func TestDeleteOneByIdSuccess(t *testing.T) {
 	}
 }
 
-func TestDeleteOneByIdNotFound(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testDeleteOneByIdNotFound(t *testing.T, db Provider) {
 	nonExistentId := NewRecordId()
 
 	result, exists, err := DeleteOneById(context.Background(), db, &testRecord{}, nonExistentId)
@@ -350,8 +335,7 @@ func TestDeleteOneByIdNotFound(t *testing.T) {
 	}
 }
 
-func TestDeleteOneByIdDoubleDelete(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testDeleteOneByIdDoubleDelete(t *testing.T, db Provider) {
 	v := newTestRecord()
 	created, err := CreateOne(context.Background(), db, v)
 	if err != nil {
@@ -377,8 +361,7 @@ func TestDeleteOneByIdDoubleDelete(t *testing.T) {
 	}
 }
 
-func TestUpdateOneBasic(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testUpdateOneBasic(t *testing.T, db Provider) {
 	v := newTestRecord()
 	v.Owner = UserId(NewRecordId())
 	created, err := CreateOne(context.Background(), db, v)
@@ -407,8 +390,7 @@ func TestUpdateOneBasic(t *testing.T) {
 	}
 }
 
-func TestUpdateOneNotFound(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testUpdateOneNotFound(t *testing.T, db Provider) {
 
 	nonExistent := &testRecord{
 		ID:    NewRecordId(),
@@ -420,8 +402,7 @@ func TestUpdateOneNotFound(t *testing.T) {
 	}
 }
 
-func TestCreateOneWithPreSetId(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testCreateOneWithPreSetId(t *testing.T, db Provider) {
 	v := newTestRecord()
 	v.ID = NewRecordId()
 	created, err := CreateOne(context.Background(), db, v)
@@ -433,8 +414,7 @@ func TestCreateOneWithPreSetId(t *testing.T) {
 	}
 }
 
-func TestCreateOneGeneratesNewId(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testCreateOneGeneratesNewId(t *testing.T, db Provider) {
 	id := NewRecordId()
 
 	v := newTestRecord()
@@ -449,8 +429,7 @@ func TestCreateOneGeneratesNewId(t *testing.T) {
 	}
 }
 
-func TestGetAllDifferentTypes(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetAllDifferentTypes(t *testing.T, db Provider) {
 
 	_, err := CreateOne(context.Background(), db, newTestRecord())
 	if err != nil {
@@ -497,4 +476,32 @@ func TestCrudRecordBlankRecord(t *testing.T) {
 	if blankTestRecord.ID != InvalidRecordId {
 		t.Fatal("BlankRecord should have invalid ID")
 	}
+}
+
+// TestDatabaseProviderContract runs every TestDatabaseProviderContract test body against every database.Provider kind
+// (memory, SQLite in-memory, SQLite on-disk) via runContractTests (issue #62).
+func TestDatabaseProviderContract(t *testing.T) {
+	runContractTests(t, []contractTest{
+		{name: "TestCreateDataIsSetOnCreate", fn: testCreateDataIsSetOnCreate},
+		{name: "TestCreateDateIsImmutable", fn: testCreateDateIsImmutable},
+		{name: "TestGetOneByIdSuccess", fn: testGetOneByIdSuccess},
+		{name: "TestGetOneByIdNotFound", fn: testGetOneByIdNotFound},
+		{name: "TestGetExistingRecordByIdSuccess", fn: testGetExistingRecordByIdSuccess},
+		{name: "TestGetExistingRecordByIdNotFound", fn: testGetExistingRecordByIdNotFound},
+		{name: "TestExistsByIdExists", fn: testExistsByIdExists},
+		{name: "TestExistsByIdNotFound", fn: testExistsByIdNotFound},
+		{name: "TestGetAllEmpty", fn: testGetAllEmpty},
+		{name: "TestGetAllWithRecords", fn: testGetAllWithRecords},
+		{name: "TestGetAllWhereWithFilter", fn: testGetAllWhereWithFilter},
+		{name: "TestGetAllWhereNoResults", fn: testGetAllWhereNoResults},
+		{name: "TestGetAllWhereNilFilter", fn: testGetAllWhereNilFilter},
+		{name: "TestDeleteOneByIdSuccess", fn: testDeleteOneByIdSuccess},
+		{name: "TestDeleteOneByIdNotFound", fn: testDeleteOneByIdNotFound},
+		{name: "TestDeleteOneByIdDoubleDelete", fn: testDeleteOneByIdDoubleDelete},
+		{name: "TestUpdateOneBasic", fn: testUpdateOneBasic},
+		{name: "TestUpdateOneNotFound", fn: testUpdateOneNotFound},
+		{name: "TestCreateOneWithPreSetId", fn: testCreateOneWithPreSetId},
+		{name: "TestCreateOneGeneratesNewId", fn: testCreateOneGeneratesNewId},
+		{name: "TestGetAllDifferentTypes", fn: testGetAllDifferentTypes},
+	})
 }

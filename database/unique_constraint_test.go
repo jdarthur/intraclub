@@ -7,7 +7,7 @@ import (
 )
 
 type testUnique struct {
-	RecordId     RecordId
+	RecordId     RecordId `json:"id"`
 	ReferenceId1 RecordId
 	ReferenceId2 RecordId
 }
@@ -57,8 +57,7 @@ func (t *testUnique) NewRecord() CrudRecord {
 	return new(testUnique)
 }
 
-func TestValidateUniqueConstraintOnCreate(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testValidateUniqueConstraintOnCreate(t *testing.T, db Provider) {
 	record1 := testUnique{
 		RecordId:     1,
 		ReferenceId1: 2,
@@ -81,8 +80,7 @@ func TestValidateUniqueConstraintOnCreate(t *testing.T) {
 	fmt.Println(err)
 }
 
-func TestValidateUniqueConstraintOnUpdate(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testValidateUniqueConstraintOnUpdate(t *testing.T, db Provider) {
 	record1 := testUnique{
 		RecordId:     1,
 		ReferenceId1: 2,
@@ -116,8 +114,7 @@ func TestValidateUniqueConstraintOnUpdate(t *testing.T) {
 	fmt.Println(err)
 }
 
-func TestSelfUpdateWithUniqueConstraint(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testSelfUpdateWithUniqueConstraint(t *testing.T, db Provider) {
 	record1 := testUnique{
 		RecordId:     1,
 		ReferenceId1: 2,
@@ -139,8 +136,7 @@ func TestSelfUpdateWithUniqueConstraint(t *testing.T) {
 	}
 }
 
-func TestUniqueConstraintNoExistingRecords(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testUniqueConstraintNoExistingRecords(t *testing.T, db Provider) {
 
 	record1 := testUnique{
 		RecordId:     1,
@@ -153,8 +149,7 @@ func TestUniqueConstraintNoExistingRecords(t *testing.T) {
 	}
 }
 
-func TestUniqueConstraintSameRecordUpdate(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testUniqueConstraintSameRecordUpdate(t *testing.T, db Provider) {
 	record1 := testUnique{
 		RecordId:     1,
 		ReferenceId1: 2,
@@ -177,8 +172,7 @@ func TestUniqueConstraintSameRecordUpdate(t *testing.T) {
 	}
 }
 
-func TestUniqueConstraintPartialMatch(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testUniqueConstraintPartialMatch(t *testing.T, db Provider) {
 
 	record1 := testUnique{
 		RecordId:     1,
@@ -213,8 +207,7 @@ func TestUniqueConstraintPartialMatch(t *testing.T) {
 	}
 }
 
-func TestUniqueConstraintMultipleDuplicates(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testUniqueConstraintMultipleDuplicates(t *testing.T, db Provider) {
 
 	record1 := testUnique{
 		RecordId:     1,
@@ -249,8 +242,7 @@ func TestUniqueConstraintMultipleDuplicates(t *testing.T) {
 	}
 }
 
-func TestUniqueConstraintUpdateToSelfUnique(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testUniqueConstraintUpdateToSelfUnique(t *testing.T, db Provider) {
 
 	record1 := testUnique{
 		RecordId:     1,
@@ -282,4 +274,19 @@ func TestUniqueConstraintUpdateToSelfUnique(t *testing.T) {
 	if err == nil {
 		t.Fatal("updating to match another record's unique values should fail")
 	}
+}
+
+// TestUniqueConstraintContract runs every TestUniqueConstraintContract test body against every database.Provider kind
+// (memory, SQLite in-memory, SQLite on-disk) via runContractTests (issue #62).
+func TestUniqueConstraintContract(t *testing.T) {
+	runContractTests(t, []contractTest{
+		{name: "TestValidateUniqueConstraintOnCreate", fn: testValidateUniqueConstraintOnCreate},
+		{name: "TestValidateUniqueConstraintOnUpdate", fn: testValidateUniqueConstraintOnUpdate},
+		{name: "TestSelfUpdateWithUniqueConstraint", fn: testSelfUpdateWithUniqueConstraint},
+		{name: "TestUniqueConstraintNoExistingRecords", fn: testUniqueConstraintNoExistingRecords},
+		{name: "TestUniqueConstraintSameRecordUpdate", fn: testUniqueConstraintSameRecordUpdate},
+		{name: "TestUniqueConstraintPartialMatch", fn: testUniqueConstraintPartialMatch},
+		{name: "TestUniqueConstraintMultipleDuplicates", fn: testUniqueConstraintMultipleDuplicates},
+		{name: "TestUniqueConstraintUpdateToSelfUnique", fn: testUniqueConstraintUpdateToSelfUnique},
+	})
 }

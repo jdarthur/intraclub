@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -55,8 +56,15 @@ func newSqliteDbProvider(path string, migrations []Migration) (*SqliteDbProvider
 		path = "intraclub.db"
 	}
 
-	dsn := "file:" + path +
-		"?_pragma=busy_timeout(5000)" + // concurrent reads from Gin handlers
+	// Append pragmas to the path. A path may already carry a query string (e.g.
+	// a shared-cache in-memory database ":memory:?cache=shared"), in which case
+	// the pragmas are joined with "&" rather than a second "?".
+	querySep := "?"
+	if strings.Contains(path, "?") {
+		querySep = "&"
+	}
+	dsn := "file:" + path + querySep +
+		"_pragma=busy_timeout(5000)" + // concurrent reads from Gin handlers
 		"&_pragma=journal_mode(WAL)" + // single-writer, concurrent readers
 		"&_txlock=immediate" // acquire the write lock up front
 	db, err := sql.Open("sqlite", dsn)
@@ -437,11 +445,17 @@ func encodeValue(field reflect.Value) (any, error) {
 		return nil, fmt.Errorf("unsupported interface field %s", field.Type())
 	case reflect.Slice, reflect.Array:
 		// []byte (and [N]byte) are stored as a SQLite BLOB column (e.g.
-		// Photo.Contents).
+		// Photo.Contents). Any other slice/array (e.g. a []UserId on the
+		// access-control test record) is stored as a JSON TEXT column so the
+		// elements round-trip losslessly.
 		if field.Type().Elem().Kind() == reflect.Uint8 {
 			return field.Bytes(), nil
 		}
-		return nil, fmt.Errorf("unsupported slice/array field %s", field.Type())
+		b, err := json.Marshal(field.Interface())
+		if err != nil {
+			return nil, fmt.Errorf("marshal slice field %s: %w", field.Type(), err)
+		}
+		return string(b), nil
 	default:
 		return nil, fmt.Errorf("unsupported field kind %s", field.Kind())
 	}
@@ -510,7 +524,16 @@ func setField(field reflect.Value, raw any) error {
 			}
 			return nil
 		}
-		return fmt.Errorf("unsupported slice/array field %s", field.Type())
+		// Other slices/arrays are stored as a JSON TEXT column (see
+		// encodeValue); decode it back into the slice.
+		s := asString(raw)
+		if s == "" {
+			return nil
+		}
+		if err := json.Unmarshal([]byte(s), field.Addr().Interface()); err != nil {
+			return fmt.Errorf("unmarshal slice field %s: %w", field.Type(), err)
+		}
+		return nil
 	default:
 		return fmt.Errorf("unsupported field kind %s", field.Kind())
 	}
