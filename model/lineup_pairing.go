@@ -18,7 +18,7 @@ func (id LineupPairingId) String() string {
 }
 
 type LineupPairing struct {
-	ID              LineupPairingId // unique ID for this LineupPairing
+	ID              LineupPairingId `json:"id"` // unique ID for this LineupPairing
 	LineupId        LineupId        // This correlates a LineupPairing into a group with other pairing and assigns to a Week
 	TeamId          TeamId          // Players must be on this team
 	Player1         database.UserId // Player in slot 1 for the format / line

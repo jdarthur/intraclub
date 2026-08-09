@@ -28,7 +28,7 @@ func (id TeamMatchId) String() string {
 // reassemble the relationship rows into the old map shape via
 // `TeamMatch.GetIndividualMatches`.
 type TeamMatch struct {
-	ID       TeamMatchId
+	ID       TeamMatchId `json:"id"`
 	WeekId   WeekId
 	HomeTeam TeamId
 	AwayTeam TeamId

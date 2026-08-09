@@ -58,8 +58,7 @@ func (sc CompletedSecondary) Won() bool {
 }
 
 type IndividualMatch struct {
-	ID             IndividualMatchId
-	Editors        []database.UserId
+	ID             IndividualMatchId `json:"id"`
 	Opponent       IndividualMatchId
 	Structure      ScoringStructureId
 	MainValue      int
@@ -73,7 +72,9 @@ type IndividualMatch struct {
 }
 
 func (s *IndividualMatch) GetOwner() database.UserId {
-	return s.Editors[0]
+	// Ownership is enforced via the match_editor child table; there is no
+	// single owner column on the record itself.
+	return database.InvalidUserId
 }
 
 func NewMatch() *IndividualMatch {
@@ -93,7 +94,11 @@ func (s *IndividualMatch) SetId(id database.RecordId) {
 }
 
 func (s *IndividualMatch) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
-	return s.Editors
+	editors, err := s.GetEditors(ctx, db)
+	if err != nil {
+		return nil
+	}
+	return editors
 }
 
 func (s *IndividualMatch) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
@@ -101,13 +106,10 @@ func (s *IndividualMatch) AccessibleTo(ctx context.Context, db database.Provider
 }
 
 func (s *IndividualMatch) SetOwner(userId database.UserId) {
-	s.Editors = append(s.Editors, userId)
+	// Ownership is enforced via the match_editor child table.
 }
 
 func (s *IndividualMatch) StaticallyValid() error {
-	if len(s.Editors) == 0 {
-		return fmt.Errorf("no editors specified")
-	}
 	if s.MainValue < 0 {
 		return fmt.Errorf("main value is negative")
 	}
@@ -133,13 +135,6 @@ func (s *IndividualMatch) DynamicallyValid(ctx context.Context, db database.Prov
 		}
 		if opp.Opponent != IndividualMatchId(database.InvalidRecordId) && opp.Opponent != s.ID {
 			return fmt.Errorf("this record's opponent %s is pointing to a different opponent than this record (%s)", s.Opponent, opp.Opponent)
-		}
-	}
-
-	for _, editor := range s.Editors {
-		err = database.ExistsById(ctx, db, &User{}, editor.RecordId())
-		if err != nil {
-			return err
 		}
 	}
 	return nil
@@ -317,4 +312,93 @@ func (s *IndividualMatch) GetSecondaryPointTotal() int {
 
 func (s *IndividualMatch) NewRecord() database.CrudRecord {
 	return new(IndividualMatch)
+}
+
+// MatchEditor is a child-table record that grants edit rights on an
+// IndividualMatch to a UserId. This is the normalized replacement for the
+// former inline `IndividualMatch.Editors` slice, enabling the relationship to
+// be queried/indexed individually and stored in its own table rather than as an
+// embedded list. It is stored in its own collection (`match_editor`) with FKs
+// to individual_match and user.
+type MatchEditor struct {
+	ID           database.RecordId `json:"id"`
+	MatchId      IndividualMatchId `json:"match_id"`
+	EditorUserId database.UserId   `json:"editor_user_id"`
+}
+
+func (e *MatchEditor) GetOwner() database.UserId {
+	return e.EditorUserId
+}
+
+func (e *MatchEditor) SetOwner(userId database.UserId) {
+	e.EditorUserId = userId
+}
+
+func (e *MatchEditor) Type() string {
+	return "match_editor"
+}
+
+func (e *MatchEditor) GetId() database.RecordId {
+	return e.ID
+}
+
+func (e *MatchEditor) SetId(id database.RecordId) {
+	e.ID = id
+}
+
+func (e *MatchEditor) StaticallyValid() error {
+	return nil
+}
+
+func (e *MatchEditor) DynamicallyValid(ctx context.Context, db database.Provider) error {
+	if err := database.ExistsById(ctx, db, &IndividualMatch{}, e.MatchId.RecordId()); err != nil {
+		return err
+	}
+	return database.ExistsById(ctx, db, &User{}, e.EditorUserId.RecordId())
+}
+
+func (e *MatchEditor) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
+	return database.AccessibleToEveryone
+}
+
+func (e *MatchEditor) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
+	return []database.UserId{e.EditorUserId}
+}
+
+func (e *MatchEditor) NewRecord() database.CrudRecord {
+	return new(MatchEditor)
+}
+
+// getEditorRows returns all MatchEditor relationship rows assigned to this
+// match.
+func (s *IndividualMatch) getEditorRows(ctx context.Context, db database.Provider) ([]*MatchEditor, error) {
+	filter := func(_ context.Context, e *MatchEditor) bool {
+		return e.MatchId == s.ID
+	}
+	return database.GetAllWhere[*MatchEditor](ctx, db, filter)
+}
+
+// GetEditors returns the UserIds that can edit this match, reassembled from the
+// match_editor child table into the former inline IndividualMatch.Editors
+// slice shape.
+func (s *IndividualMatch) GetEditors(ctx context.Context, db database.Provider) ([]database.UserId, error) {
+	rows, err := s.getEditorRows(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]database.UserId, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, row.EditorUserId)
+	}
+	return result, nil
+}
+
+// AssignEditor creates the relationship row that grants the given user edit
+// rights on this match.
+func (s *IndividualMatch) AssignEditor(ctx context.Context, db database.Provider, editor database.UserId) (*MatchEditor, error) {
+	row := &MatchEditor{
+		MatchId:      s.ID,
+		EditorUserId: editor,
+	}
+	return database.CreateOne(ctx, db, row)
 }

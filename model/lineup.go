@@ -18,7 +18,7 @@ func (id LineupId) String() string {
 }
 
 type Lineup struct {
-	ID     LineupId
+	ID     LineupId `json:"id"`
 	TeamId TeamId // TeamId for this particular Lineup
 	WeekId WeekId // Week that this Lineup applies to
 }

@@ -75,9 +75,11 @@ func newStoredIndividualMatch(t *testing.T, db database.Provider) *IndividualMat
 	scoring := newDefaultStoredScoringStructure(t, db)
 	match := NewMatch()
 	match.Structure = scoring.ID
-	match.Editors = []database.UserId{scoring.Owner}
 	v, err := database.CreateOne(context.Background(), db, match)
 	require.NoError(t, err)
+	if _, err := v.AssignEditor(context.Background(), db, scoring.Owner); err != nil {
+		require.NoError(t, err)
+	}
 	return v
 }
 

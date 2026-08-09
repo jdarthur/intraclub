@@ -15,9 +15,6 @@ func newStoredMatchPair(t *testing.T, db database.Provider, s *ScoringStructure)
 	match1.Structure = s.ID
 	match2.Structure = s.ID
 
-	match1.Editors = []database.UserId{s.Owner}
-	match2.Editors = []database.UserId{s.Owner}
-
 	created1, err := database.CreateOne(context.Background(), db, match1)
 	if err != nil {
 		t.Fatal(err)
@@ -33,6 +30,16 @@ func newStoredMatchPair(t *testing.T, db database.Provider, s *ScoringStructure)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// Grant edit rights via the normalized match_editor child table (the
+	// former inline Editors slice).
+	if _, err := created1.AssignEditor(context.Background(), db, s.Owner); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := created2.AssignEditor(context.Background(), db, s.Owner); err != nil {
+		t.Fatal(err)
+	}
+
 	err = created1.Initialize(context.Background(), db)
 	if err != nil {
 		t.Fatal(err)
