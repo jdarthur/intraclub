@@ -37,7 +37,7 @@ func (opt AvailabilityOption) Valid() bool {
 }
 
 type Availability struct {
-	ID        database.RecordId
+	ID        database.RecordId `json:"id"`
 	UserId    database.UserId
 	WeekId    WeekId
 	Available AvailabilityOption
