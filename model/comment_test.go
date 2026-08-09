@@ -37,7 +37,6 @@ func copyComment(c *Comment) *Comment {
 		Content:   c.Content,
 		CreatedAt: c.CreatedAt,
 		EditedAt:  c.EditedAt,
-		Reactions: c.Reactions,
 	}
 }
 
