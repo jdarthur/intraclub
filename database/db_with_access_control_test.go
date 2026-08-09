@@ -7,7 +7,7 @@ import (
 )
 
 type PrivateTestRecord struct {
-	ID       RecordId
+	ID       RecordId `json:"id"`
 	Owner    UserId
 	SharedTo []UserId
 	Value    string
@@ -82,8 +82,7 @@ func newStoredPrivateTestRecord(t *testing.T, db Provider, owner UserId) *Privat
 	return v
 }
 
-func TestGetOneViaOwner(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetOneViaOwner(t *testing.T, db Provider) {
 	userId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, userId)
 
@@ -98,8 +97,7 @@ func TestGetOneViaOwner(t *testing.T) {
 	fmt.Printf("%+v\n", v)
 }
 
-func TestGetOneViaSharedTo(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetOneViaSharedTo(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -120,8 +118,7 @@ func TestGetOneViaSharedTo(t *testing.T) {
 	fmt.Printf("%+v\n", v)
 }
 
-func TestGetOneUnauthorized(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetOneUnauthorized(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -137,8 +134,7 @@ func TestGetOneUnauthorized(t *testing.T) {
 	}
 }
 
-func TestDeleteOneByOwner(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testDeleteOneByOwner(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -153,8 +149,7 @@ func TestDeleteOneByOwner(t *testing.T) {
 	fmt.Printf("%+v\n", v)
 }
 
-func TestDeleteOneByUnauthorized(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testDeleteOneByUnauthorized(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -169,8 +164,7 @@ func TestDeleteOneByUnauthorized(t *testing.T) {
 	}
 }
 
-func TestUpdateOneByOwner(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testUpdateOneByOwner(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -209,9 +203,8 @@ func updateRecordAndReQuery(t *testing.T, db Provider, r *PrivateTestRecord, new
 	return v, err
 }
 
-func TestUpdateOneByUnauthorized(t *testing.T) {
+func testUpdateOneByUnauthorized(t *testing.T, db Provider) {
 	// create a record in the database
-	db := NewUnitTestDBProvider()
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -225,9 +218,8 @@ func TestUpdateOneByUnauthorized(t *testing.T) {
 	}
 }
 
-func TestAccessibleByEveryone(t *testing.T) {
+func testAccessibleByEveryone(t *testing.T, db Provider) {
 	// create a record in the database
-	db := NewUnitTestDBProvider()
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 	err := r.ShareTo(context.Background(), db, EveryoneUserId, ownerId)
@@ -248,8 +240,7 @@ func TestAccessibleByEveryone(t *testing.T) {
 	fmt.Printf("%+v\n", v)
 }
 
-func TestAccessibleBySysAdmin(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testAccessibleBySysAdmin(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -268,8 +259,7 @@ func TestAccessibleBySysAdmin(t *testing.T) {
 	fmt.Printf("%+v\n", v)
 }
 
-func TestEditableBySysAdmin(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testEditableBySysAdmin(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 	fmt.Printf("%+v\n", r)
@@ -288,8 +278,7 @@ func TestEditableBySysAdmin(t *testing.T) {
 	fmt.Printf("%+v\n", v)
 }
 
-func TestGetAllByOwner(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetAllByOwner(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	otherId := UserId(NewRecordId())
 
@@ -309,8 +298,7 @@ func TestGetAllByOwner(t *testing.T) {
 	}
 }
 
-func TestGetAllByUnauthorizedUser(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetAllByUnauthorizedUser(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	unauthorizedId := UserId(NewRecordId())
 
@@ -326,8 +314,7 @@ func TestGetAllByUnauthorizedUser(t *testing.T) {
 	}
 }
 
-func TestGetAllBySysAdmin(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetAllBySysAdmin(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	adminId := UserId(NewRecordId())
 
@@ -347,8 +334,7 @@ func TestGetAllBySysAdmin(t *testing.T) {
 	}
 }
 
-func TestDeleteOneByIdNotFoundNonOwner(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testDeleteOneByIdNotFoundNonOwner(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -363,8 +349,7 @@ func TestDeleteOneByIdNotFoundNonOwner(t *testing.T) {
 	}
 }
 
-func TestUpdateOneByIdNotFound(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testUpdateOneByIdNotFound(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -379,8 +364,7 @@ func TestUpdateOneByIdNotFound(t *testing.T) {
 	}
 }
 
-func TestDeleteBySharedToUser(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testDeleteBySharedToUser(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -411,8 +395,7 @@ func TestDeleteBySharedToUser(t *testing.T) {
 	}
 }
 
-func TestUpdateBySharedToUser(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testUpdateBySharedToUser(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -435,8 +418,7 @@ func TestUpdateBySharedToUser(t *testing.T) {
 	}
 }
 
-func TestGetOneBySharedToUser(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetOneBySharedToUser(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -457,8 +439,7 @@ func TestGetOneBySharedToUser(t *testing.T) {
 	fmt.Printf("%+v\n", v)
 }
 
-func TestUpdateOneBySharedToUser(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testUpdateOneBySharedToUser(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -482,8 +463,7 @@ func TestUpdateOneBySharedToUser(t *testing.T) {
 	}
 }
 
-func TestGetOneIdDoesNotExist(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetOneIdDoesNotExist(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -497,8 +477,7 @@ func TestGetOneIdDoesNotExist(t *testing.T) {
 	}
 }
 
-func TestGetAllWithMultipleOwners(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testGetAllWithMultipleOwners(t *testing.T, db Provider) {
 	owner1 := UserId(NewRecordId())
 	owner2 := UserId(NewRecordId())
 	owner3 := UserId(NewRecordId())
@@ -518,8 +497,7 @@ func TestGetAllWithMultipleOwners(t *testing.T) {
 	}
 }
 
-func TestDeleteBySysAdmin(t *testing.T) {
-	db := NewUnitTestDBProvider()
+func testDeleteBySysAdmin(t *testing.T, db Provider) {
 	ownerId := UserId(NewRecordId())
 	r := newStoredPrivateTestRecord(t, db, ownerId)
 
@@ -537,4 +515,33 @@ func TestDeleteBySysAdmin(t *testing.T) {
 		t.Fatal("sys admin should be able to delete")
 	}
 	fmt.Printf("%+v\n", v)
+}
+
+// TestDbWithAccessControlContract runs every TestDbWithAccessControlContract test body against every database.Provider kind
+// (memory, SQLite in-memory, SQLite on-disk) via runContractTests (issue #62).
+func TestDbWithAccessControlContract(t *testing.T) {
+	runContractTests(t, []contractTest{
+		{name: "TestGetOneViaOwner", fn: testGetOneViaOwner},
+		{name: "TestGetOneViaSharedTo", fn: testGetOneViaSharedTo},
+		{name: "TestGetOneUnauthorized", fn: testGetOneUnauthorized},
+		{name: "TestDeleteOneByOwner", fn: testDeleteOneByOwner},
+		{name: "TestDeleteOneByUnauthorized", fn: testDeleteOneByUnauthorized},
+		{name: "TestUpdateOneByOwner", fn: testUpdateOneByOwner},
+		{name: "TestUpdateOneByUnauthorized", fn: testUpdateOneByUnauthorized},
+		{name: "TestAccessibleByEveryone", fn: testAccessibleByEveryone},
+		{name: "TestAccessibleBySysAdmin", fn: testAccessibleBySysAdmin},
+		{name: "TestEditableBySysAdmin", fn: testEditableBySysAdmin},
+		{name: "TestGetAllByOwner", fn: testGetAllByOwner},
+		{name: "TestGetAllByUnauthorizedUser", fn: testGetAllByUnauthorizedUser},
+		{name: "TestGetAllBySysAdmin", fn: testGetAllBySysAdmin},
+		{name: "TestDeleteOneByIdNotFoundNonOwner", fn: testDeleteOneByIdNotFoundNonOwner},
+		{name: "TestUpdateOneByIdNotFound", fn: testUpdateOneByIdNotFound},
+		{name: "TestDeleteBySharedToUser", fn: testDeleteBySharedToUser},
+		{name: "TestUpdateBySharedToUser", fn: testUpdateBySharedToUser},
+		{name: "TestGetOneBySharedToUser", fn: testGetOneBySharedToUser},
+		{name: "TestUpdateOneBySharedToUser", fn: testUpdateOneBySharedToUser},
+		{name: "TestGetOneIdDoesNotExist", fn: testGetOneIdDoesNotExist},
+		{name: "TestGetAllWithMultipleOwners", fn: testGetAllWithMultipleOwners},
+		{name: "TestDeleteBySysAdmin", fn: testDeleteBySysAdmin},
+	})
 }

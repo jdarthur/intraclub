@@ -159,3 +159,54 @@ func TestSqliteProviderNoOpUpdateSucceeds(t *testing.T) {
 		t.Fatalf("no-op Update should succeed, got: %v", err)
 	}
 }
+
+// sqliteSliceTestRecord carries a []UserId field to exercise the JSON TEXT
+// column mapping for non-[]byte slices.
+type sqliteSliceTestRecord struct {
+	ID       RecordId `json:"id"`
+	Owner    UserId   `json:"owner"`
+	SharedTo []UserId `json:"shared_to"`
+}
+
+func (r *sqliteSliceTestRecord) Type() string                        { return "test_slice_record" }
+func (r *sqliteSliceTestRecord) GetId() RecordId                     { return r.ID }
+func (r *sqliteSliceTestRecord) SetId(id RecordId)                   { r.ID = id }
+func (r *sqliteSliceTestRecord) GetOwner() UserId                    { return r.Owner }
+func (r *sqliteSliceTestRecord) SetOwner(UserId)                     {}
+func (r *sqliteSliceTestRecord) EditableBy(context.Context, Provider) []UserId { return []UserId{r.Owner} }
+func (r *sqliteSliceTestRecord) AccessibleTo(context.Context, Provider) []UserId { return []UserId{r.Owner} }
+func (r *sqliteSliceTestRecord) StaticallyValid() error              { return nil }
+func (r *sqliteSliceTestRecord) DynamicallyValid(context.Context, Provider) error { return nil }
+func (r *sqliteSliceTestRecord) NewRecord() CrudRecord               { return &sqliteSliceTestRecord{} }
+
+const testSliceRecordMigration = "CREATE TABLE test_slice_record (id TEXT PRIMARY KEY, owner TEXT, shared_to TEXT);"
+
+func TestSqliteProviderSliceRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	p, err := newSqliteDbProvider(filepath.Join(t.TempDir(), "slice.db"), []Migration{
+		{Name: "001_test_slice_record", SQL: testSliceRecordMigration},
+	})
+	if err != nil {
+		t.Fatalf("newSqliteDbProvider: %v", err)
+	}
+	t.Cleanup(func() { p.Disconnect() })
+
+	sharedTo := []UserId{UserId(NewRecordId()), EveryoneUserId}
+	created, err := p.Create(ctx, &sqliteSliceTestRecord{Owner: UserId(NewRecordId()), SharedTo: sharedTo})
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	rec := created.(*sqliteSliceTestRecord)
+
+	got, exists, err := p.GetOne(ctx, &sqliteSliceTestRecord{ID: rec.GetId()})
+	if err != nil {
+		t.Fatalf("GetOne: %v", err)
+	}
+	if !exists {
+		t.Fatal("record not found")
+	}
+	g := got.(*sqliteSliceTestRecord)
+	if len(g.SharedTo) != len(sharedTo) || g.SharedTo[0] != sharedTo[0] || g.SharedTo[1] != sharedTo[1] {
+		t.Fatalf("slice round-trip mismatch, got %+v", g.SharedTo)
+	}
+}
