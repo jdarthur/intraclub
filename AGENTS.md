@@ -9,9 +9,9 @@ Work in progress — see `creation-sequence.md` for a feature checklist.
 - Backend: Go 1.26 + [Gin](https://github.com/gin-gonic/gin) REST API under `/api`.
 - Auth: JWT (ES512, keypair in `token.crt`/`token.key`) + email magic-link OTP.
 - Storage: generic `database.Provider` with pluggable backends — **SQLite**
-  (`modernc.org/sqlite`, migrations in `database/migrations/`), MongoDB, in-memory
-  (used by tests). Default is in-memory; select via `--db` / `--db-path` /
-  `INTRACLUB_DB_PATH`.
+  (`modernc.org/sqlite`, migrations in `database/migrations/`) and in-memory
+  (used by tests). Default is SQLite (single `intraclub.db` file); select via
+  `--db` / `--db-path` / `INTRACLUB_DB_PATH`.
 - Frontend: SvelteKit (Svelte 5) / Vite / TypeScript in `ui/`; proxies `/api` to
   backend on port 8080.
 - Entry point: `main.go` (flag parsing, provider selection, route wiring).

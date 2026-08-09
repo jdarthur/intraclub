@@ -15,10 +15,9 @@ const (
 	// unit/contract tests and is a valid option for ephemeral local runs.
 	ProviderMemory ProviderKind = "memory"
 
-	// ProviderSqlite is the file-backed SQLite provider. Construction and
-	// connection setup are implemented in issue #53; until then selecting it
-	// returns an explicit "not yet implemented" error rather than failing
-	// silently at startup.
+	// ProviderSqlite is the file-backed SQLite provider (the default for the
+	// running server). Construction opens the file, enables WAL, and runs any
+	// pending migrations.
 	ProviderSqlite ProviderKind = "sqlite"
 )
 
