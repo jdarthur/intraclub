@@ -22,13 +22,12 @@ func (id CommentId) String() string {
 
 type Comment struct {
 	ID        CommentId       `json:"id"`                           // unique ID for this comment
-	Blurb     BlurbId         `json:"references"`                   // ID of the Blurb that this comment is on
-	ReplyTo   CommentId       `json:"references_comment"`           // ID of the Comment that this is in reference to (if any)
+	Blurb     BlurbId         `json:"blurb"`                        // ID of the Blurb that this comment is on
+	ReplyTo   CommentId       `json:"reply_to"`                     // ID of the Comment that this is in reference to (if any)
 	Owner     database.UserId `json:"user_id" bson:"user_id"`       // ID of the User that created this comment
 	Content   string          `json:"content" bson:"content"`       // content of the comment itself
 	EditedAt  time.Time       `json:"edited_at" bson:"edited_at"`   // time that this Comment was edited (if applicable)
 	CreatedAt time.Time       `json:"created_at" bson:"created_at"` // when this comment was created
-	Reactions ReactionList    `json:"reactions" bson:"reactions"`   // list of user reactions to this comment, if any
 }
 
 func (c *Comment) GetOwner() database.UserId {
@@ -118,7 +117,7 @@ func (c *Comment) StaticallyValid() error {
 		return fmt.Errorf("comment created timestamp is zero")
 	}
 
-	return c.Reactions.StaticallyValid()
+	return nil
 }
 
 func (c *Comment) DynamicallyValid(ctx context.Context, db database.Provider) error {
@@ -155,9 +154,142 @@ func (c *Comment) DynamicallyValid(ctx context.Context, db database.Provider) er
 		}
 	}
 
-	return c.Reactions.DynamicallyValid(ctx, db)
+	// validate each reaction row (via the comment_reaction child table)
+	reactions, err := c.getReactionRows(ctx, db)
+	if err != nil {
+		return err
+	}
+	for _, row := range reactions {
+		r := &Reaction{UserId: row.UserId, Type: row.ReactionType}
+		if err := r.DynamicallyValid(ctx, db); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *Comment) NewRecord() database.CrudRecord {
 	return new(Comment)
+}
+
+// CommentReaction is a child-table record that assigns a single Reaction from
+// a User to a Comment. This is the normalized replacement for the former inline
+// `Comment.Reactions` slice, enabling the relationship to be queried/indexed
+// individually and stored in its own table rather than as an embedded list.
+type CommentReaction struct {
+	ID           database.RecordId `json:"id"`
+	CommentId    CommentId         `json:"comment_id"`
+	UserId       database.UserId   `json:"user_id"`
+	ReactionType reactionType      `json:"reaction_type"`
+}
+
+func (r *CommentReaction) GetOwner() database.UserId {
+	return r.UserId
+}
+
+func (r *CommentReaction) SetOwner(userId database.UserId) {
+	r.UserId = userId
+}
+
+func (r *CommentReaction) Type() string {
+	return "comment_reaction"
+}
+
+func (r *CommentReaction) GetId() database.RecordId {
+	return r.ID
+}
+
+func (r *CommentReaction) SetId(id database.RecordId) {
+	r.ID = id
+}
+
+func (r *CommentReaction) StaticallyValid() error {
+	return r.ReactionType.StaticallyValid()
+}
+
+func (r *CommentReaction) DynamicallyValid(ctx context.Context, db database.Provider) error {
+	if err := database.ExistsById(ctx, db, &Comment{}, r.CommentId.RecordId()); err != nil {
+		return err
+	}
+	return database.ExistsById(ctx, db, &User{}, r.UserId.RecordId())
+}
+
+func (r *CommentReaction) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {
+	return database.AccessibleToEveryone
+}
+
+func (r *CommentReaction) EditableBy(ctx context.Context, db database.Provider) []database.UserId {
+	return []database.UserId{r.UserId}
+}
+
+func (r *CommentReaction) NewRecord() database.CrudRecord {
+	return new(CommentReaction)
+}
+
+// getReactionRows returns all CommentReaction relationship rows assigned to
+// this comment.
+func (c *Comment) getReactionRows(ctx context.Context, db database.Provider) ([]*CommentReaction, error) {
+	filter := func(_ context.Context, r *CommentReaction) bool {
+		return r.CommentId == c.ID
+	}
+	return database.GetAllWhere[*CommentReaction](ctx, db, filter)
+}
+
+// GetReactions reassembles the comment_reaction child rows into the former
+// inline Comment.Reactions slice shape.
+func (c *Comment) GetReactions(ctx context.Context, db database.Provider) (ReactionList, error) {
+	rows, err := c.getReactionRows(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+	reactions := make(ReactionList, 0, len(rows))
+	for _, row := range rows {
+		reactions = append(reactions, &Reaction{UserId: row.UserId, Type: row.ReactionType})
+	}
+	return reactions, nil
+}
+
+// React adds a Reaction to this comment, storing it in the comment_reaction
+// child table. A duplicate (comment, user, type) reaction is rejected.
+func (c *Comment) React(ctx context.Context, db database.Provider, u database.UserId, t reactionType) error {
+	r := &Reaction{UserId: u, Type: t}
+
+	if err := database.Validate(ctx, db, r); err != nil {
+		return err
+	}
+
+	rows, err := c.getReactionRows(ctx, db)
+	if err != nil {
+		return err
+	}
+	for _, row := range rows {
+		if row.UserId == u && row.ReactionType == t {
+			return fmt.Errorf("reaction already exists: %+v", r)
+		}
+	}
+
+	row := &CommentReaction{
+		CommentId:    c.ID,
+		UserId:       u,
+		ReactionType: t,
+	}
+	_, err = database.CreateOne(ctx, db, row)
+	return err
+}
+
+// Unreact removes the Reaction matching (user, type) from this comment.
+func (c *Comment) Unreact(ctx context.Context, db database.Provider, u database.UserId, t reactionType) error {
+	r := &Reaction{UserId: u, Type: t}
+
+	rows, err := c.getReactionRows(ctx, db)
+	if err != nil {
+		return err
+	}
+	for _, row := range rows {
+		if row.UserId == u && row.ReactionType == t {
+			_, _, err := database.DeleteOneById(ctx, db, row, row.GetId())
+			return err
+		}
+	}
+	return fmt.Errorf("reaction with values %+v does not exist", r)
 }

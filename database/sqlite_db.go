@@ -435,6 +435,13 @@ func encodeValue(field reflect.Value) (any, error) {
 			return n.Name(), nil
 		}
 		return nil, fmt.Errorf("unsupported interface field %s", field.Type())
+	case reflect.Slice, reflect.Array:
+		// []byte (and [N]byte) are stored as a SQLite BLOB column (e.g.
+		// Photo.Contents).
+		if field.Type().Elem().Kind() == reflect.Uint8 {
+			return field.Bytes(), nil
+		}
+		return nil, fmt.Errorf("unsupported slice/array field %s", field.Type())
 	default:
 		return nil, fmt.Errorf("unsupported field kind %s", field.Kind())
 	}
@@ -493,6 +500,17 @@ func setField(field reflect.Value, raw any) error {
 			return nil
 		}
 		return fmt.Errorf("unsupported struct field %s", field.Type())
+	case reflect.Slice, reflect.Array:
+		// []byte round-trips from a SQLite BLOB column (e.g. Photo.Contents).
+		if field.Type().Elem().Kind() == reflect.Uint8 {
+			if b, ok := raw.([]byte); ok {
+				field.SetBytes(b)
+			} else {
+				field.SetBytes([]byte(asString(raw)))
+			}
+			return nil
+		}
+		return fmt.Errorf("unsupported slice/array field %s", field.Type())
 	default:
 		return fmt.Errorf("unsupported field kind %s", field.Kind())
 	}

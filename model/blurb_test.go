@@ -78,8 +78,12 @@ func TestBlurbSeasonIdDoesNotExist(t *testing.T) {
 func TestBlurbPhotoIdDoesNotExist(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
-	b := newValidBlurb(commish.ID, season.ID)
-	b.Photos = []PhotoId{0}
+	b := newStoredBlurb(t, db, commish.ID, season.ID)
+	// raw-insert a blurb_photo row referencing a nonexistent photo, bypassing
+	// BlurbPhoto.DynamicallyValid, so Blurb.DynamicallyValid is what rejects it
+	if _, err := db.Create(context.Background(), &BlurbPhoto{BlurbId: b.ID, PhotoId: 0}); err != nil {
+		t.Fatal(err)
+	}
 	assert.Error(t, b.DynamicallyValid(context.Background(), db), "expected error on invalid photo ID")
 	fmt.Println(b.DynamicallyValid(context.Background(), db))
 }
@@ -92,7 +96,9 @@ func TestBlurbPhotoDoesNotBelongToUser(t *testing.T) {
 	user2 := newStoredUser(t, db)
 	photo := newStoredPhoto(t, db, user2.ID)
 
-	b.Photos = []PhotoId{photo.ID}
+	if _, err := db.Create(context.Background(), &BlurbPhoto{BlurbId: b.ID, PhotoId: photo.ID}); err != nil {
+		t.Fatal(err)
+	}
 
 	assert.Error(t, b.DynamicallyValid(context.Background(), db), "expected error on non-owned photo ID")
 	fmt.Println(b.DynamicallyValid(context.Background(), db))

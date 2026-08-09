@@ -60,7 +60,7 @@ func (id PhotoId) UnmarshalJSON(data []byte) error {
 }
 
 type Photo struct {
-	ID       PhotoId
+	ID       PhotoId `json:"id"`
 	Owner    database.UserId
 	AltText  string
 	Contents []byte
