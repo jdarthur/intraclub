@@ -109,10 +109,9 @@ func parseFlags() serverConfig {
 	useDevTokenMode := flag.Bool("dev-token", false, "Use development token mode")
 	addr := flag.String("addr", "127.0.0.1:8080", "Address to listen on, e.g. 127.0.0.1:8080")
 
-	// defaultDBKind is the provider used at startup. It is set to the
-	// in-memory provider until the SQLite provider (issue #53) lands; the
-	// default flips to database.ProviderSqlite once that provider is wired.
-	defaultDBKind := database.ProviderMemory
+	// defaultDBKind is the provider used at startup. SQLite is the default
+	// (file-backed, single-file .db); pass --db memory for an ephemeral run.
+	defaultDBKind := database.ProviderSqlite
 	dbKind := flag.String("db", string(defaultDBKind), "Database provider (memory | sqlite)")
 	dbPath := flag.String("db-path", "", "Path to the SQLite database file; falls back to INTRACLUB_DB_PATH env")
 	flag.Parse()

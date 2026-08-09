@@ -89,22 +89,14 @@ npm run test:e2e:ui
 
 The UI talks to a Go/Gin backend that lives at the repository root (`/api/...` routes). Start it before exercising the UI.
 
-### 1. Start MongoDB
-
-The backend stores data in MongoDB, provided via Docker:
-
-```sh
-docker compose up -d
-```
-
-This starts `mongo-findash` and maps the container's MongoDB to port `27018` on your host.
-
-### 2. Prerequisites
+### 1. Prerequisites
 
 - [Go](https://go.dev/dl/) installed and available in your `PATH`
-- [Docker](https://docs.docker.com/engine/install/) (for MongoDB)
 
-### 3. Run the backend server
+No database service is required — the backend uses the default SQLite provider
+and stores data in a single `intraclub.db` file.
+
+### 2. Run the backend server
 
 From the repository **root** (not `ui/`):
 
@@ -124,7 +116,7 @@ go run main.go --dev-token
 
 The API server listens on `http://127.0.0.1:8080`.
 
-### 4. Run the UI
+### 3. Run the UI
 
 Back in the `ui/` directory:
 

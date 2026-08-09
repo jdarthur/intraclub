@@ -38,11 +38,11 @@ and the authorization model is documented in [`api/authorization.md`](./api/auth
   [go-msgauth](https://github.com/emersion/go-msgauth).
 - Generic, type-safe CRUD abstraction over a `database.Provider` interface
   (`database/database_provider.go`), with pluggable backends:
-  - **MongoDB** via the [mongo-driver](https://github.com/mongodb/mongo-go-driver)
-    (the historical store, started through `docker-compose.yml`).
   - **SQLite** via [modernc.org/sqlite](https://gitlab.com/cznic/sqlite)
-    (pure-Go, no CGO) with a migration runner (`database/migrations/`).
-  - An in-memory provider used for tests and dev.
+    (pure-Go, no CGO, compiles into the static binary) with a migration runner
+    (`database/migrations/`). This is the default and recommended backend —
+    the whole database is a single file, so backup is just copying it.
+  - An in-memory provider used for tests and ephemeral local runs.
 - Provider selection is configurable via the `--db` / `--db-path` flags or the
   `INTRACLUB_DB_PATH` environment variable.
 
@@ -70,7 +70,9 @@ main.go       Server entrypoint & flag parsing
 
 - [Go](https://go.dev/dl/) (1.26)
 - [Node.js](https://nodejs.org/) and npm (for the UI)
-- [Docker](https://docs.docker.com/engine/install/) — only if using MongoDB
+
+No database service is required — the default SQLite provider stores everything
+in a single local file.
 
 ### Backend
 
@@ -85,12 +87,34 @@ make standard
 The `--dev-token` flag enables development token mode (loopback-only, bypasses
 auth gating) and seeds sample data. The API listens on `http://127.0.0.1:8080`.
 
-To use SQLite instead of the default provider:
+### Database: SQLite (default)
+
+The server defaults to the **SQLite** provider, which stores everything in a
+single file (default `intraclub.db` in the working directory). No external
+database service is required.
 
 ```sh
+./main                          # uses ./intraclub.db
 ./main --db sqlite --db-path /path/to/intraclub.db
-# or
 INTRACLUB_DB_PATH=/path/to/intraclub.db ./main --db sqlite
+```
+
+For an ephemeral run that keeps data only in memory:
+
+```sh
+./main --db memory
+```
+
+**Migrations** run automatically at startup: ordered SQL scripts in
+`database/migrations/` are applied against the database, and applied versions
+are tracked in a `schema_migrations` table, so each deployment only runs the new
+ones. No manual step is needed to create or upgrade the schema.
+
+**Backup & restore** is simply copying the `.db` file:
+
+```sh
+cp intraclub.db intraclub.backup.db    # backup
+cp intraclub.backup.db intraclub.db    # restore
 ```
 
 ### Frontend
