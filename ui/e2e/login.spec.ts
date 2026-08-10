@@ -26,7 +26,7 @@ test('dev-mode login renders a magic link and completes the token→JWT exchange
 	// Clicking the link runs the existing token→JWT exchange and lands on "/".
 	await link.click();
 	await expect(page).toHaveURL('/');
-	await expect(page.getByRole('heading', { name: 'Welcome to SvelteKit' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Welcome to IntraClub' })).toBeVisible();
 
 	// The exchanged JWT should be persisted.
 	const jwt = await page.evaluate(() => localStorage.getItem('intraclub_jwt'));
