@@ -76,6 +76,36 @@ func (f *Format) PreDelete(ctx context.Context, db database.Provider) error {
 	return f.CheckHasAssignedDrafts(ctx, db, false)
 }
 
+// PostDelete cascades deletion to this format's format_rating and format_line
+// join rows. Without this, deleting a format would orphan those rows, keeping
+// the referenced Ratings permanently "in-use" (see #94).
+func (f *Format) PostDelete(ctx context.Context, db database.Provider) error {
+	formatRatings, err := database.GetAllWhere[*FormatRating](ctx, db, func(_ context.Context, fr *FormatRating) bool {
+		return fr.FormatId == f.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, fr := range formatRatings {
+		if _, _, err := database.DeleteOneById(ctx, db, fr, fr.ID); err != nil {
+			return err
+		}
+	}
+
+	formatLines, err := database.GetAllWhere[*FormatLine](ctx, db, func(_ context.Context, fl *FormatLine) bool {
+		return fl.FormatId == f.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, fl := range formatLines {
+		if _, _, err := database.DeleteOneById(ctx, db, fl, fl.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (f *Format) SetOwner(userId database.UserId) {
 	f.UserId = userId
 }
