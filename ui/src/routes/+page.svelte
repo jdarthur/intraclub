@@ -11,7 +11,7 @@
 
 {#if loggedIn}
 	<h1>Welcome to IntraClub</h1>
-	<p>Head to <a href="/facilities">Facilities</a>, <a href="/formats">Formats</a>, <a href="/ratings">Ratings</a>, or <a href="/rulesets">Rulesets</a> to get started.</p>
+	<p>Head to <a href="/facilities">Facilities</a>, <a href="/formats">Formats</a>, <a href="/ratings">Ratings</a>, <a href="/rulesets">Rulesets</a>, or <a href="/scoring-structures">Scoring Structures</a> to get started.</p>
 {:else}
 	<h1>IntraClub</h1>
 	<p>Welcome! Log in to manage your club.</p>
