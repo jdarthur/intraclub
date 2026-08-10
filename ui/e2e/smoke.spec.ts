@@ -1,8 +1,13 @@
 import { expect, test } from '@playwright/test';
 
-test('homepage renders basic content', async ({ page }) => {
+test('homepage renders a landing page with nav and login form', async ({ page }) => {
 	await page.goto('/');
 
-	await expect(page.getByRole('heading', { name: 'Welcome to SvelteKit' })).toBeVisible();
-	await expect(page.getByRole('link', { name: /svelte.dev\/docs\/kit/i })).toBeVisible();
+	// Nav-bar is always shown.
+	await expect(page.getByRole('navigation')).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Facilities' })).toBeVisible();
+
+	// Not logged in, so the login form is displayed on the root route.
+	await expect(page.getByRole('heading', { name: 'IntraClub' })).toBeVisible();
+	await expect(page.getByLabel('Email')).toBeVisible();
 });
