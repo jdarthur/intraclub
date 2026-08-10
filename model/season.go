@@ -434,6 +434,49 @@ func (s *Season) IsTeamAssignedToSeason(ctx context.Context, db database.Provide
 	return false
 }
 
+// PostDelete cascades deletion to this season's season_commissioner,
+// season_late_addition, and season_team join rows. Without this, deleting a
+// season would orphan those rows (see #97).
+func (s *Season) PostDelete(ctx context.Context, db database.Provider) error {
+	commissioners, err := database.GetAllWhere[*SeasonCommissioner](ctx, db, func(_ context.Context, c *SeasonCommissioner) bool {
+		return c.SeasonId == s.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, c := range commissioners {
+		if _, _, err := database.DeleteOneById(ctx, db, c, c.ID); err != nil {
+			return err
+		}
+	}
+
+	lateAdditions, err := database.GetAllWhere[*SeasonLateAddition](ctx, db, func(_ context.Context, c *SeasonLateAddition) bool {
+		return c.SeasonId == s.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, c := range lateAdditions {
+		if _, _, err := database.DeleteOneById(ctx, db, c, c.ID); err != nil {
+			return err
+		}
+	}
+
+	teams, err := database.GetAllWhere[*SeasonTeam](ctx, db, func(_ context.Context, c *SeasonTeam) bool {
+		return c.SeasonId == s.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, c := range teams {
+		if _, _, err := database.DeleteOneById(ctx, db, c, c.ID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s *Season) NewRecord() database.CrudRecord {
 	return new(Season)
 }

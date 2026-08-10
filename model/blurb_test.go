@@ -154,3 +154,39 @@ func TestUnreactWhereNotPresent(t *testing.T) {
 	assert.Error(t, b.Unreact(context.Background(), db, commish.ID, ThumbsUp), "expected error on unreact where existing reaction doesn't exist")
 	fmt.Println(b.Unreact(context.Background(), db, commish.ID, ThumbsUp))
 }
+
+func TestBlurbPostDeleteCascadesChildren(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	blurb, season := newDefaultBlurb(t, db)
+	participant := getAnyTeamCaptain(t, db, season)
+
+	photo := newStoredPhoto(t, db, participant)
+	_, err := database.CreateOne(context.Background(), db, &BlurbPhoto{BlurbId: blurb.ID, PhotoId: photo.ID})
+	require.NoError(t, err)
+
+	err = blurb.React(context.Background(), db, participant, ThumbsUp)
+	require.NoError(t, err)
+
+	counts := func() (int, int) {
+		photos, err := database.GetAllWhere[*BlurbPhoto](context.Background(), db, func(_ context.Context, p *BlurbPhoto) bool {
+			return p.BlurbId == blurb.ID
+		})
+		require.NoError(t, err)
+		reactions, err := database.GetAllWhere[*BlurbReaction](context.Background(), db, func(_ context.Context, r *BlurbReaction) bool {
+			return r.BlurbId == blurb.ID
+		})
+		require.NoError(t, err)
+		return len(photos), len(reactions)
+	}
+
+	photos, reactions := counts()
+	require.Equal(t, 1, photos)
+	require.Equal(t, 1, reactions)
+
+	_, _, err = database.DeleteOneById(context.Background(), db, &Blurb{}, blurb.ID.RecordId())
+	require.NoError(t, err)
+
+	photos, reactions = counts()
+	require.Equal(t, 0, photos)
+	require.Equal(t, 0, reactions)
+}

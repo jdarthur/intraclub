@@ -225,3 +225,49 @@ func TestSupersededByOwnerMustBeIdentical(t *testing.T) {
 	assertRulesetIsDynamicallyInvalid(t, db, r, "does not match this ruleset's owner")
 
 }
+
+func TestRulesetPostDeleteCascadesChildren(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	ruleset := newValidStoredRuleset(t, db)
+
+	section := &RuleSection{Parent: ruleset.ID, Title: "title", Markdown: "contents", Owner: ruleset.Owner}
+	created, err := database.CreateOne(context.Background(), db, section)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ruleset.AddSection(context.Background(), db, created.ID, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	counts := func() (int, int) {
+		sections, err := database.GetAllWhere[*RuleSection](context.Background(), db, func(_ context.Context, s *RuleSection) bool {
+			return s.Parent == ruleset.ID
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		relations, err := database.GetAllWhere[*RulesetSection](context.Background(), db, func(_ context.Context, s *RulesetSection) bool {
+			return s.RulesetId == ruleset.ID
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(sections), len(relations)
+	}
+
+	sections, relations := counts()
+	if sections != 1 || relations != 1 {
+		t.Fatalf("expected 1 section and 1 relation, got sections=%d relations=%d", sections, relations)
+	}
+
+	_, _, err = database.DeleteOneById(context.Background(), db, &Ruleset{}, ruleset.ID.RecordId())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sections, relations = counts()
+	if sections != 0 || relations != 0 {
+		t.Fatalf("expected 0 after delete, got sections=%d relations=%d", sections, relations)
+	}
+}

@@ -478,7 +478,32 @@ func (t *Team) PreDelete(ctx context.Context, db database.Provider) error {
 	return nil
 }
 
-func (t *Team) PostDelete() error {
+// PostDelete cascades deletion to this team's team_rating and team_assignment
+// join rows. Without this, deleting a team would orphan those rows (see #97).
+func (t *Team) PostDelete(ctx context.Context, db database.Provider) error {
+	ratings, err := database.GetAllWhere[*TeamRating](ctx, db, func(_ context.Context, r *TeamRating) bool {
+		return r.TeamId == t.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, r := range ratings {
+		if _, _, err := database.DeleteOneById(ctx, db, r, r.ID); err != nil {
+			return err
+		}
+	}
+
+	assignments, err := database.GetAllWhere[*TeamAssignment](ctx, db, func(_ context.Context, a *TeamAssignment) bool {
+		return a.TeamId == t.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, a := range assignments {
+		if _, _, err := database.DeleteOneById(ctx, db, a, a.ID); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

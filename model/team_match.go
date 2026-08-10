@@ -80,6 +80,23 @@ func (t *TeamMatch) EditableBy(ctx context.Context, db database.Provider) []data
 	return []database.UserId{database.SysAdminUserId}
 }
 
+// PostDelete cascades deletion to this team match's team_match_individual_match
+// join rows. Without this, deleting a team match would orphan those rows (see #97).
+func (t *TeamMatch) PostDelete(ctx context.Context, db database.Provider) error {
+	rows, err := database.GetAllWhere[*TeamMatchIndividualMatch](ctx, db, func(_ context.Context, m *TeamMatchIndividualMatch) bool {
+		return m.TeamMatchId == t.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, m := range rows {
+		if _, _, err := database.DeleteOneById(ctx, db, m, m.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (t *TeamMatch) NewRecord() database.CrudRecord {
 	return new(TeamMatch)
 }

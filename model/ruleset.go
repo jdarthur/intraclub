@@ -249,6 +249,37 @@ func (r *Ruleset) RemoveSection(ctx context.Context, db database.Provider, secti
 // Fork creates a new Ruleset that is a copy of this one, with a new owner.
 // The new ruleset gets an incremented revision number and copies all sections
 // from the original ruleset. Returns an error if the ruleset has no sections.
+// PostDelete cascades deletion to this ruleset's rule_section and
+// ruleset_section rows. Without this, deleting a ruleset would orphan those
+// rows (see #97).
+func (r *Ruleset) PostDelete(ctx context.Context, db database.Provider) error {
+	sections, err := database.GetAllWhere[*RuleSection](ctx, db, func(_ context.Context, s *RuleSection) bool {
+		return s.Parent == r.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, s := range sections {
+		if _, _, err := database.DeleteOneById(ctx, db, s, s.ID.RecordId()); err != nil {
+			return err
+		}
+	}
+
+	relations, err := database.GetAllWhere[*RulesetSection](ctx, db, func(_ context.Context, s *RulesetSection) bool {
+		return s.RulesetId == r.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, s := range relations {
+		if _, _, err := database.DeleteOneById(ctx, db, s, s.ID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (r *Ruleset) NewRecord() database.CrudRecord {
 	return new(Ruleset)
 }

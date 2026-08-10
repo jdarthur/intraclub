@@ -316,3 +316,26 @@ func TestCommissionerProposalGetVotesEmpty(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, votes, 0)
 }
+
+func TestCommissionerProposalPostDeleteCascadesVotes(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	season, proposal := newStoredCommissionerProposal(t, db, false)
+
+	voter := getAnyTeamCaptain(t, db, season)
+	err := proposal.Vote(context.Background(), db, voter, true)
+	require.NoError(t, err)
+
+	count := func() int {
+		rows, err := database.GetAllWhere[*CommissionerProposalVote](context.Background(), db, func(_ context.Context, v *CommissionerProposalVote) bool {
+			return v.ProposalId == proposal.ID
+		})
+		require.NoError(t, err)
+		return len(rows)
+	}
+	require.Equal(t, 1, count())
+
+	_, _, err = database.DeleteOneById(context.Background(), db, &CommissionerProposal{}, proposal.ID)
+	require.NoError(t, err)
+
+	require.Equal(t, 0, count())
+}

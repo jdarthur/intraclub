@@ -100,6 +100,23 @@ func (u *User) DynamicallyValid(ctx context.Context, db database.Provider) error
 	return nil
 }
 
+// PostDelete cascades deletion to this user's user_role_assignment rows.
+// Without this, deleting a user would orphan those rows (see #97).
+func (u *User) PostDelete(ctx context.Context, db database.Provider) error {
+	assignments, err := database.GetAllWhere[*UserRoleAssignment](ctx, db, func(_ context.Context, a *UserRoleAssignment) bool {
+		return a.UserId == u.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, a := range assignments {
+		if _, _, err := database.DeleteOneById(ctx, db, a, a.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (u *User) NewRecord() database.CrudRecord {
 	return new(User)
 }

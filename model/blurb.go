@@ -222,6 +222,36 @@ func (b *Blurb) GetComments(ctx context.Context, db database.Provider) ([]*Comme
 	return v, nil
 }
 
+// PostDelete cascades deletion to this blurb's blurb_photo and blurb_reaction
+// child rows. Without this, deleting a blurb would orphan those rows (see #97).
+func (b *Blurb) PostDelete(ctx context.Context, db database.Provider) error {
+	photos, err := database.GetAllWhere[*BlurbPhoto](ctx, db, func(_ context.Context, p *BlurbPhoto) bool {
+		return p.BlurbId == b.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, p := range photos {
+		if _, _, err := database.DeleteOneById(ctx, db, p, p.ID); err != nil {
+			return err
+		}
+	}
+
+	reactions, err := database.GetAllWhere[*BlurbReaction](ctx, db, func(_ context.Context, r *BlurbReaction) bool {
+		return r.BlurbId == b.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, r := range reactions {
+		if _, _, err := database.DeleteOneById(ctx, db, r, r.ID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (b *Blurb) NewRecord() database.CrudRecord {
 	return new(Blurb)
 }

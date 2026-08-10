@@ -395,6 +395,24 @@ func (c *ScoringStructure) WinningScore(myScore, yourScore int) bool {
 	return false
 }
 
+// PostDelete cascades deletion to this scoring structure's
+// scoring_structure_secondary join rows. Without this, deleting a scoring
+// structure would orphan those rows (see #97).
+func (c *ScoringStructure) PostDelete(ctx context.Context, db database.Provider) error {
+	secondaries, err := database.GetAllWhere[*ScoringStructureSecondary](ctx, db, func(_ context.Context, s *ScoringStructureSecondary) bool {
+		return s.ScoringStructureId == c.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, s := range secondaries {
+		if _, _, err := database.DeleteOneById(ctx, db, s, s.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c *ScoringStructure) NewRecord() database.CrudRecord {
 	return new(ScoringStructure)
 }
