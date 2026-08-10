@@ -65,6 +65,14 @@ func (r *Rating) GetOwner() database.UserId {
 }
 
 func (r *Rating) PreDelete(ctx context.Context, db database.Provider) error {
+	// ratingRef records how many rows in a referencing table still point at this rating.
+	type ratingRef struct {
+		table string
+		count int
+	}
+
+	refs := make([]ratingRef, 0, 6)
+
 	formatRatings, err := database.GetAllWhere[*FormatRating](ctx, db, func(_ context.Context, fr *FormatRating) bool {
 		return fr.RatingId == r.ID
 	})
@@ -72,9 +80,68 @@ func (r *Rating) PreDelete(ctx context.Context, db database.Provider) error {
 		return err
 	}
 	if len(formatRatings) > 0 {
-		return fmt.Errorf("rating with ID %s is in-use by %d formats", r.ID, len(formatRatings))
+		refs = append(refs, ratingRef{"format_rating", len(formatRatings)})
 	}
-	return nil
+
+	teamRatings, err := database.GetAllWhere[*TeamRating](ctx, db, func(_ context.Context, tr *TeamRating) bool {
+		return tr.RatingId == r.ID
+	})
+	if err != nil {
+		return err
+	}
+	if len(teamRatings) > 0 {
+		refs = append(refs, ratingRef{"team_rating", len(teamRatings)})
+	}
+
+	draftRatingCutoffs, err := database.GetAllWhere[*DraftRatingCutoff](ctx, db, func(_ context.Context, dc *DraftRatingCutoff) bool {
+		return dc.RatingId == r.ID
+	})
+	if err != nil {
+		return err
+	}
+	if len(draftRatingCutoffs) > 0 {
+		refs = append(refs, ratingRef{"draft_rating_cutoff", len(draftRatingCutoffs)})
+	}
+
+	draftPicks, err := database.GetAllWhere[*DraftPick](ctx, db, func(_ context.Context, dp *DraftPick) bool {
+		return dp.Rating == r.ID
+	})
+	if err != nil {
+		return err
+	}
+	if len(draftPicks) > 0 {
+		refs = append(refs, ratingRef{"draft_pick", len(draftPicks)})
+	}
+
+	preDraftGrades, err := database.GetAllWhere[*PreDraftGrade](ctx, db, func(_ context.Context, pg *PreDraftGrade) bool {
+		return pg.Rating == r.ID
+	})
+	if err != nil {
+		return err
+	}
+	if len(preDraftGrades) > 0 {
+		refs = append(refs, ratingRef{"pre_draft_grade", len(preDraftGrades)})
+	}
+
+	formatLines, err := database.GetAllWhere[*FormatLine](ctx, db, func(_ context.Context, fl *FormatLine) bool {
+		return fl.Player1Rating == r.ID || fl.Player2Rating == r.ID
+	})
+	if err != nil {
+		return err
+	}
+	if len(formatLines) > 0 {
+		refs = append(refs, ratingRef{"format_line", len(formatLines)})
+	}
+
+	if len(refs) == 0 {
+		return nil
+	}
+
+	parts := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		parts = append(parts, fmt.Sprintf("%d %s", ref.count, ref.table))
+	}
+	return fmt.Errorf("rating with ID %s is in-use by %s", r.ID, strings.Join(parts, ", "))
 }
 
 func (r *Rating) SetOwner(userId database.UserId) {
