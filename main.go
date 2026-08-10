@@ -12,6 +12,7 @@ import (
 	"intraclub/database"
 	"intraclub/model"
 	"intraclub/route"
+	"intraclub/route/ruleset"
 	"intraclub/route/user"
 
 	"github.com/gin-gonic/gin"
@@ -82,6 +83,12 @@ func main() {
 
 	formats := api.NewCrudCommon(model.NewFormat, false, db)
 	formats.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	rulesets := api.NewCrudCommon(model.NewRuleset, false, db)
+	rulesets.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	amendRuleset := api.RouteFamily[*ruleset.AmendNameBody]{DatabaseProvider: db}
+	amendRuleset.Handle(rg, ruleset.AmendRulesetName{})
 
 	rg.GET("/draft_order_patterns", model.GetDraftOrderPatterns)
 

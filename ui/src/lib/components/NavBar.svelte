@@ -17,6 +17,7 @@
 		<a href="/facilities">Facilities</a>
 		<a href="/formats">Formats</a>
 		<a href="/ratings">Ratings</a>
+		<a href="/rulesets">Rulesets</a>
 	</div>
 	<div class="actions">
 		{#if loggedIn}

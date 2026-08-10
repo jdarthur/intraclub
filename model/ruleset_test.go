@@ -123,6 +123,55 @@ func TestRulesetCannotBeUpdatedWithoutAmendment(t *testing.T) {
 	}
 	fmt.Println(err)
 }
+
+func TestRulesetEditNameCreatesSupersedingRevision(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	ruleset := newValidStoredRuleset(t, db)
+
+	newRevision, err := ruleset.EditName(context.Background(), db, "Amended Name")
+	if err != nil {
+		t.Fatalf("unexpected error amending ruleset name: %s", err)
+	}
+
+	// the new revision supersedes the old and keeps the owner
+	if newRevision.Name != "Amended Name" {
+		t.Fatalf("expected new revision name %q, got %q", "Amended Name", newRevision.Name)
+	}
+	if newRevision.Revision != ruleset.Revision+1 {
+		t.Fatalf("expected revision %d, got %d", ruleset.Revision+1, newRevision.Revision)
+	}
+	if newRevision.Owner != ruleset.Owner {
+		t.Fatalf("expected owner %s to be preserved, got %s", ruleset.Owner, newRevision.Owner)
+	}
+
+	// the original ruleset is now marked as superseded
+	reloaded, err := database.GetExistingRecordById(context.Background(), db, &Ruleset{}, ruleset.ID.RecordId())
+	if err != nil {
+		t.Fatalf("unexpected error reloading original ruleset: %s", err)
+	}
+	if reloaded.SupersededBy != newRevision.ID {
+		t.Fatalf("expected original ruleset to be superseded by %s, got %s", newRevision.ID, reloaded.SupersededBy)
+	}
+
+	// the original ruleset cannot be directly updated even after amending
+	err = database.UpdateOne(context.Background(), db, ruleset)
+	if err == nil {
+		t.Fatal("expected error updating existing ruleset after amend")
+	}
+}
+
+func TestRulesetEditNameRequiresDifferentNonEmptyName(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	ruleset := newValidStoredRuleset(t, db)
+
+	if _, err := ruleset.EditName(context.Background(), db, ""); err == nil {
+		t.Fatal("expected error amending ruleset with empty name")
+	}
+	if _, err := ruleset.EditName(context.Background(), db, ruleset.Name); err == nil {
+		t.Fatal("expected error amending ruleset with unchanged name")
+	}
+}
+
 func TestRulesetDateIsAfterSupersedingRuleset(t *testing.T) {
 	// Date value for this Ruleset must be before the Date value
 	// for the superseding Ruleset (date value isn't very meaningful
