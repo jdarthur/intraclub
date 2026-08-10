@@ -390,3 +390,68 @@ func TestFormatRatingInvalidRatingId(t *testing.T) {
 	}
 	fmt.Println(err)
 }
+
+func TestFormatDeleteCascadesJoinRows(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	ctx := context.Background()
+
+	format := newDefaultStoredFormat(t, db)
+
+	formatRatings, err := database.GetAllWhere[*FormatRating](ctx, db, func(_ context.Context, fr *FormatRating) bool {
+		return fr.FormatId == format.ID
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	formatLines, err := database.GetAllWhere[*FormatLine](ctx, db, func(_ context.Context, fl *FormatLine) bool {
+		return fl.FormatId == format.ID
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(formatRatings) == 0 || len(formatLines) == 0 {
+		t.Fatalf("Expected format to have join rows, got %d format_ratings and %d format_lines", len(formatRatings), len(formatLines))
+	}
+
+	// The ratings referenced by the format's join rows must be deletable
+	// after the format is deleted (they should no longer be "in-use").
+	referenced := map[RatingId]bool{}
+	for _, fr := range formatRatings {
+		referenced[fr.RatingId] = true
+	}
+	for _, fl := range formatLines {
+		referenced[fl.Player1Rating] = true
+		referenced[fl.Player2Rating] = true
+	}
+
+	_, _, err = database.DeleteOneById(ctx, db, &Format{}, format.ID.RecordId())
+	if err != nil {
+		t.Fatalf("Expected format delete to succeed: %v", err)
+	}
+
+	remainingRatings, err := database.GetAllWhere[*FormatRating](ctx, db, func(_ context.Context, fr *FormatRating) bool {
+		return fr.FormatId == format.ID
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(remainingRatings) != 0 {
+		t.Fatalf("Expected 0 remaining format_rating rows, got %d", len(remainingRatings))
+	}
+	remainingLines, err := database.GetAllWhere[*FormatLine](ctx, db, func(_ context.Context, fl *FormatLine) bool {
+		return fl.FormatId == format.ID
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(remainingLines) != 0 {
+		t.Fatalf("Expected 0 remaining format_line rows, got %d", len(remainingLines))
+	}
+
+	for ratingId := range referenced {
+		_, _, err = database.DeleteOneById(ctx, db, &Rating{}, ratingId.RecordId())
+		if err != nil {
+			t.Fatalf("Expected rating %s to be deletable after format delete: %v", ratingId, err)
+		}
+	}
+}

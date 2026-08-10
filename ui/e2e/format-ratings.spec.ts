@@ -1,6 +1,4 @@
 import { expect, test, type Page } from '@playwright/test';
-import { DatabaseSync } from 'node:sqlite';
-import { fileURLToPath } from 'node:url';
 
 // The Go backend runs with --dev-token from the repo root (see
 // playwright.config.ts), so POST /api/one_time_password returns the magic-link
@@ -15,10 +13,6 @@ async function login(page: Page) {
 	await link.click();
 	await expect(page).toHaveURL('/');
 }
-
-// The Playwright test process runs with cwd = ui/, while the Go backend
-// (spawned from the repo root) keeps its SQLite db at <repo>/intraclub.db.
-const dbPath = fileURLToPath(new URL('../../intraclub.db', import.meta.url));
 
 test('assign ratings to a format: add, list, remove', async ({ page }) => {
 	await login(page);
@@ -42,7 +36,6 @@ test('assign ratings to a format: add, list, remove', async ({ page }) => {
 	await page.getByLabel('Name').fill(formatName);
 	await page.getByRole('button', { name: 'Create format' }).click();
 	await expect(page).toHaveURL(/\/formats\/[0-9a-f]+$/);
-	const formatId = page.url().match(/\/formats\/([0-9a-f]+)$/)![1];
 
 	// No ratings assigned yet.
 	await expect(page.getByText('No ratings assigned yet.')).toBeVisible();
@@ -73,24 +66,13 @@ test('assign ratings to a format: add, list, remove', async ({ page }) => {
 	await expect(secondItem.getByRole('button', { name: 'Remove' })).toBeDisabled();
 	await expect(page.getByText('A format must keep at least one rating.')).toBeVisible();
 
-	// Clean up. Deleting a format does not cascade-delete its format_rating join
-	// rows, and Rating.PreDelete blocks deleting a rating that is still in use —
-	// so after deleting the format we remove its orphan format_rating rows
-	// directly, then delete both ratings to keep the shared dev db clean.
+	// Clean up. Deleting a format now cascades to its format_rating / format_line
+	// join rows, so the ratings are no longer "in-use" and can be deleted to
+	// keep the shared dev db clean.
 	page.on('dialog', (d) => d.accept());
 	await page.getByRole('button', { name: 'Delete format' }).click();
 	await expect(page).toHaveURL('/formats');
 	await expect(page.getByRole('link', { name: formatName })).toHaveCount(0);
-
-	const db = new DatabaseSync(dbPath);
-	// The Go backend holds this SQLite file open; wait out any transient lock
-	// instead of failing immediately with "database is locked".
-	db.exec('PRAGMA busy_timeout = 10000');
-	try {
-		db.prepare('DELETE FROM format_rating WHERE format_id = ?').run(formatId);
-	} finally {
-		db.close();
-	}
 
 	for (const ratingName of [ratingName1, ratingName2]) {
 		await page.goto('/ratings');
