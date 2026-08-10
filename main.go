@@ -12,6 +12,7 @@ import (
 	"intraclub/database"
 	"intraclub/model"
 	"intraclub/route"
+	"intraclub/route/format"
 	"intraclub/route/ruleset"
 	"intraclub/route/user"
 
@@ -83,6 +84,9 @@ func main() {
 
 	formats := api.NewCrudCommon(model.NewFormat, false, db)
 	formats.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	formatRatings := api.RouteFamily[*format.SetPossibleRatingsBody]{DatabaseProvider: db}
+	formatRatings.Handle(rg, format.GetPossibleRatings{}, format.SetPossibleRatings{})
 
 	rulesets := api.NewCrudCommon(model.NewRuleset, false, db)
 	rulesets.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
