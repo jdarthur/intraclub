@@ -310,6 +310,23 @@ func (s *IndividualMatch) GetSecondaryPointTotal() int {
 	return output
 }
 
+// PostDelete cascades deletion to this match's match_editor child rows.
+// Without this, deleting a match would orphan those rows (see #97).
+func (s *IndividualMatch) PostDelete(ctx context.Context, db database.Provider) error {
+	editors, err := database.GetAllWhere[*MatchEditor](ctx, db, func(_ context.Context, e *MatchEditor) bool {
+		return e.MatchId == s.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, e := range editors {
+		if _, _, err := database.DeleteOneById(ctx, db, e, e.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *IndividualMatch) NewRecord() database.CrudRecord {
 	return new(IndividualMatch)
 }

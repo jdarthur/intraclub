@@ -229,3 +229,55 @@ func TestTeamMatchValidateMatchesVsLineup(t *testing.T) {
 	require.NoError(t, err)
 	assert.Error(t, teamMatch.ValidateMatchesVsLineup(context.Background(), db))
 }
+
+func TestTeamMatchPostDeleteCascadesIndividualMatches(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	teamMatch := newStoredTeamMatch(t, db)
+	lineup, err := database.GetExistingRecordById(context.Background(), db, &Lineup{}, teamMatch.Lineup.RecordId())
+	require.NoError(t, err)
+	homeTeam, err := database.GetExistingRecordById(context.Background(), db, &Team{}, teamMatch.HomeTeam.RecordId())
+	require.NoError(t, err)
+	pairing := newStoredLineupPairing(t, db, lineup, homeTeam)
+	match := newStoredIndividualMatch(t, db)
+
+	_, err = teamMatch.AssignIndividualMatch(context.Background(), db, pairing.ID, match.ID)
+	require.NoError(t, err)
+
+	count := func() int {
+		rows, err := database.GetAllWhere[*TeamMatchIndividualMatch](context.Background(), db, func(_ context.Context, r *TeamMatchIndividualMatch) bool {
+			return r.TeamMatchId == teamMatch.ID
+		})
+		require.NoError(t, err)
+		return len(rows)
+	}
+	require.Equal(t, 1, count())
+
+	_, _, err = database.DeleteOneById(context.Background(), db, &TeamMatch{}, teamMatch.ID.RecordId())
+	require.NoError(t, err)
+
+	require.Equal(t, 0, count())
+}
+
+func TestLineupPostDeleteCascadesPairings(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	teamMatch := newStoredTeamMatch(t, db)
+	lineup, err := database.GetExistingRecordById(context.Background(), db, &Lineup{}, teamMatch.Lineup.RecordId())
+	require.NoError(t, err)
+	homeTeam, err := database.GetExistingRecordById(context.Background(), db, &Team{}, teamMatch.HomeTeam.RecordId())
+	require.NoError(t, err)
+	newStoredLineupPairing(t, db, lineup, homeTeam)
+
+	count := func() int {
+		rows, err := database.GetAllWhere[*LineupPairing](context.Background(), db, func(_ context.Context, p *LineupPairing) bool {
+			return p.LineupId == lineup.ID
+		})
+		require.NoError(t, err)
+		return len(rows)
+	}
+	require.Equal(t, 1, count())
+
+	_, _, err = database.DeleteOneById(context.Background(), db, &Lineup{}, lineup.ID.RecordId())
+	require.NoError(t, err)
+
+	require.Equal(t, 0, count())
+}

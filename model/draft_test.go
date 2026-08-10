@@ -724,3 +724,87 @@ func TestDraftAssignAndGetRatingCutoffs(t *testing.T) {
 	assert.Equal(t, 20, cutoffs[rating1.ID])
 	assert.Equal(t, 40, cutoffs[rating2.ID])
 }
+
+func TestDraftPostDeleteCascadesChildren(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	commissioner := newStoredUser(t, db)
+	draft := newStoredDraft(t, db, commissioner.ID) // draft_format (PostCreate) + one available player
+
+	captain := newStoredUser(t, db)
+	team := newStoredTeam(t, db, captain.ID)
+
+	_, err := database.CreateOne(context.Background(), db, &DraftCaptain{
+		DraftId: draft.ID, TeamId: team.ID, CaptainId: captain.ID, DraftOrder: 0,
+	})
+	require.NoError(t, err)
+
+	format, err := database.GetExistingRecordById(context.Background(), db, &Format{}, draft.Format.RecordId())
+	require.NoError(t, err)
+	possibleRatings, err := format.GetPossibleRatings(context.Background(), db)
+	require.NoError(t, err)
+	rating := possibleRatings[0]
+
+	// create the pre-draft grade before any picks so the draft is not yet "completed"
+	_, err = database.CreateOne(context.Background(), db, &PreDraftGrade{
+		DraftId: draft.ID, PlayerId: commissioner.ID, GraderId: commissioner.ID,
+		Modifier: AverageModifier, Rating: rating,
+	})
+	require.NoError(t, err)
+
+	_, err = database.CreateOne(context.Background(), db, &DraftPick{
+		DraftId: draft.ID, TeamId: team.ID, UserId: captain.ID, Round: 1, Pick: 1,
+	})
+	require.NoError(t, err)
+
+	_, err = database.CreateOne(context.Background(), db, &DraftRatingCutoff{
+		DraftId: draft.ID, RatingId: rating, CutoffIndex: 1,
+	})
+	require.NoError(t, err)
+
+	countRows := func() (int, int, int, int, int, int) {
+		avail, err := database.GetAllWhere[*DraftAvailablePlayer](context.Background(), db, func(_ context.Context, r *DraftAvailablePlayer) bool {
+			return r.DraftId == draft.ID
+		})
+		require.NoError(t, err)
+		caps, err := database.GetAllWhere[*DraftCaptain](context.Background(), db, func(_ context.Context, r *DraftCaptain) bool {
+			return r.DraftId == draft.ID
+		})
+		require.NoError(t, err)
+		formats, err := database.GetAllWhere[*DraftFormat](context.Background(), db, func(_ context.Context, r *DraftFormat) bool {
+			return r.DraftId == draft.ID
+		})
+		require.NoError(t, err)
+		picks, err := database.GetAllWhere[*DraftPick](context.Background(), db, func(_ context.Context, r *DraftPick) bool {
+			return r.DraftId == draft.ID
+		})
+		require.NoError(t, err)
+		cutoffs, err := database.GetAllWhere[*DraftRatingCutoff](context.Background(), db, func(_ context.Context, r *DraftRatingCutoff) bool {
+			return r.DraftId == draft.ID
+		})
+		require.NoError(t, err)
+		grades, err := database.GetAllWhere[*PreDraftGrade](context.Background(), db, func(_ context.Context, r *PreDraftGrade) bool {
+			return r.DraftId == draft.ID
+		})
+		require.NoError(t, err)
+		return len(avail), len(caps), len(formats), len(picks), len(cutoffs), len(grades)
+	}
+
+	a, c, f, p, co, g := countRows()
+	require.Equal(t, 1, a)
+	require.Equal(t, 1, c)
+	require.Equal(t, 1, f)
+	require.Equal(t, 1, p)
+	require.Equal(t, 1, co)
+	require.Equal(t, 1, g)
+
+	_, _, err = database.DeleteOneById(context.Background(), db, &Draft{}, draft.ID.RecordId())
+	require.NoError(t, err)
+
+	a, c, f, p, co, g = countRows()
+	require.Equal(t, 0, a)
+	require.Equal(t, 0, c)
+	require.Equal(t, 0, f)
+	require.Equal(t, 0, p)
+	require.Equal(t, 0, co)
+	require.Equal(t, 0, g)
+}

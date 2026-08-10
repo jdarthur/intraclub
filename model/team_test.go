@@ -293,3 +293,38 @@ func TestTeamRatingCrudRecordInterface(t *testing.T) {
 	assert.Equal(t, database.UserId(0), blankTr.UserId)
 	assert.Equal(t, RatingId(0), blankTr.RatingId)
 }
+
+func TestTeamPostDeleteCascadesChildren(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	captain := newStoredUser(t, db)
+	team := newStoredTeam(t, db, captain.ID) // creates a TeamAssignment
+
+	member := newStoredUser(t, db)
+	rating := newStoredRating(t, db)
+	tr := &TeamRating{TeamId: team.ID, UserId: member.ID, RatingId: rating.ID}
+	_, err := database.CreateOne(context.Background(), db, tr)
+	require.NoError(t, err)
+
+	counts := func() (int, int) {
+		assignments, err := database.GetAllWhere[*TeamAssignment](context.Background(), db, func(_ context.Context, a *TeamAssignment) bool {
+			return a.TeamId == team.ID
+		})
+		require.NoError(t, err)
+		ratings, err := database.GetAllWhere[*TeamRating](context.Background(), db, func(_ context.Context, r *TeamRating) bool {
+			return r.TeamId == team.ID
+		})
+		require.NoError(t, err)
+		return len(assignments), len(ratings)
+	}
+
+	assignments, ratings := counts()
+	require.Greater(t, assignments, 0)
+	require.Greater(t, ratings, 0)
+
+	_, _, err = database.DeleteOneById(context.Background(), db, &Team{}, team.ID.RecordId())
+	require.NoError(t, err)
+
+	assignments, ratings = counts()
+	assert.Equal(t, 0, assignments)
+	assert.Equal(t, 0, ratings)
+}

@@ -209,6 +209,85 @@ func (d *Draft) PostUpdate(ctx context.Context, db database.Provider) error {
 	return d.syncDraftFormat(ctx, db)
 }
 
+// PostDelete cascades deletion to all of this draft's join rows: available
+// players, captains, formats, picks, rating cutoffs, and pre-draft grades.
+// Without this, deleting a draft would orphan those rows (see #97).
+func (d *Draft) PostDelete(ctx context.Context, db database.Provider) error {
+	availablePlayers, err := database.GetAllWhere[*DraftAvailablePlayer](ctx, db, func(_ context.Context, r *DraftAvailablePlayer) bool {
+		return r.DraftId == d.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, r := range availablePlayers {
+		if _, _, err := database.DeleteOneById(ctx, db, r, r.ID); err != nil {
+			return err
+		}
+	}
+
+	captains, err := database.GetAllWhere[*DraftCaptain](ctx, db, func(_ context.Context, r *DraftCaptain) bool {
+		return r.DraftId == d.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, r := range captains {
+		if _, _, err := database.DeleteOneById(ctx, db, r, r.ID); err != nil {
+			return err
+		}
+	}
+
+	formats, err := database.GetAllWhere[*DraftFormat](ctx, db, func(_ context.Context, r *DraftFormat) bool {
+		return r.DraftId == d.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, r := range formats {
+		if _, _, err := database.DeleteOneById(ctx, db, r, r.ID); err != nil {
+			return err
+		}
+	}
+
+	picks, err := database.GetAllWhere[*DraftPick](ctx, db, func(_ context.Context, r *DraftPick) bool {
+		return r.DraftId == d.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, r := range picks {
+		if _, _, err := database.DeleteOneById(ctx, db, r, r.ID); err != nil {
+			return err
+		}
+	}
+
+	ratingCutoffs, err := database.GetAllWhere[*DraftRatingCutoff](ctx, db, func(_ context.Context, r *DraftRatingCutoff) bool {
+		return r.DraftId == d.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, r := range ratingCutoffs {
+		if _, _, err := database.DeleteOneById(ctx, db, r, r.ID); err != nil {
+			return err
+		}
+	}
+
+	preDraftGrades, err := database.GetAllWhere[*PreDraftGrade](ctx, db, func(_ context.Context, r *PreDraftGrade) bool {
+		return r.DraftId == d.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, r := range preDraftGrades {
+		if _, _, err := database.DeleteOneById(ctx, db, r, r.ID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (d *Draft) syncDraftFormat(ctx context.Context, db database.Provider) error {
 	existing, err := database.GetAllWhere[*DraftFormat](ctx, db, func(_ context.Context, df *DraftFormat) bool {
 		return df.DraftId == d.ID

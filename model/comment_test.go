@@ -233,3 +233,36 @@ func TestCommentByNonSeasonParticipant(t *testing.T) {
 	}
 	fmt.Println(err)
 }
+
+func TestCommentPostDeleteCascadesReactions(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	blurb, season := newDefaultBlurb(t, db)
+	owner := getAnyTeamCaptain(t, db, season)
+	comment := newStoredComment(t, db, owner, blurb)
+
+	err := comment.React(context.Background(), db, owner, ThumbsUp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count := func() int {
+		rows, err := database.GetAllWhere[*CommentReaction](context.Background(), db, func(_ context.Context, r *CommentReaction) bool {
+			return r.CommentId == comment.ID
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(rows)
+	}
+	if count() == 0 {
+		t.Fatal("expected comment to have reactions")
+	}
+
+	_, _, err = database.DeleteOneById(context.Background(), db, &Comment{}, comment.ID.RecordId())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count() != 0 {
+		t.Fatal("expected 0 reactions after delete")
+	}
+}

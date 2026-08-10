@@ -87,6 +87,23 @@ func (l *Lineup) GetFormat(ctx context.Context, db database.Provider) (*Format, 
 	return database.GetExistingRecordById(ctx, db, &Format{}, draft.Format.RecordId())
 }
 
+// PostDelete cascades deletion to this lineup's lineup_pairing child rows.
+// Without this, deleting a lineup would orphan those rows (see #97).
+func (l *Lineup) PostDelete(ctx context.Context, db database.Provider) error {
+	pairings, err := database.GetAllWhere[*LineupPairing](ctx, db, func(_ context.Context, p *LineupPairing) bool {
+		return p.LineupId == l.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, p := range pairings {
+		if _, _, err := database.DeleteOneById(ctx, db, p, p.ID.RecordId()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (l *Lineup) NewRecord() database.CrudRecord {
 	return new(Lineup)
 }

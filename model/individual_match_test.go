@@ -150,3 +150,30 @@ func TestIndividualPointTotals(t *testing.T) {
 		t.Fatal("expected secondary point to be 13")
 	}
 }
+
+func TestIndividualMatchPostDeleteCascadesEditors(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	scoring := newDefaultStoredScoringStructure(t, db)
+	match1, _ := newStoredMatchPair(t, db, scoring)
+
+	count := func() int {
+		rows, err := database.GetAllWhere[*MatchEditor](context.Background(), db, func(_ context.Context, e *MatchEditor) bool {
+			return e.MatchId == match1.ID
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(rows)
+	}
+	if count() == 0 {
+		t.Fatal("expected match to have editors")
+	}
+
+	_, _, err := database.DeleteOneById(context.Background(), db, &IndividualMatch{}, match1.ID.RecordId())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count() != 0 {
+		t.Fatal("expected 0 editors after delete")
+	}
+}

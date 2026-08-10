@@ -168,6 +168,23 @@ func (c *Comment) DynamicallyValid(ctx context.Context, db database.Provider) er
 	return nil
 }
 
+// PostDelete cascades deletion to this comment's comment_reaction child rows.
+// Without this, deleting a comment would orphan those rows (see #97).
+func (c *Comment) PostDelete(ctx context.Context, db database.Provider) error {
+	reactions, err := database.GetAllWhere[*CommentReaction](ctx, db, func(_ context.Context, r *CommentReaction) bool {
+		return r.CommentId == c.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, r := range reactions {
+		if _, _, err := database.DeleteOneById(ctx, db, r, r.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c *Comment) NewRecord() database.CrudRecord {
 	return new(Comment)
 }

@@ -252,6 +252,23 @@ func (c *CommissionerProposal) Status(ctx context.Context, db database.Provider)
 	return false, false, nil
 }
 
+// PostDelete cascades deletion to this proposal's commissioner_proposal_vote
+// child rows. Without this, deleting a proposal would orphan those rows (see #97).
+func (c *CommissionerProposal) PostDelete(ctx context.Context, db database.Provider) error {
+	votes, err := database.GetAllWhere[*CommissionerProposalVote](ctx, db, func(_ context.Context, v *CommissionerProposalVote) bool {
+		return v.ProposalId == c.ID
+	})
+	if err != nil {
+		return err
+	}
+	for _, v := range votes {
+		if _, _, err := database.DeleteOneById(ctx, db, v, v.ID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c *CommissionerProposal) NewRecord() database.CrudRecord {
 	return new(CommissionerProposal)
 }

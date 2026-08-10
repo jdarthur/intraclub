@@ -264,3 +264,29 @@ func TestInvalidOwnerId(t *testing.T) {
 	}
 	fmt.Println(err)
 }
+
+func TestScoringStructurePostDeleteCascadesSecondaries(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	sc := newDefaultStoredScoringStructure(t, db)
+
+	count := func() int {
+		rows, err := database.GetAllWhere[*ScoringStructureSecondary](context.Background(), db, func(_ context.Context, s *ScoringStructureSecondary) bool {
+			return s.ScoringStructureId == sc.ID
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(rows)
+	}
+	if count() == 0 {
+		t.Fatal("expected scoring structure to have secondaries")
+	}
+
+	_, _, err := database.DeleteOneById(context.Background(), db, &ScoringStructure{}, sc.ID.RecordId())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count() != 0 {
+		t.Fatal("expected 0 secondaries after delete")
+	}
+}

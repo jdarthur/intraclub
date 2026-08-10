@@ -323,3 +323,28 @@ func TestUserDynamicallyValid(t *testing.T) {
 	err := user.DynamicallyValid(ctx, db)
 	assert.NoError(t, err)
 }
+
+func TestUserPostDeleteCascadesRoleAssignments(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	user := newStoredUser(t, db)
+
+	_, err := database.CreateOne(context.Background(), db, &UserRoleAssignment{
+		UserId: user.ID,
+		Role:   SystemAdministrator,
+	})
+	require.NoError(t, err)
+
+	count := func() int {
+		rows, err := database.GetAllWhere[*UserRoleAssignment](context.Background(), db, func(_ context.Context, r *UserRoleAssignment) bool {
+			return r.UserId == user.ID
+		})
+		require.NoError(t, err)
+		return len(rows)
+	}
+	require.Equal(t, 1, count())
+
+	_, _, err = database.DeleteOneById(context.Background(), db, &User{}, user.ID.RecordId())
+	require.NoError(t, err)
+
+	require.Equal(t, 0, count())
+}
