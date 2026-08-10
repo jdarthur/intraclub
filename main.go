@@ -96,6 +96,9 @@ func main() {
 
 	rg.GET("/draft_order_patterns", model.GetDraftOrderPatterns)
 
+	playoffStructures := api.NewCrudCommon(model.NewPlayoffStructure, false, db)
+	playoffStructures.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
 	err = r.Run(cfg.addr)
 	if err != nil {
 		panic(err)

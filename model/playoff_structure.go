@@ -11,6 +11,15 @@ import (
 
 type PlayoffStructureId database.RecordId
 
+func (id PlayoffStructureId) UnmarshalJSON(bytes []byte) error {
+	rid := id.RecordId()
+	return (*database.RecordId)(&rid).UnmarshalJSON(bytes)
+}
+
+func (id PlayoffStructureId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
 func (id PlayoffStructureId) RecordId() database.RecordId {
 	return database.RecordId(id)
 }
@@ -21,9 +30,9 @@ func (id PlayoffStructureId) String() string {
 
 type PlayoffStructure struct {
 	ID            PlayoffStructureId `json:"id"` // unique ID for this record
-	UserId        database.UserId
-	Byes          int // number of teams which get a bye week
-	NumberOfTeams int // number of teams which make the playoffs
+	UserId        database.UserId    `json:"user_id"`
+	Byes          int                `json:"byes"`           // number of teams which get a bye week
+	NumberOfTeams int                `json:"number_of_teams"` // number of teams which make the playoffs
 }
 
 func (p *PlayoffStructure) GetOwner() database.UserId {
