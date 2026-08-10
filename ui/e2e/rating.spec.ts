@@ -11,7 +11,7 @@ async function login(page: Page) {
 	await page.waitForLoadState('networkidle');
 	await page.getByLabel('Email').fill('jdarthur@gatech.edu');
 	await page.getByRole('button', { name: 'Send login link' }).click();
-	const link = page.getByRole('link', { name: 'Log in' });
+	const link = page.getByRole('main').getByRole('link', { name: 'Log in' });
 	await expect(link).toBeVisible();
 	await link.click();
 	await expect(page).toHaveURL('/');

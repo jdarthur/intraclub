@@ -291,6 +291,67 @@ func (r *Ruleset) Fork(ctx context.Context, db database.Provider, newUserId data
 	return newRuleset, nil
 }
 
+// EditName amends this Ruleset by producing a new revision with the given
+// name and marking this Ruleset as superseded by the new revision. The new
+// revision inherits this Ruleset's owner and sections. Returns the new
+// superseding Ruleset.
+func (r *Ruleset) EditName(ctx context.Context, db database.Provider, newName string) (*Ruleset, error) {
+	newName = strings.TrimSpace(newName)
+	if newName == "" {
+		return nil, fmt.Errorf("name must not be empty")
+	}
+	if newName == r.Name {
+		return nil, fmt.Errorf("new name must be different than the current name")
+	}
+
+	sectionRelations, err := r.GetSectionRelations(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+	newSectionIds := make([]RuleSectionId, 0, len(sectionRelations))
+	for _, sr := range sectionRelations {
+		newSectionIds = append(newSectionIds, sr.SectionId)
+	}
+
+	// copy the existing ruleset with an incremented revision, overriding the name
+	copied := r.Copy(newSectionIds)
+	copied.Name = newName
+	copied.Revision += 1
+
+	newRuleset, err := database.CreateOne(ctx, db, copied)
+	if err != nil {
+		return nil, err
+	}
+
+	// mark this ruleset as superseded by the new revision (raw provider update,
+	// which bypasses the PreUpdate hook that forbids direct modification)
+	r.SupersededBy = newRuleset.ID
+	err = db.Update(ctx, r)
+	if err != nil {
+		// revert the creation of the superseding ruleset
+		_, _, _ = database.DeleteOneById(ctx, db, &Ruleset{}, newRuleset.ID.RecordId())
+		return nil, err
+	}
+
+	// delete the old section relations and re-link them to the new revision
+	for _, oldRel := range sectionRelations {
+		_, _, _ = database.DeleteOneById(ctx, db, &RulesetSection{}, oldRel.ID)
+	}
+	for i, sr := range sectionRelations {
+		newRuleSectionRelation := &RulesetSection{
+			RulesetId:    newRuleset.ID,
+			SectionId:    sr.SectionId,
+			SectionIndex: i,
+		}
+		_, err = database.CreateOne(ctx, db, newRuleSectionRelation)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return newRuleset, nil
+}
+
 type RuleSectionId database.RecordId
 
 func (id RuleSectionId) UnmarshalJSON(bytes []byte) error {

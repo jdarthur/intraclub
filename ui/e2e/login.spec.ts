@@ -20,7 +20,7 @@ test('dev-mode login renders a magic link and completes the token→JWT exchange
 	// annotation and a clickable magic link instead of "check your email".
 	await expect(page.getByText(/DEV MODE ONLY/)).toBeVisible();
 
-	const link = page.getByRole('link', { name: 'Log in' });
+	const link = page.getByRole('main').getByRole('link', { name: 'Log in' });
 	await expect(link).toHaveAttribute('href', /^\/auth\/callback\?token=/);
 
 	// Clicking the link runs the existing token→JWT exchange and lands on "/".
