@@ -2,6 +2,11 @@
 	import { createPhoto, photoTypeFromExtension, photoTypeLabels } from '$lib/photo';
 	import { goto } from '$app/navigation';
 	import type { PhotoType } from '$lib/photo';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import { NativeSelect, NativeSelectOption } from '$lib/components/ui/native-select/index.js';
 
 	let altText = $state('');
 	let contents = $state('');
@@ -51,53 +56,42 @@
 	<title>New photo</title>
 </svelte:head>
 
-<h1>New photo</h1>
-<a href="/photos">&larr; Back to photos</a>
+<div class="flex items-center gap-4">
+	<h1 class="text-2xl font-semibold tracking-tight">New photo</h1>
+	<a href="/photos" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to photos</a>
+</div>
 
-<form onsubmit={handleSubmit}>
-	<label>
-		File
-		<input type="file" accept="image/*" onchange={onFileChange} required />
-	</label>
-	<label>
-		Alt text
-		<input type="text" bind:value={altText} />
-	</label>
-	<label>
-		File type
-		<select bind:value={fileType}>
-			<option value={0}>png</option>
-			<option value={1}>jpg</option>
-			<option value={2}>jpeg</option>
-			<option value={3}>gif</option>
-			<option value={4}>webp</option>
-		</select>
-	</label>
-	<button type="submit" disabled={submitting}>{submitting ? 'Creating...' : 'Create photo'}</button>
-</form>
+<Card class="mt-6 max-w-md">
+	<CardHeader>
+		<CardTitle class="text-base">Upload a photo</CardTitle>
+	</CardHeader>
+	<CardContent>
+		<form onsubmit={handleSubmit} class="flex flex-col gap-4">
+			<div class="flex flex-col gap-2">
+				<Label for="file">File</Label>
+				<Input id="file" type="file" accept="image/*" onchange={onFileChange} required />
+			</div>
+			<div class="flex flex-col gap-2">
+				<Label for="altText">Alt text</Label>
+				<Input id="altText" type="text" bind:value={altText} />
+			</div>
+			<div class="flex flex-col gap-2">
+				<Label for="fileType">File type</Label>
+				<NativeSelect id="fileType" bind:value={fileType} class="w-full">
+					<NativeSelectOption value={0}>png</NativeSelectOption>
+					<NativeSelectOption value={1}>jpg</NativeSelectOption>
+					<NativeSelectOption value={2}>jpeg</NativeSelectOption>
+					<NativeSelectOption value={3}>gif</NativeSelectOption>
+					<NativeSelectOption value={4}>webp</NativeSelectOption>
+				</NativeSelect>
+			</div>
+			<Button type="submit" disabled={submitting} class="w-fit">
+				{submitting ? 'Creating...' : 'Create photo'}
+			</Button>
+		</form>
+	</CardContent>
+</Card>
 
 {#if error}
-	<p class="error">{error}</p>
+	<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin-top: 1rem;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	input,
-	select {
-		padding: 0.35rem;
-	}
-</style>
