@@ -22,6 +22,13 @@ async function login(page: Page) {
 // (spawned from the repo root) keeps its SQLite db at <repo>/intraclub.db.
 const dbPath = fileURLToPath(new URL('../../intraclub.db', import.meta.url));
 
+// Delete now confirms through an in-app shadcn Popover (no native window.confirm):
+// click the trigger, then the "Delete" button inside the popover.
+async function confirmDelete(page: Page) {
+	await page.getByRole('button', { name: 'Delete rating' }).click();
+	await page.getByRole('button', { name: 'Delete', exact: true }).click();
+}
+
 test('rating CRUD: create, view, update, delete', async ({ page }) => {
 	await login(page);
 
@@ -52,20 +59,16 @@ test('rating CRUD: create, view, update, delete', async ({ page }) => {
 	const row = page.getByRole('link', { name: `Test Rating ${unique} Updated` });
 	await expect(row).toBeVisible();
 
-	// Delete (accept the confirm dialog)
+	// Delete (confirm via the popover)
 	await row.click();
 	await expect(page.getByRole('heading', { name: `Test Rating ${unique} Updated` })).toBeVisible();
-	page.on('dialog', (d) => d.accept());
-	await page.getByRole('button', { name: 'Delete rating' }).click();
+	await confirmDelete(page);
 	await expect(page).toHaveURL('/ratings');
 	await expect(page.getByRole('link', { name: `Test Rating ${unique} Updated` })).toHaveCount(0);
 });
 
 test('rating delete is blocked when the rating is assigned to a format', async ({ page }) => {
 	await login(page);
-
-	// Both delete attempts below use window.confirm; accept every dialog.
-	page.on('dialog', (d) => d.accept());
 
 	// Create a rating to attempt deletion of.
 	const unique = Date.now();
@@ -94,7 +97,7 @@ test('rating delete is blocked when the rating is assigned to a format', async (
 		).run(formatRatingId, formatId, ratingId, 0);
 
 		// Attempt to delete -> PreDelete blocks it and the page surfaces the error.
-		await page.getByRole('button', { name: 'Delete rating' }).click();
+		await confirmDelete(page);
 		await expect(page.getByText(/in-use by/)).toBeVisible();
 	} finally {
 		// Clean up the format_rating row so it can't affect other tests.
@@ -103,7 +106,7 @@ test('rating delete is blocked when the rating is assigned to a format', async (
 	}
 
 	// With the format_rating gone, the rating can now be deleted.
-	await page.getByRole('button', { name: 'Delete rating' }).click();
+	await confirmDelete(page);
 	await expect(page).toHaveURL('/ratings');
 	await expect(page.getByRole('link', { name: `In Use Rating ${unique}` })).toHaveCount(0);
 });
