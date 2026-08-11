@@ -44,7 +44,13 @@ async function expireSession(): Promise<void> {
 	expiredHandled = true;
 	clearToken();
 	sessionExpired.set(true);
-	await goto('/');
+	try {
+		await goto('/');
+	} catch {
+		// navigation may be rejected (e.g. mid-route-change); the token is
+		// already cleared and the store updated, so the next page load will
+		// reflect the logged-out state regardless.
+	}
 }
 
 /**
@@ -73,7 +79,10 @@ function tick(): void {
 
 /**
  * fetch wrapper that attaches the auth token and, belt-and-suspenders for clock
- * or ticker drift, expires the session if the API rejects it with a 401.
+ * or ticker drift, expires the session if the API rejects it with a 401. This
+ * relies on the backend contract that a 401 is always an invalid/expired token
+ * (see api/api_route.go auth gate) — login and magic-link endpoints use raw
+ * `fetch` and are unaffected.
  */
 export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
 	const token = getToken();
