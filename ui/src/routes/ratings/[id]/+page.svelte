@@ -4,6 +4,19 @@
 	import { goto } from '$app/navigation';
 	import { getRating, updateRating, deleteRating } from '$lib/rating';
 	import type { Rating } from '$lib/rating';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import { Textarea } from '$lib/components/ui/textarea/index.js';
+	import {
+		Popover,
+		PopoverClose,
+		PopoverContent,
+		PopoverHeader,
+		PopoverTitle,
+		PopoverTrigger
+	} from '$lib/components/ui/popover/index.js';
 
 	const id = () => page.params.id as string;
 
@@ -14,6 +27,7 @@
 	let error = $state('');
 	let saving = $state(false);
 	let deleting = $state(false);
+	let deleteOpen = $state(false);
 
 	onMount(load);
 
@@ -44,7 +58,7 @@
 	}
 
 	async function handleDelete() {
-		if (!confirm('Delete this rating?')) return;
+		deleteOpen = false;
 		error = '';
 		deleting = true;
 		try {
@@ -63,63 +77,60 @@
 </svelte:head>
 
 {#if loadError}
-	<h1>Rating</h1>
-	<p class="error">{loadError}</p>
-	<a href="/ratings">&larr; Back to ratings</a>
+	<h1 class="text-2xl font-semibold tracking-tight">Rating</h1>
+	<p class="text-sm font-medium text-destructive">{loadError}</p>
+	<a href="/ratings" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to ratings</a>
 {:else if !rating}
-	<h1>Rating</h1>
-	<p>Loading...</p>
+	<h1 class="text-2xl font-semibold tracking-tight">Rating</h1>
+	<p class="text-muted-foreground">Loading...</p>
 {:else}
-	<h1>{rating.name}</h1>
-	<a href="/ratings">&larr; Back to ratings</a>
+	<div class="flex items-center gap-4">
+		<h1 class="text-2xl font-semibold tracking-tight">{rating.name}</h1>
+		<a href="/ratings" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to ratings</a>
+	</div>
 
-	<form onsubmit={handleSave}>
-		<label>
-			Name
-			<input type="text" bind:value={name} required />
-		</label>
-		<label>
-			Description
-			<textarea bind:value={description} required></textarea>
-		</label>
-		<button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</button>
-	</form>
+	<Card class="mt-6 max-w-md">
+		<CardHeader>
+			<CardTitle class="text-base">Rating details</CardTitle>
+		</CardHeader>
+		<CardContent>
+			<form onsubmit={handleSave} class="flex flex-col gap-4">
+				<div class="flex flex-col gap-2">
+					<Label for="name">Name</Label>
+					<Input id="name" type="text" bind:value={name} required />
+				</div>
+				<div class="flex flex-col gap-2">
+					<Label for="description">Description</Label>
+					<Textarea id="description" bind:value={description} required />
+				</div>
+				<Button type="submit" disabled={saving} class="w-fit">
+					{saving ? 'Saving...' : 'Save changes'}
+				</Button>
+			</form>
+		</CardContent>
+	</Card>
 
-	<button type="button" onclick={handleDelete} disabled={deleting} class="danger">
-		{deleting ? 'Deleting...' : 'Delete rating'}
-	</button>
+	<div class="mt-8">
+		<Popover bind:open={deleteOpen}>
+			<PopoverTrigger disabled={deleting} class={buttonVariants({ variant: 'destructive' })}>
+				{deleting ? 'Deleting...' : 'Delete rating'}
+			</PopoverTrigger>
+			<PopoverContent class="w-80">
+				<PopoverHeader>
+					<PopoverTitle>Delete rating?</PopoverTitle>
+					<p class="text-sm text-muted-foreground">
+						This permanently removes this rating and cannot be undone.
+					</p>
+				</PopoverHeader>
+				<div class="flex justify-end gap-2">
+					<PopoverClose class={buttonVariants({ variant: 'outline', size: 'sm' })}>Cancel</PopoverClose>
+					<Button variant="destructive" size="sm" onclick={handleDelete}>Delete</Button>
+				</div>
+			</PopoverContent>
+		</Popover>
+	</div>
 
 	{#if error}
-		<p class="error">{error}</p>
+		<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
 	{/if}
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin-top: 1rem;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	input,
-	textarea {
-		padding: 0.35rem;
-	}
-	textarea {
-		min-height: 5rem;
-		resize: vertical;
-	}
-	.danger {
-		margin-top: 1rem;
-		color: #c00;
-	}
-</style>
