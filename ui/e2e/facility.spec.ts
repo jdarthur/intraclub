@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { DatabaseSync } from 'node:sqlite';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { waitForHydration } from './helpers';
 
 // The Go backend runs with --dev-token from the repo root (see
 // playwright.config.ts), so POST /api/one_time_password returns the magic-link
@@ -30,6 +31,7 @@ test('facility CRUD: create, view, update, delete', async ({ page }) => {
 	await page.goto('/facilities');
 	await page.getByRole('link', { name: 'New facility' }).click();
 	await expect(page).toHaveURL(/\/facilities\/new$/);
+	await waitForHydration(page);
 	await page.getByLabel('Name').fill(`Test Facility ${unique}`);
 	await page.getByLabel('Address').fill(`${unique} Main St`);
 	await page.getByLabel('Number of courts').fill('4');
@@ -67,6 +69,7 @@ test('facility delete is blocked when the facility is assigned to a season', asy
 	// Create a facility to attempt deletion of.
 	const unique = Date.now();
 	await page.goto('/facilities/new');
+	await waitForHydration(page);
 	await page.getByLabel('Name').fill(`In Use Facility ${unique}`);
 	await page.getByLabel('Address').fill(`${unique} St`);
 	await page.getByLabel('Number of courts').fill('2');

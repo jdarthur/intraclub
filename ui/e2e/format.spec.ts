@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { DatabaseSync } from 'node:sqlite';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { waitForHydration } from './helpers';
 
 // The Go backend runs with --dev-token from the repo root (see
 // playwright.config.ts), so POST /api/one_time_password returns the magic-link
@@ -30,6 +31,7 @@ test('format CRUD: create, view, update, delete', async ({ page }) => {
 	await page.goto('/formats');
 	await page.getByRole('link', { name: 'New format' }).click();
 	await expect(page).toHaveURL(/\/formats\/new$/);
+	await waitForHydration(page);
 	await page.getByLabel('Name').fill(`Test Format ${unique}`);
 	await page.getByRole('button', { name: 'Create format' }).click();
 
@@ -65,6 +67,7 @@ test('format delete is blocked when the format is assigned to a draft', async ({
 	// Create a format to attempt deletion of.
 	const unique = Date.now();
 	await page.goto('/formats/new');
+	await waitForHydration(page);
 	await page.getByLabel('Name').fill(`In Use Format ${unique}`);
 	await page.getByRole('button', { name: 'Create format' }).click();
 	await expect(page).toHaveURL(/\/formats\/([0-9a-f]+)$/);

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { waitForHydration } from './helpers';
 
 // The Go backend runs with --dev-token from the repo root (see
 // playwright.config.ts), so POST /api/one_time_password returns the magic-link
@@ -23,6 +24,7 @@ test('ruleset CRUD: create, view, amend (update), delete', async ({ page }) => {
 	await page.goto('/rulesets');
 	await page.getByRole('link', { name: 'New ruleset' }).click();
 	await expect(page).toHaveURL(/\/rulesets\/new$/);
+	await waitForHydration(page);
 	await page.getByLabel('Name').fill(`Test Ruleset ${unique}`);
 	await page.getByRole('button', { name: 'Create ruleset' }).click();
 

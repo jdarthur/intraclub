@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { waitForHydration } from './helpers';
 
 // The Go backend runs with --dev-token from the repo root (see
 // playwright.config.ts), so POST /api/one_time_password returns the magic-link
@@ -25,6 +26,7 @@ test('assign ratings to a format: add, list, remove', async ({ page }) => {
 	// Create two ratings to assign.
 	for (const ratingName of [ratingName1, ratingName2]) {
 		await page.goto('/ratings/new');
+		await waitForHydration(page);
 		await page.getByLabel('Name').fill(ratingName);
 		await page.getByLabel('Description').fill(`Description ${unique}`);
 		await page.getByRole('button', { name: 'Create rating' }).click();
@@ -33,6 +35,7 @@ test('assign ratings to a format: add, list, remove', async ({ page }) => {
 
 	// Create a fresh format with no ratings yet.
 	await page.goto('/formats/new');
+	await waitForHydration(page);
 	await page.getByLabel('Name').fill(formatName);
 	await page.getByRole('button', { name: 'Create format' }).click();
 	await expect(page).toHaveURL(/\/formats\/[0-9a-f]+$/);
