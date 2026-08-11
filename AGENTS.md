@@ -32,6 +32,16 @@ cd ui && npm run check                # svelte-check + typecheck
 ```
 Verify: `go build ./...` succeeds; Go toolchain is go1.26.
 
+## Verification for UI changes
+- **Always run `make e2e` before marking any UI change as finished.** The
+  full Playwright suite runs headless with `fullyParallel` (see `ui/playwright.config.ts`)
+  and covers the CRUD pages, login, and smoke flows end-to-end against a real
+  backend + SQLite DB. A change that only passes `npm run check` (svelte-check/
+  typecheck) is not enough — UI work is only "done" once the full parallel e2e
+  suite is green.
+- Run `make e2e` a few times if a change touches navigation/forms: the suite is
+  parallel, so hydration/race flakes only surface across repeated full runs.
+
 ## Architecture
 - `database/` — the core. `Provider` interface (`database_provider.go`) with
   generic helpers `GetOneById`/`GetAll`/`GetAllWhere`/`CreateOne`/`UpdateOne`/
