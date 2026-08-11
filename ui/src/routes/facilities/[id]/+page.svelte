@@ -4,10 +4,18 @@
 	import { goto } from '$app/navigation';
 	import { getFacility, updateFacility, deleteFacility } from '$lib/facility';
 	import type { Facility } from '$lib/facility';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import {
+		Popover,
+		PopoverClose,
+		PopoverContent,
+		PopoverHeader,
+		PopoverTitle,
+		PopoverTrigger
+	} from '$lib/components/ui/popover/index.js';
 
 	const id = () => page.params.id as string;
 
@@ -20,6 +28,7 @@
 	let error = $state('');
 	let saving = $state(false);
 	let deleting = $state(false);
+	let deleteOpen = $state(false);
 
 	onMount(load);
 
@@ -57,7 +66,7 @@
 	}
 
 	async function handleDelete() {
-		if (!confirm('Delete this facility?')) return;
+		deleteOpen = false;
 		error = '';
 		deleting = true;
 		try {
@@ -118,9 +127,23 @@
 	</Card>
 
 	<div class="mt-4">
-		<Button variant="destructive" onclick={handleDelete} disabled={deleting}>
-			{deleting ? 'Deleting...' : 'Delete facility'}
-		</Button>
+		<Popover bind:open={deleteOpen}>
+			<PopoverTrigger disabled={deleting} class={buttonVariants({ variant: 'destructive' })}>
+				{deleting ? 'Deleting...' : 'Delete facility'}
+			</PopoverTrigger>
+			<PopoverContent class="w-80">
+				<PopoverHeader>
+					<PopoverTitle>Delete facility?</PopoverTitle>
+					<p class="text-sm text-muted-foreground">
+						This permanently removes this facility and cannot be undone.
+					</p>
+				</PopoverHeader>
+				<div class="flex justify-end gap-2">
+					<PopoverClose class={buttonVariants({ variant: 'outline', size: 'sm' })}>Cancel</PopoverClose>
+					<Button variant="destructive" size="sm" onclick={handleDelete}>Delete</Button>
+				</div>
+			</PopoverContent>
+		</Popover>
 	</div>
 
 	{#if error}

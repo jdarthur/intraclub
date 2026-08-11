@@ -18,6 +18,13 @@ async function login(page: Page) {
 	await expect(page).toHaveURL('/');
 }
 
+// Delete now confirms through an in-app shadcn Popover (no native window.confirm):
+// click the trigger, then the "Delete" button inside the popover.
+async function confirmDelete(page: Page) {
+	await page.getByRole('button', { name: 'Delete facility' }).click();
+	await page.getByRole('button', { name: 'Delete', exact: true }).click();
+}
+
 // The Playwright test process runs with cwd = ui/, while the Go backend
 // (spawned from the repo root) keeps its SQLite db at <repo>/intraclub.db.
 const dbPath = fileURLToPath(new URL('../../intraclub.db', import.meta.url));
@@ -51,20 +58,16 @@ test('facility CRUD: create, view, update, delete', async ({ page }) => {
 	const row = page.getByRole('link', { name: `Test Facility ${unique} Updated` });
 	await expect(row).toBeVisible();
 
-	// Delete (accept the confirm dialog)
+	// Delete (confirm via the popover)
 	await row.click();
 	await expect(page.getByRole('heading', { name: `Test Facility ${unique} Updated` })).toBeVisible();
-	page.on('dialog', (d) => d.accept());
-	await page.getByRole('button', { name: 'Delete facility' }).click();
+	await confirmDelete(page);
 	await expect(page).toHaveURL('/facilities');
 	await expect(page.getByRole('link', { name: `Test Facility ${unique} Updated` })).toHaveCount(0);
 });
 
 test('facility delete is blocked when the facility is assigned to a season', async ({ page }) => {
 	await login(page);
-
-	// Both delete attempts below use window.confirm; accept every dialog.
-	page.on('dialog', (d) => d.accept());
 
 	// Create a facility to attempt deletion of.
 	const unique = Date.now();
@@ -102,7 +105,7 @@ test('facility delete is blocked when the facility is assigned to a season', asy
 		);
 
 		// Attempt to delete -> PreDelete blocks it and the page surfaces the error.
-		await page.getByRole('button', { name: 'Delete facility' }).click();
+		await confirmDelete(page);
 		await expect(page.getByText(/is in use/)).toBeVisible();
 	} finally {
 		// Clean up the season row so it can't affect other tests.
@@ -111,7 +114,7 @@ test('facility delete is blocked when the facility is assigned to a season', asy
 	}
 
 	// With the season gone, the facility can now be deleted.
-	await page.getByRole('button', { name: 'Delete facility' }).click();
+	await confirmDelete(page);
 	await expect(page).toHaveURL('/facilities');
 	await expect(page.getByRole('link', { name: `In Use Facility ${unique}` })).toHaveCount(0);
 });

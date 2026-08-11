@@ -17,6 +17,12 @@ export type WithElementRef<
 
 export type WithoutChild<T> = T extends { children: infer _ } ? Omit<T, 'children'> : T;
 
+export type WithoutChildrenOrChild<T, U extends string = 'child' | 'children'> = T extends {
+	[K in U]: infer _;
+}
+	? Omit<T, U>
+	: T;
+
 export type WithChild<
 	T,
 	U extends string = 'children',
