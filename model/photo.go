@@ -60,11 +60,11 @@ func (id PhotoId) UnmarshalJSON(data []byte) error {
 }
 
 type Photo struct {
-	ID       PhotoId `json:"id"`
-	Owner    database.UserId
-	AltText  string
-	Contents []byte
-	FileType PhotoType
+	ID       PhotoId         `json:"id"`
+	Owner    database.UserId `json:"owner"`
+	AltText  string          `json:"alt_text"`
+	Contents []byte          `json:"contents"`
+	FileType PhotoType       `json:"file_type"`
 }
 
 func (p *Photo) GetOwner() database.UserId {

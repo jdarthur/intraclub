@@ -20,6 +20,7 @@
 		<a href="/rulesets">Rulesets</a>
 		<a href="/scoring-structures">Scoring Structures</a>
 		<a href="/playoff-structures">Playoff Structures</a>
+		<a href="/photos">Photos</a>
 	</div>
 	<div class="actions">
 		{#if loggedIn}
