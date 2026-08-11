@@ -8,6 +8,18 @@
 		deletePlayoffStructure
 	} from '$lib/playoffStructure';
 	import type { PlayoffStructure } from '$lib/playoffStructure';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import {
+		Popover,
+		PopoverClose,
+		PopoverContent,
+		PopoverHeader,
+		PopoverTitle,
+		PopoverTrigger
+	} from '$lib/components/ui/popover/index.js';
 
 	const id = () => page.params.id as string;
 
@@ -18,6 +30,7 @@
 	let error = $state('');
 	let saving = $state(false);
 	let deleting = $state(false);
+	let deleteOpen = $state(false);
 
 	onMount(load);
 
@@ -53,7 +66,7 @@
 	}
 
 	async function handleDelete() {
-		if (!confirm('Delete this playoff structure?')) return;
+		deleteOpen = false;
 		error = '';
 		deleting = true;
 		try {
@@ -72,82 +85,66 @@
 </svelte:head>
 
 {#if loadError}
-	<h1>Playoff Structure</h1>
-	<p class="error">{loadError}</p>
-	<a href="/playoff-structures">&larr; Back to playoff structures</a>
+	<h1 class="text-2xl font-semibold tracking-tight">Playoff Structure</h1>
+	<p class="text-sm font-medium text-destructive">{loadError}</p>
+	<a
+		href="/playoff-structures"
+		class="text-sm text-muted-foreground hover:text-foreground"
+	>&larr; Back to playoff structures</a>
 {:else if !structure}
-	<h1>Playoff Structure</h1>
-	<p>Loading...</p>
+	<h1 class="text-2xl font-semibold tracking-tight">Playoff Structure</h1>
+	<p class="text-muted-foreground">Loading...</p>
 {:else}
-	<h1>Playoff Structure</h1>
-	<a href="/playoff-structures">&larr; Back to playoff structures</a>
+	<div class="flex items-center gap-4">
+		<h1 class="text-2xl font-semibold tracking-tight">Playoff Structure</h1>
+		<a
+			href="/playoff-structures"
+			class="text-sm text-muted-foreground hover:text-foreground"
+		>&larr; Back to playoff structures</a>
+	</div>
 
-	<dl class="meta">
-		<div>
-			<dt>Byes</dt>
-			<dd>{structure.byes}</dd>
-		</div>
-		<div>
-			<dt>Number of teams</dt>
-			<dd>{structure.number_of_teams}</dd>
-		</div>
-	</dl>
+	<Card class="mt-6 max-w-md">
+		<CardHeader>
+			<CardTitle class="text-base">Playoff structure details</CardTitle>
+		</CardHeader>
+		<CardContent>
+			<form onsubmit={handleSave} class="flex flex-col gap-4">
+				<div class="flex flex-col gap-2">
+					<Label for="byes">Byes</Label>
+					<Input id="byes" type="number" min="0" bind:value={byes} required />
+				</div>
+				<div class="flex flex-col gap-2">
+					<Label for="numberOfTeams">Number of teams</Label>
+					<Input id="numberOfTeams" type="number" min="2" bind:value={numberOfTeams} required />
+				</div>
+				<Button type="submit" disabled={saving} class="w-fit">
+					{saving ? 'Saving...' : 'Save changes'}
+				</Button>
+			</form>
+		</CardContent>
+	</Card>
 
-	<h2>Edit</h2>
-	<form onsubmit={handleSave}>
-		<label>
-			Byes
-			<input type="number" min="0" bind:value={byes} required />
-		</label>
-		<label>
-			Number of teams
-			<input type="number" min="2" bind:value={numberOfTeams} required />
-		</label>
-		<button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</button>
-	</form>
-
-	<button type="button" onclick={handleDelete} disabled={deleting} class="danger">
-		{deleting ? 'Deleting...' : 'Delete playoff structure'}
-	</button>
+	<div class="mt-4">
+		<Popover bind:open={deleteOpen}>
+			<PopoverTrigger disabled={deleting} class={buttonVariants({ variant: 'destructive' })}>
+				{deleting ? 'Deleting...' : 'Delete playoff structure'}
+			</PopoverTrigger>
+			<PopoverContent class="w-80">
+				<PopoverHeader>
+					<PopoverTitle>Delete playoff structure?</PopoverTitle>
+					<p class="text-sm text-muted-foreground">
+						This permanently removes this playoff structure and cannot be undone.
+					</p>
+				</PopoverHeader>
+				<div class="flex justify-end gap-2">
+					<PopoverClose class={buttonVariants({ variant: 'outline', size: 'sm' })}>Cancel</PopoverClose>
+					<Button variant="destructive" size="sm" onclick={handleDelete}>Delete</Button>
+				</div>
+			</PopoverContent>
+		</Popover>
+	</div>
 
 	{#if error}
-		<p class="error">{error}</p>
+		<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
 	{/if}
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	.meta {
-		display: flex;
-		gap: 1.5rem;
-		margin: 1rem 0;
-	}
-	.meta dt {
-		font-size: 0.85rem;
-		color: #666;
-	}
-	.meta dd {
-		margin: 0;
-	}
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin-top: 0.5rem;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	input {
-		padding: 0.35rem;
-	}
-	.danger {
-		margin-top: 1rem;
-		color: #c00;
-	}
-</style>

@@ -15,6 +15,13 @@ async function login(page: Page) {
 	await expect(page).toHaveURL('/');
 }
 
+// Delete now confirms through an in-app shadcn Popover (no native window.confirm):
+// click the trigger, then the "Delete" button inside the popover.
+async function confirmDelete(page: Page) {
+	await page.getByRole('button', { name: 'Delete playoff structure' }).click();
+	await page.getByRole('button', { name: 'Delete', exact: true }).click();
+}
+
 test('playoff structure CRUD: create, view, update, delete', async ({ page }) => {
 	await login(page);
 
@@ -46,11 +53,10 @@ test('playoff structure CRUD: create, view, update, delete', async ({ page }) =>
 	await page.goto('/playoff-structures');
 	await expect(recordLink).toHaveText('0 byes / 4 teams');
 
-	// Delete (accept the confirm dialog)
+	// Delete (confirm via the popover)
 	await recordLink.click();
 	await expect(page).toHaveURL(/\/playoff-structures\/[0-9a-f]+$/);
-	page.on('dialog', (d) => d.accept());
-	await page.getByRole('button', { name: 'Delete playoff structure' }).click();
+	await confirmDelete(page);
 	await expect(page).toHaveURL('/playoff-structures');
 	await expect(recordLink).toHaveCount(0);
 });

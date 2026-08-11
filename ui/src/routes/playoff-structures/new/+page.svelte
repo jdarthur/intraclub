@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { createPlayoffStructure } from '$lib/playoffStructure';
 	import { goto } from '$app/navigation';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
 
 	let byes = $state<string>('0');
 	let numberOfTeams = $state<string>('8');
@@ -29,42 +33,35 @@
 	<title>New playoff structure</title>
 </svelte:head>
 
-<h1>New playoff structure</h1>
-<a href="/playoff-structures">&larr; Back to playoff structures</a>
+<div class="flex items-center gap-4">
+	<h1 class="text-2xl font-semibold tracking-tight">New playoff structure</h1>
+	<a
+		href="/playoff-structures"
+		class="text-sm text-muted-foreground hover:text-foreground"
+	>&larr; Back to playoff structures</a>
+</div>
 
-<form onsubmit={handleSubmit}>
-	<label>
-		Byes
-		<input type="number" min="0" bind:value={byes} required />
-	</label>
-	<label>
-		Number of teams
-		<input type="number" min="2" bind:value={numberOfTeams} required />
-	</label>
-	<button type="submit" disabled={submitting}>{submitting ? 'Creating...' : 'Create playoff structure'}</button>
-</form>
+<Card class="mt-6 max-w-md">
+	<CardHeader>
+		<CardTitle class="text-base">Playoff structure details</CardTitle>
+	</CardHeader>
+	<CardContent>
+		<form onsubmit={handleSubmit} class="flex flex-col gap-4">
+			<div class="flex flex-col gap-2">
+				<Label for="byes">Byes</Label>
+				<Input id="byes" type="number" min="0" bind:value={byes} required />
+			</div>
+			<div class="flex flex-col gap-2">
+				<Label for="numberOfTeams">Number of teams</Label>
+				<Input id="numberOfTeams" type="number" min="2" bind:value={numberOfTeams} required />
+			</div>
+			<Button type="submit" disabled={submitting} class="w-fit">
+				{submitting ? 'Creating...' : 'Create playoff structure'}
+			</Button>
+		</form>
+	</CardContent>
+</Card>
 
 {#if error}
-	<p class="error">{error}</p>
+	<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin-top: 1rem;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	input {
-		padding: 0.35rem;
-	}
-</style>

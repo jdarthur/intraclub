@@ -2,6 +2,15 @@
 	import { onMount } from 'svelte';
 	import { listPlayoffStructures } from '$lib/playoffStructure';
 	import type { PlayoffStructure } from '$lib/playoffStructure';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import {
+		Table,
+		TableBody,
+		TableCell,
+		TableHead,
+		TableHeader,
+		TableRow
+	} from '$lib/components/ui/table/index.js';
 
 	let structures = $state<PlayoffStructure[]>([]);
 	let loading = $state(true);
@@ -22,44 +31,39 @@
 	<title>Playoff Structures</title>
 </svelte:head>
 
-<h1>Playoff Structures</h1>
-<a href="/playoff-structures/new">New playoff structure</a>
+<div class="flex items-center justify-between gap-4">
+	<h1 class="text-2xl font-semibold tracking-tight">Playoff Structures</h1>
+	<Button href="/playoff-structures/new">New playoff structure</Button>
+</div>
 
 {#if loading}
-	<p>Loading...</p>
+	<p class="text-muted-foreground">Loading...</p>
 {:else if error}
-	<p class="error">{error}</p>
+	<p class="text-sm font-medium text-destructive">{error}</p>
 {:else if structures.length === 0}
-	<p>No playoff structures yet.</p>
+	<p class="text-muted-foreground">No playoff structures yet.</p>
 {:else}
-	<table>
-		<thead>
-			<tr>
-				<th>Playoff structure</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each structures as structure}
-				<tr>
-					<td><a href={`/playoff-structures/${structure.id}`}>{structure.byes} byes / {structure.number_of_teams} teams</a></td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
+	<div class="mt-4 overflow-hidden rounded-lg border">
+		<Table>
+			<TableHeader>
+				<TableRow>
+					<TableHead>Playoff structure</TableHead>
+				</TableRow>
+			</TableHeader>
+			<TableBody>
+				{#each structures as structure}
+					<TableRow>
+						<TableCell>
+							<a
+								href={`/playoff-structures/${structure.id}`}
+								class="font-medium text-primary underline-offset-4 hover:underline"
+							>
+								{structure.byes} byes / {structure.number_of_teams} teams
+							</a>
+						</TableCell>
+					</TableRow>
+				{/each}
+			</TableBody>
+		</Table>
+	</div>
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	table {
-		border-collapse: collapse;
-		margin-top: 1rem;
-	}
-	th,
-	td {
-		border: 1px solid #ccc;
-		padding: 0.4rem 0.8rem;
-		text-align: left;
-	}
-</style>
