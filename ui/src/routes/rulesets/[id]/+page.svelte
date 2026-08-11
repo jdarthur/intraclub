@@ -3,6 +3,18 @@
 	import { goto } from '$app/navigation';
 	import { getRuleset, amendRulesetName, deleteRuleset } from '$lib/ruleset';
 	import type { Ruleset } from '$lib/ruleset';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import {
+		Popover,
+		PopoverClose,
+		PopoverContent,
+		PopoverHeader,
+		PopoverTitle,
+		PopoverTrigger
+	} from '$lib/components/ui/popover/index.js';
 
 	// Derived from the route param so the page re-loads when navigating between
 	// ruleset revisions (same [id] route, different id).
@@ -14,6 +26,7 @@
 	let error = $state('');
 	let saving = $state(false);
 	let deleting = $state(false);
+	let deleteOpen = $state(false);
 
 	$effect(() => {
 		load(currentId);
@@ -48,7 +61,7 @@
 	}
 
 	async function handleDelete() {
-		if (!confirm('Delete this ruleset?')) return;
+		deleteOpen = false;
 		error = '';
 		deleting = true;
 		try {
@@ -66,15 +79,17 @@
 </svelte:head>
 
 {#if loadError}
-	<h1>Ruleset</h1>
-	<p class="error">{loadError}</p>
-	<a href="/rulesets">&larr; Back to rulesets</a>
+	<h1 class="text-2xl font-semibold tracking-tight">Ruleset</h1>
+	<p class="text-sm font-medium text-destructive">{loadError}</p>
+	<a href="/rulesets" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to rulesets</a>
 {:else if !ruleset}
-	<h1>Ruleset</h1>
-	<p>Loading...</p>
+	<h1 class="text-2xl font-semibold tracking-tight">Ruleset</h1>
+	<p class="text-muted-foreground">Loading...</p>
 {:else}
-	<h1>{ruleset.name}</h1>
-	<a href="/rulesets">&larr; Back to rulesets</a>
+	<div class="flex items-center gap-4">
+		<h1 class="text-2xl font-semibold tracking-tight">{ruleset.name}</h1>
+		<a href="/rulesets" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to rulesets</a>
+	</div>
 
 	<dl class="meta">
 		<div>
@@ -97,32 +112,52 @@
 		</div>
 	</dl>
 
-	<h2>Edit</h2>
-	<p class="hint">Saving edits amends this ruleset and creates a new revision.</p>
-	<form onsubmit={handleSave}>
-		<label>
-			Name
-			<input type="text" bind:value={name} required />
-		</label>
-		<button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</button>
-	</form>
+	<Card class="mt-6 max-w-md">
+		<CardHeader>
+			<CardTitle class="text-base">Edit</CardTitle>
+		</CardHeader>
+		<CardContent>
+			<p class="hint text-sm text-muted-foreground">
+				Saving edits amends this ruleset and creates a new revision.
+			</p>
+			<form onsubmit={handleSave} class="flex flex-col gap-4">
+				<div class="flex flex-col gap-2">
+					<Label for="name">Name</Label>
+					<Input id="name" type="text" bind:value={name} required />
+				</div>
+				<Button type="submit" disabled={saving} class="w-fit">
+					{saving ? 'Saving...' : 'Save changes'}
+				</Button>
+			</form>
+		</CardContent>
+	</Card>
 
-	<button type="button" onclick={handleDelete} disabled={deleting} class="danger">
-		{deleting ? 'Deleting...' : 'Delete ruleset'}
-	</button>
+	<div class="mt-4">
+		<Popover bind:open={deleteOpen}>
+			<PopoverTrigger disabled={deleting} class={buttonVariants({ variant: 'destructive' })}>
+				{deleting ? 'Deleting...' : 'Delete ruleset'}
+			</PopoverTrigger>
+			<PopoverContent class="w-80">
+				<PopoverHeader>
+					<PopoverTitle>Delete ruleset?</PopoverTitle>
+					<p class="text-sm text-muted-foreground">
+						This permanently removes this ruleset and cannot be undone.
+					</p>
+				</PopoverHeader>
+				<div class="flex justify-end gap-2">
+					<PopoverClose class={buttonVariants({ variant: 'outline', size: 'sm' })}>Cancel</PopoverClose>
+					<Button variant="destructive" size="sm" onclick={handleDelete}>Delete</Button>
+				</div>
+			</PopoverContent>
+		</Popover>
+	</div>
 
 	{#if error}
-		<p class="error">{error}</p>
+		<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
 	{/if}
 {/if}
 
 <style>
-	.error {
-		color: #c00;
-	}
-	.hint {
-		color: #666;
-	}
 	.meta {
 		display: flex;
 		gap: 1.5rem;
@@ -134,24 +169,5 @@
 	}
 	.meta dd {
 		margin: 0;
-	}
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin-top: 0.5rem;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	input {
-		padding: 0.35rem;
-	}
-	.danger {
-		margin-top: 1rem;
-		color: #c00;
 	}
 </style>

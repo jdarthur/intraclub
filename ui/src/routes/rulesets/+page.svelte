@@ -2,6 +2,15 @@
 	import { onMount } from 'svelte';
 	import { listRulesets } from '$lib/ruleset';
 	import type { Ruleset } from '$lib/ruleset';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import {
+		Table,
+		TableBody,
+		TableCell,
+		TableHead,
+		TableHeader,
+		TableRow
+	} from '$lib/components/ui/table/index.js';
 
 	let rulesets = $state<Ruleset[]>([]);
 	let loading = $state(true);
@@ -22,46 +31,38 @@
 	<title>Rulesets</title>
 </svelte:head>
 
-<h1>Rulesets</h1>
-<a href="/rulesets/new">New ruleset</a>
+<div class="flex items-center justify-between gap-4">
+	<h1 class="text-2xl font-semibold tracking-tight">Rulesets</h1>
+	<Button href="/rulesets/new">New ruleset</Button>
+</div>
 
 {#if loading}
-	<p>Loading...</p>
+	<p class="text-muted-foreground">Loading...</p>
 {:else if error}
-	<p class="error">{error}</p>
+	<p class="text-sm font-medium text-destructive">{error}</p>
 {:else if rulesets.length === 0}
-	<p>No rulesets yet.</p>
+	<p class="text-muted-foreground">No rulesets yet.</p>
 {:else}
-	<table>
-		<thead>
-			<tr>
-				<th>Name</th>
-				<th>Revision</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each rulesets as ruleset}
-				<tr>
-					<td><a href={`/rulesets/${ruleset.id}`}>{ruleset.name}</a></td>
-					<td>{ruleset.revision}</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
+	<div class="mt-4 overflow-hidden rounded-lg border">
+		<Table>
+			<TableHeader>
+				<TableRow>
+					<TableHead>Name</TableHead>
+					<TableHead>Revision</TableHead>
+				</TableRow>
+			</TableHeader>
+			<TableBody>
+				{#each rulesets as ruleset}
+					<TableRow>
+						<TableCell>
+							<a href={`/rulesets/${ruleset.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+								{ruleset.name}
+							</a>
+						</TableCell>
+						<TableCell>{ruleset.revision}</TableCell>
+					</TableRow>
+				{/each}
+			</TableBody>
+		</Table>
+	</div>
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	table {
-		border-collapse: collapse;
-		margin-top: 1rem;
-	}
-	th,
-	td {
-		border: 1px solid #ccc;
-		padding: 0.4rem 0.8rem;
-		text-align: left;
-	}
-</style>

@@ -54,11 +54,11 @@ test('ruleset CRUD: create, view, amend (update), delete', async ({ page }) => {
 	const row = page.getByRole('link', { name: `Test Ruleset ${unique} Amended` });
 	await expect(row).toBeVisible();
 
-	// Delete (accept the confirm dialog)
+	// Delete (confirm via the popover)
 	await row.click();
 	await expect(page.getByRole('heading', { name: `Test Ruleset ${unique} Amended` })).toBeVisible();
-	page.on('dialog', (d) => d.accept());
 	await page.getByRole('button', { name: 'Delete ruleset' }).click();
+	await page.getByRole('button', { name: 'Delete', exact: true }).click();
 	await expect(page).toHaveURL('/rulesets');
 	await expect(page.getByRole('link', { name: `Test Ruleset ${unique} Amended` })).toHaveCount(0);
 });
