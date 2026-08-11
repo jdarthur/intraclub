@@ -72,8 +72,11 @@ test('assign ratings to a format: add, list, remove', async ({ page }) => {
 	// Clean up. Deleting a format now cascades to its format_rating / format_line
 	// join rows, so the ratings are no longer "in-use" and can be deleted to
 	// keep the shared dev db clean.
+	// The format delete confirms via an in-app popover (no window.confirm); the
+	// dialog handler below is still needed for the ratings deletes further down.
 	page.on('dialog', (d) => d.accept());
 	await page.getByRole('button', { name: 'Delete format' }).click();
+	await page.getByRole('button', { name: 'Delete', exact: true }).click();
 	await expect(page).toHaveURL('/formats');
 	await expect(page.getByRole('link', { name: formatName })).toHaveCount(0);
 
