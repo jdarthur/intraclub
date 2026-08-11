@@ -12,9 +12,13 @@ import (
 
 type FormatId database.RecordId
 
-func (id FormatId) UnmarshalJSON(bytes []byte) error {
+func (id *FormatId) UnmarshalJSON(bytes []byte) error {
 	rid := id.RecordId()
-	return (*database.RecordId)(&rid).UnmarshalJSON(bytes)
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*id = FormatId(rid)
+	return nil
 }
 
 func (id FormatId) MarshalJSON() ([]byte, error) {

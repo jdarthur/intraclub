@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -16,7 +17,7 @@ import (
 // to re-query the team from the database on each call
 type TeamCaptainAssignment struct {
 	TeamId    TeamId          `json:"team_id"`
-	CaptainId database.UserId `json:"captain_idt"`
+	CaptainId database.UserId `json:"captain_id"`
 }
 
 func getDraftContext() context.Context {
@@ -71,6 +72,19 @@ func (id DraftId) String() string {
 	return id.RecordId().String()
 }
 
+func (id DraftId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
+func (id *DraftId) UnmarshalJSON(bytes []byte) error {
+	rid := id.RecordId()
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*id = DraftId(rid)
+	return nil
+}
+
 type Draft struct {
 	ID                DraftId           `json:"id"`
 	Name              string            `json:"name"`                // descriptive name for the draft, e.g. "2025 Men's Intraclub". this will become the default name of the Season post-draft
@@ -100,6 +114,66 @@ func NewDraft() *Draft {
 	return &Draft{
 		DraftOrderPattern: DraftOrderPatternSnake{},
 	}
+}
+
+// draftJSON is the wire representation of a Draft. The DraftOrderPattern is an
+// interface field that JSON cannot (de)serialize directly, so it is exposed by
+// its Name() string (e.g. "Snake") on the wire and reconstructed from that name
+// on reads.
+type draftJSON struct {
+	ID                DraftId         `json:"id"`
+	Name              string          `json:"name"`
+	Owner             database.UserId `json:"owner"`
+	Format            FormatId        `json:"format"`
+	CompletedAt       time.Time       `json:"completed_at"`
+	DraftOrderPattern string          `json:"draft_order_pattern"`
+}
+
+// MarshalJSON serializes a Draft with its DraftOrderPattern represented by
+// Name() instead of an opaque interface value.
+func (d *Draft) MarshalJSON() ([]byte, error) {
+	return json.Marshal(draftJSON{
+		ID:                d.ID,
+		Name:              d.Name,
+		Owner:             d.Owner,
+		Format:            d.Format,
+		CompletedAt:       d.CompletedAt,
+		DraftOrderPattern: draftOrderPatternName(d.DraftOrderPattern),
+	})
+}
+
+// UnmarshalJSON reconstructs a Draft from its wire form, resolving the
+// DraftOrderPattern from the provided Name() string (defaulting to Snake if
+// omitted).
+func (d *Draft) UnmarshalJSON(data []byte) error {
+	var aux draftJSON
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	d.ID = aux.ID
+	d.Name = aux.Name
+	d.Owner = aux.Owner
+	d.Format = aux.Format
+	d.CompletedAt = aux.CompletedAt
+	if aux.DraftOrderPattern == "" {
+		d.DraftOrderPattern = DraftOrderPatternSnake{}
+		return nil
+	}
+	pattern, err := DraftOrderPatternFromString(aux.DraftOrderPattern)
+	if err != nil {
+		return err
+	}
+	d.DraftOrderPattern = pattern
+	return nil
+}
+
+// draftOrderPatternName returns the Name() of a DraftOrderPattern, defaulting
+// to an empty string when the pattern is nil.
+func draftOrderPatternName(p DraftOrderPattern) string {
+	if p == nil {
+		return ""
+	}
+	return p.Name()
 }
 
 // SetInterfaceField reconstructs the DraftOrderPattern interface field from its

@@ -18,6 +18,19 @@ func (t TeamId) String() string {
 	return t.RecordId().String()
 }
 
+func (t TeamId) MarshalJSON() ([]byte, error) {
+	return t.RecordId().MarshalJSON()
+}
+
+func (t *TeamId) UnmarshalJSON(bytes []byte) error {
+	rid := t.RecordId()
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*t = TeamId(rid)
+	return nil
+}
+
 type TeamRole string
 
 const (
