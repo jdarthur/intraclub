@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+
 	let email = $state('');
 	let message = $state('');
 	let error = $state('');
@@ -34,49 +38,24 @@
 	}
 </script>
 
-<form onsubmit={handleSubmit}>
-	<label>
-		Email
-		<input type="email" bind:value={email} required />
-	</label>
-	<button type="submit">Send login link</button>
+<form onsubmit={handleSubmit} class="flex max-w-sm flex-col gap-4">
+	<div class="flex flex-col gap-2">
+		<Label for="email">Email</Label>
+		<Input id="email" type="email" bind:value={email} required />
+	</div>
+	<Button type="submit" class="w-fit">Send login link</Button>
 </form>
 
 {#if message}
-	<p>{message}</p>
+	<p class="text-sm text-muted-foreground">{message}</p>
 {/if}
 
 {#if devLink}
 	<p>
-		<a href={devLink}>Log in</a>
+		<a href={devLink} class="text-sm font-medium text-primary underline underline-offset-4 hover:underline">Log in</a>
 	</p>
 {/if}
 
 {#if error}
-	<p class="error">{error}</p>
+	<p class="text-sm font-medium text-destructive">{error}</p>
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin-top: 1rem;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	input {
-		padding: 0.35rem;
-	}
-	button {
-		padding: 0.35rem 0.6rem;
-		width: fit-content;
-	}
-</style>

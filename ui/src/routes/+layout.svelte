@@ -1,4 +1,5 @@
 <script lang="ts">
+	import './styles.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { startSessionMonitor } from '$lib/auth';
 	import NavBar from '$lib/components/NavBar.svelte';
@@ -19,12 +20,6 @@
 </svelte:head>
 
 <NavBar />
-<main class="content">
+<main class="mx-auto w-full max-w-6xl px-6 py-6">
 	{@render children()}
 </main>
-
-<style>
-	.content {
-		padding: 1.25rem;
-	}
-</style>

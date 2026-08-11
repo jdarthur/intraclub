@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { isLoggedIn, clearToken } from '$lib/auth';
 	import { goto } from '$app/navigation';
+	import { Button } from '$lib/components/ui/button/index.js';
 
 	let loggedIn = $state(isLoggedIn());
 
@@ -11,71 +12,24 @@
 	}
 </script>
 
-<nav class="navbar">
-	<a href="/" class="brand">IntraClub</a>
-	<div class="links">
-		<a href="/facilities">Facilities</a>
-		<a href="/formats">Formats</a>
-		<a href="/ratings">Ratings</a>
-		<a href="/rulesets">Rulesets</a>
-		<a href="/scoring-structures">Scoring Structures</a>
-		<a href="/playoff-structures">Playoff Structures</a>
-		<a href="/photos">Photos</a>
+<header class="sticky top-0 z-40 w-full border-b bg-background">
+	<div class="mx-auto flex h-14 max-w-6xl items-center gap-6 px-6">
+		<a href="/" class="text-base font-semibold tracking-tight">IntraClub</a>
+		<nav class="flex items-center gap-1 text-sm">
+			<a href="/facilities" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Facilities</a>
+			<a href="/formats" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Formats</a>
+			<a href="/ratings" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Ratings</a>
+			<a href="/rulesets" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Rulesets</a>
+			<a href="/scoring-structures" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Scoring Structures</a>
+			<a href="/playoff-structures" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Playoff Structures</a>
+			<a href="/photos" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Photos</a>
+		</nav>
+		<div class="ml-auto flex items-center">
+			{#if loggedIn}
+				<Button variant="ghost" onclick={logout}>Log out</Button>
+			{:else}
+				<a href="/login" class="text-sm text-muted-foreground transition-colors hover:text-foreground">Log in</a>
+			{/if}
+		</div>
 	</div>
-	<div class="actions">
-		{#if loggedIn}
-			<button type="button" onclick={logout}>Log out</button>
-		{:else}
-			<a href="/login" class="login">Log in</a>
-		{/if}
-	</div>
-</nav>
-
-<style>
-	.navbar {
-		display: flex;
-		align-items: center;
-		gap: 1.5rem;
-		padding: 0.75rem 1.25rem;
-		background: #1f2937;
-		color: #f9fafb;
-	}
-	.brand {
-		color: #fff;
-		font-weight: 700;
-		text-decoration: none;
-	}
-	.links {
-		display: flex;
-		gap: 1rem;
-	}
-	.links a {
-		color: #d1d5db;
-		text-decoration: none;
-	}
-	.links a:hover {
-		color: #fff;
-	}
-	.actions {
-		margin-left: auto;
-	}
-	.login {
-		color: #d1d5db;
-		text-decoration: none;
-	}
-	.login:hover {
-		color: #fff;
-	}
-	.actions button {
-		background: transparent;
-		border: 1px solid #d1d5db;
-		color: #d1d5db;
-		padding: 0.25rem 0.6rem;
-		border-radius: 4px;
-		cursor: pointer;
-	}
-	.actions button:hover {
-		color: #fff;
-		border-color: #fff;
-	}
-</style>
+</header>

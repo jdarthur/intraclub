@@ -4,6 +4,18 @@
 	import { goto } from '$app/navigation';
 	import { getFacility, updateFacility, deleteFacility } from '$lib/facility';
 	import type { Facility } from '$lib/facility';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import {
+		Popover,
+		PopoverClose,
+		PopoverContent,
+		PopoverHeader,
+		PopoverTitle,
+		PopoverTrigger
+	} from '$lib/components/ui/popover/index.js';
 
 	const id = () => page.params.id as string;
 
@@ -16,6 +28,7 @@
 	let error = $state('');
 	let saving = $state(false);
 	let deleting = $state(false);
+	let deleteOpen = $state(false);
 
 	onMount(load);
 
@@ -53,7 +66,7 @@
 	}
 
 	async function handleDelete() {
-		if (!confirm('Delete this facility?')) return;
+		deleteOpen = false;
 		error = '';
 		deleting = true;
 		try {
@@ -72,66 +85,68 @@
 </svelte:head>
 
 {#if loadError}
-	<h1>Facility</h1>
-	<p class="error">{loadError}</p>
-	<a href="/facilities">&larr; Back to facilities</a>
+	<h1 class="text-2xl font-semibold tracking-tight">Facility</h1>
+	<p class="text-sm font-medium text-destructive">{loadError}</p>
+	<a href="/facilities" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to facilities</a>
 {:else if !facility}
-	<h1>Facility</h1>
-	<p>Loading...</p>
+	<h1 class="text-2xl font-semibold tracking-tight">Facility</h1>
+	<p class="text-muted-foreground">Loading...</p>
 {:else}
-	<h1>{facility.name}</h1>
-	<a href="/facilities">&larr; Back to facilities</a>
+	<div class="flex items-center gap-4">
+		<h1 class="text-2xl font-semibold tracking-tight">{facility.name}</h1>
+		<a href="/facilities" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to facilities</a>
+	</div>
 
-	<form onsubmit={handleSave}>
-		<label>
-			Name
-			<input type="text" bind:value={name} required />
-		</label>
-		<label>
-			Address
-			<input type="text" bind:value={address} required />
-		</label>
-		<label>
-			Number of courts
-			<input type="number" bind:value={courts} min="1" required />
-		</label>
-		<label>
-			Layout photo ID (optional)
-			<input type="text" bind:value={layoutPhoto} placeholder="16-char hex ID" />
-		</label>
-		<button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</button>
-	</form>
+	<Card class="mt-6 max-w-md">
+		<CardHeader>
+			<CardTitle class="text-base">Facility details</CardTitle>
+		</CardHeader>
+		<CardContent>
+			<form onsubmit={handleSave} class="flex flex-col gap-4">
+				<div class="flex flex-col gap-2">
+					<Label for="name">Name</Label>
+					<Input id="name" type="text" bind:value={name} required />
+				</div>
+				<div class="flex flex-col gap-2">
+					<Label for="address">Address</Label>
+					<Input id="address" type="text" bind:value={address} required />
+				</div>
+				<div class="flex flex-col gap-2">
+					<Label for="courts">Number of courts</Label>
+					<Input id="courts" type="number" bind:value={courts} min="1" required />
+				</div>
+				<div class="flex flex-col gap-2">
+					<Label for="layoutPhoto">Layout photo ID (optional)</Label>
+					<Input id="layoutPhoto" type="text" bind:value={layoutPhoto} placeholder="16-char hex ID" />
+				</div>
+				<Button type="submit" disabled={saving} class="w-fit">
+					{saving ? 'Saving...' : 'Save changes'}
+				</Button>
+			</form>
+		</CardContent>
+	</Card>
 
-	<button type="button" onclick={handleDelete} disabled={deleting} class="danger">
-		{deleting ? 'Deleting...' : 'Delete facility'}
-	</button>
+	<div class="mt-4">
+		<Popover bind:open={deleteOpen}>
+			<PopoverTrigger disabled={deleting} class={buttonVariants({ variant: 'destructive' })}>
+				{deleting ? 'Deleting...' : 'Delete facility'}
+			</PopoverTrigger>
+			<PopoverContent class="w-80">
+				<PopoverHeader>
+					<PopoverTitle>Delete facility?</PopoverTitle>
+					<p class="text-sm text-muted-foreground">
+						This permanently removes this facility and cannot be undone.
+					</p>
+				</PopoverHeader>
+				<div class="flex justify-end gap-2">
+					<PopoverClose class={buttonVariants({ variant: 'outline', size: 'sm' })}>Cancel</PopoverClose>
+					<Button variant="destructive" size="sm" onclick={handleDelete}>Delete</Button>
+				</div>
+			</PopoverContent>
+		</Popover>
+	</div>
 
 	{#if error}
-		<p class="error">{error}</p>
+		<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
 	{/if}
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin-top: 1rem;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	input {
-		padding: 0.35rem;
-	}
-	.danger {
-		margin-top: 1rem;
-		color: #c00;
-	}
-</style>

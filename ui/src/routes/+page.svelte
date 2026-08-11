@@ -20,20 +20,15 @@
 </svelte:head>
 
 {#if loggedIn}
-	<h1>Welcome to IntraClub</h1>
-	<p>Head to <a href="/facilities">Facilities</a>, <a href="/formats">Formats</a>, <a href="/ratings">Ratings</a>, <a href="/rulesets">Rulesets</a>, <a href="/scoring-structures">Scoring Structures</a>, or <a href="/playoff-structures">Playoff Structures</a> to get started.</p>
+	<h1 class="text-2xl font-semibold tracking-tight">Welcome to IntraClub</h1>
+	<p class="mt-2 text-muted-foreground">Head to <a href="/facilities" class="text-primary underline-offset-4 hover:underline">Facilities</a>, <a href="/formats" class="text-primary underline-offset-4 hover:underline">Formats</a>, <a href="/ratings" class="text-primary underline-offset-4 hover:underline">Ratings</a>, <a href="/rulesets" class="text-primary underline-offset-4 hover:underline">Rulesets</a>, <a href="/scoring-structures" class="text-primary underline-offset-4 hover:underline">Scoring Structures</a>, or <a href="/playoff-structures" class="text-primary underline-offset-4 hover:underline">Playoff Structures</a> to get started.</p>
 {:else}
-	<h1>IntraClub</h1>
+	<h1 class="text-2xl font-semibold tracking-tight">IntraClub</h1>
 	{#if $sessionExpired}
-		<p class="session-expired" role="status">{SESSION_EXPIRED_MESSAGE}</p>
+		<p class="mt-2 text-sm font-semibold text-destructive" role="status">{SESSION_EXPIRED_MESSAGE}</p>
 	{/if}
-	<p>Welcome! Log in to manage your club.</p>
-	<LoginForm />
+	<p class="mt-2 text-muted-foreground">Welcome! Log in to manage your club.</p>
+	<div class="mt-4">
+		<LoginForm />
+	</div>
 {/if}
-
-<style>
-	.session-expired {
-		color: #c00;
-		font-weight: 600;
-	}
-</style>
