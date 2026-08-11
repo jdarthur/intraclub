@@ -27,8 +27,11 @@ const JwtCertFile = "token.crt"
 // JwtKeyFile is the filename for the persisted JWT private key.
 const JwtKeyFile = "token.key"
 
-// JwtLifetime is the duration for which issued tokens remain valid.
-const JwtLifetime = time.Hour * 2
+// JwtLifetime is the duration for which issued tokens remain valid. It is a
+// package variable (not a const) so it can be configured at startup via the
+// --jwt-lifetime flag or the INTRACLUB_JWT_LIFETIME env var (see main.go).
+// Tests can shorten it to exercise expiry without waiting for the real window.
+var JwtLifetime = time.Hour * 2
 
 // JwtPublicKey holds the loaded ECDSA public key used to verify JWT signatures.
 var JwtPublicKey *ecdsa.PublicKey

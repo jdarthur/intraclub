@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 
 	"intraclub/api"
 	"intraclub/database"
@@ -125,6 +126,7 @@ func (c serverConfig) providerConfig() database.ProviderConfig {
 func parseFlags() serverConfig {
 	useDevTokenMode := flag.Bool("dev-token", false, "Use development token mode")
 	addr := flag.String("addr", "127.0.0.1:8080", "Address to listen on, e.g. 127.0.0.1:8080")
+	jwtLifetimeFlag := flag.String("jwt-lifetime", "", "JWT token lifetime (e.g. 2h, 90m, 5s); falls back to INTRACLUB_JWT_LIFETIME env, then 2h")
 
 	// defaultDBKind is the provider used at startup. SQLite is the default
 	// (file-backed, single-file .db); pass --db memory for an ephemeral run.
@@ -132,6 +134,12 @@ func parseFlags() serverConfig {
 	dbKind := flag.String("db", string(defaultDBKind), "Database provider (memory | sqlite)")
 	dbPath := flag.String("db-path", "", "Path to the SQLite database file; falls back to INTRACLUB_DB_PATH env")
 	flag.Parse()
+
+	jwtLifetime, err := resolveJwtLifetime(*jwtLifetimeFlag)
+	if err != nil {
+		log.Fatalf("invalid JWT lifetime: %v", err)
+	}
+	api.JwtLifetime = jwtLifetime
 
 	if useDevTokenMode != nil && *useDevTokenMode == true {
 		model.UseDevTokenMode = true
@@ -157,6 +165,27 @@ func resolveDBPath(flagPath string) string {
 		return flagPath
 	}
 	return os.Getenv("INTRACLUB_DB_PATH")
+}
+
+// resolveJwtLifetime returns the JWT token lifetime, preferring the explicit
+// --jwt-lifetime flag and falling back to the INTRACLUB_JWT_LIFETIME env var,
+// then to the package default of api.JwtLifetime.
+func resolveJwtLifetime(flagVal string) (time.Duration, error) {
+	raw := flagVal
+	if raw == "" {
+		raw = os.Getenv("INTRACLUB_JWT_LIFETIME")
+	}
+	if raw == "" {
+		return api.JwtLifetime, nil
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, fmt.Errorf("invalid JWT lifetime %q: %w", raw, err)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("JWT lifetime must be positive, got %q", raw)
+	}
+	return d, nil
 }
 
 // isLoopbackAddress reports whether addr's host is a loopback interface
