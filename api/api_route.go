@@ -190,6 +190,12 @@ func (r *routeWrapper[T]) Handle(c *gin.Context) {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		// run static (field-level) validation on the bound body so that
+		// invalid requests are rejected before any handler logic runs
+		if err := b.StaticallyValid(); err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		apiRequest.Body = b
 	}
 

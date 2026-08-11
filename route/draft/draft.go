@@ -73,9 +73,6 @@ func (c InitializeDraft) RequestBody() (*InitializeBody, bool) {
 }
 
 func (c InitializeDraft) Handler(req api.Request[*InitializeBody]) (any, int, error) {
-	if err := req.Body.StaticallyValid(); err != nil {
-		return nil, http.StatusBadRequest, err
-	}
 	draft, status, err := loadEditableDraft(req)
 	if err != nil {
 		return nil, status, err
@@ -115,9 +112,6 @@ func (c AssignDraftablePlayers) RequestBody() (*AssignDraftablePlayersBody, bool
 }
 
 func (c AssignDraftablePlayers) Handler(req api.Request[*AssignDraftablePlayersBody]) (any, int, error) {
-	if err := req.Body.StaticallyValid(); err != nil {
-		return nil, http.StatusBadRequest, err
-	}
 	draft, status, err := loadEditableDraft(req)
 	if err != nil {
 		return nil, status, err
@@ -159,9 +153,6 @@ func (c AssignRatingCutoff) RequestBody() (*AssignRatingCutoffBody, bool) {
 }
 
 func (c AssignRatingCutoff) Handler(req api.Request[*AssignRatingCutoffBody]) (any, int, error) {
-	if err := req.Body.StaticallyValid(); err != nil {
-		return nil, http.StatusBadRequest, err
-	}
 	draft, status, err := loadEditableDraft(req)
 	if err != nil {
 		return nil, status, err
@@ -203,9 +194,6 @@ func (c SelectByCaptain) RequestBody() (*SelectBody, bool) {
 }
 
 func (c SelectByCaptain) Handler(req api.Request[*SelectBody]) (any, int, error) {
-	if err := req.Body.StaticallyValid(); err != nil {
-		return nil, http.StatusBadRequest, err
-	}
 	if req.Token == nil {
 		return nil, http.StatusUnauthorized, errors.New("token is required")
 	}
@@ -295,9 +283,6 @@ func (c CreateSeason) RequestBody() (*CreateSeasonBody, bool) {
 }
 
 func (c CreateSeason) Handler(req api.Request[*CreateSeasonBody]) (any, int, error) {
-	if err := req.Body.StaticallyValid(); err != nil {
-		return nil, http.StatusBadRequest, err
-	}
 	draft, status, err := loadEditableDraft(req)
 	if err != nil {
 		return nil, status, err
@@ -345,9 +330,6 @@ func (c SetDraftOrderPattern) RequestBody() (*SetDraftOrderPatternBody, bool) {
 }
 
 func (c SetDraftOrderPattern) Handler(req api.Request[*SetDraftOrderPatternBody]) (any, int, error) {
-	if err := req.Body.StaticallyValid(); err != nil {
-		return nil, http.StatusBadRequest, err
-	}
 	draft, status, err := loadEditableDraft(req)
 	if err != nil {
 		return nil, status, err
