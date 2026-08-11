@@ -3,6 +3,9 @@ package main
 import (
 	"os"
 	"testing"
+	"time"
+
+	"intraclub/api"
 )
 
 func TestResolveDBPath(t *testing.T) {
@@ -58,6 +61,64 @@ func TestIsLoopbackAddress(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := isLoopbackAddress(tt.addr); got != tt.want {
 				t.Errorf("isLoopbackAddress(%q) = %v, want %v", tt.addr, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestResolveJwtLifetimeDefaultsToPackageDefault(t *testing.T) {
+	// No flag, no env var -> package default (2h).
+	api.JwtLifetime = time.Hour * 2
+	t.Setenv("INTRACLUB_JWT_LIFETIME", "")
+
+	d, err := resolveJwtLifetime("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if d != time.Hour*2 {
+		t.Fatalf("expected default 2h, got %v", d)
+	}
+}
+
+func TestResolveJwtLifetimeEnvVar(t *testing.T) {
+	t.Setenv("INTRACLUB_JWT_LIFETIME", "90m")
+
+	d, err := resolveJwtLifetime("")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if d != 90*time.Minute {
+		t.Fatalf("expected 90m, got %v", d)
+	}
+}
+
+func TestResolveJwtLifetimeFlagWins(t *testing.T) {
+	t.Setenv("INTRACLUB_JWT_LIFETIME", "90m")
+
+	d, err := resolveJwtLifetime("5s")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if d != 5*time.Second {
+		t.Fatalf("expected 5s, got %v", d)
+	}
+}
+
+func TestResolveJwtLifetimeInvalid(t *testing.T) {
+	t.Setenv("INTRACLUB_JWT_LIFETIME", "not-a-duration")
+
+	_, err := resolveJwtLifetime("")
+	if err == nil {
+		t.Fatal("expected an error for an invalid lifetime")
+	}
+}
+
+func TestResolveJwtLifetimeRejectsNonPositive(t *testing.T) {
+	for _, raw := range []string{"0s", "-5s", "-1h"} {
+		t.Run(raw, func(t *testing.T) {
+			t.Setenv("INTRACLUB_JWT_LIFETIME", raw)
+			if _, err := resolveJwtLifetime(""); err == nil {
+				t.Fatalf("expected an error for lifetime %q", raw)
 			}
 		})
 	}

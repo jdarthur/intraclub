@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"intraclub/database"
 )
@@ -129,5 +130,33 @@ func TestGenerateTokenDifferentUsers(t *testing.T) {
 	}
 	if token1 == token2 {
 		t.Fatal("tokens for different users should not be equal")
+	}
+}
+
+// TestGenerateTokenExpired validates that a token minted with an already-elapsed
+// JwtLifetime is rejected. It also proves JwtLifetime is configurable (not a
+// hard-coded const), which the --jwt-lifetime flag / INTRACLUB_JWT_LIFETIME env
+// var rely on and which lets tests exercise the expiry path without waiting 2h.
+func TestGenerateTokenExpired(t *testing.T) {
+	deleteKeyPair(t)
+	err := GenerateJwtKeyPairIfNotExists()
+	if err != nil {
+		t.Fatalf("GenerateJwtKeyPairIfNotExists failed: %v", err)
+	}
+
+	userId := database.NewRecordId()
+
+	// A negative lifetime mints an already-expired token (ExpiresAt in the past).
+	orig := JwtLifetime
+	JwtLifetime = -time.Minute
+	token, err := GenerateToken(userId)
+	JwtLifetime = orig
+	if err != nil {
+		t.Fatalf("GenerateToken failed: %v", err)
+	}
+
+	_, err = ValidateToken(token)
+	if err == nil {
+		t.Fatal("expected an error for an expired token")
 	}
 }

@@ -28,6 +28,7 @@ make clean           # remove build artifacts
 
 ./main --dev-token   # run backend, dev mode (loopback-only, seeds sample data) on :8080
 cd ui && npm install && npm run dev   # frontend dev server (port 5173)
+cd ui && npm run test                # frontend unit tests (vitest)
 cd ui && npm run check                # svelte-check + typecheck
 ```
 Verify: `go build ./...` succeeds; Go toolchain is go1.26.
