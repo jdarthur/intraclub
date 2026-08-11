@@ -2,6 +2,15 @@
 	import { onMount } from 'svelte';
 	import { listRatings } from '$lib/rating';
 	import type { Rating } from '$lib/rating';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import {
+		Table,
+		TableBody,
+		TableCell,
+		TableHead,
+		TableHeader,
+		TableRow
+	} from '$lib/components/ui/table/index.js';
 
 	let ratings = $state<Rating[]>([]);
 	let loading = $state(true);
@@ -22,46 +31,38 @@
 	<title>Ratings</title>
 </svelte:head>
 
-<h1>Ratings</h1>
-<a href="/ratings/new">New rating</a>
+<div class="flex items-center justify-between gap-4">
+	<h1 class="text-2xl font-semibold tracking-tight">Ratings</h1>
+	<Button href="/ratings/new">New rating</Button>
+</div>
 
 {#if loading}
-	<p>Loading...</p>
+	<p class="text-muted-foreground">Loading...</p>
 {:else if error}
-	<p class="error">{error}</p>
+	<p class="text-sm font-medium text-destructive">{error}</p>
 {:else if ratings.length === 0}
-	<p>No ratings yet.</p>
+	<p class="text-muted-foreground">No ratings yet.</p>
 {:else}
-	<table>
-		<thead>
-			<tr>
-				<th>Name</th>
-				<th>Description</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each ratings as rating}
-				<tr>
-					<td><a href={`/ratings/${rating.id}`}>{rating.name}</a></td>
-					<td>{rating.description}</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
+	<div class="mt-4 overflow-hidden rounded-lg border">
+		<Table>
+			<TableHeader>
+				<TableRow>
+					<TableHead>Name</TableHead>
+					<TableHead>Description</TableHead>
+				</TableRow>
+			</TableHeader>
+			<TableBody>
+				{#each ratings as rating}
+					<TableRow>
+						<TableCell>
+							<a href={`/ratings/${rating.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+								{rating.name}
+							</a>
+						</TableCell>
+						<TableCell>{rating.description}</TableCell>
+					</TableRow>
+				{/each}
+			</TableBody>
+		</Table>
+	</div>
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	table {
-		border-collapse: collapse;
-		margin-top: 1rem;
-	}
-	th,
-	td {
-		border: 1px solid #ccc;
-		padding: 0.4rem 0.8rem;
-		text-align: left;
-	}
-</style>

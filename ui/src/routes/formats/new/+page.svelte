@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { createFormat } from '$lib/format';
 	import { goto } from '$app/navigation';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
 
 	let name = $state('');
 	let error = $state('');
@@ -25,38 +29,28 @@
 	<title>New format</title>
 </svelte:head>
 
-<h1>New format</h1>
-<a href="/formats">&larr; Back to formats</a>
+<div class="flex items-center gap-4">
+	<h1 class="text-2xl font-semibold tracking-tight">New format</h1>
+	<a href="/formats" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to formats</a>
+</div>
 
-<form onsubmit={handleSubmit}>
-	<label>
-		Name
-		<input type="text" bind:value={name} required />
-	</label>
-	<button type="submit" disabled={submitting}>{submitting ? 'Creating...' : 'Create format'}</button>
-</form>
+<Card class="mt-6 max-w-md">
+	<CardHeader>
+		<CardTitle class="text-base">Format details</CardTitle>
+	</CardHeader>
+	<CardContent>
+		<form onsubmit={handleSubmit} class="flex flex-col gap-4">
+			<div class="flex flex-col gap-2">
+				<Label for="name">Name</Label>
+				<Input id="name" type="text" bind:value={name} required />
+			</div>
+			<Button type="submit" disabled={submitting} class="w-fit">
+				{submitting ? 'Creating...' : 'Create format'}
+			</Button>
+		</form>
+	</CardContent>
+</Card>
 
 {#if error}
-	<p class="error">{error}</p>
+	<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin-top: 1rem;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	input {
-		padding: 0.35rem;
-	}
-</style>

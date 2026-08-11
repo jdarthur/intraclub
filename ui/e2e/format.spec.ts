@@ -22,6 +22,13 @@ async function login(page: Page) {
 // (spawned from the repo root) keeps its SQLite db at <repo>/intraclub.db.
 const dbPath = fileURLToPath(new URL('../../intraclub.db', import.meta.url));
 
+// Delete now confirms through an in-app shadcn Popover (no native window.confirm):
+// click the trigger, then the "Delete" button inside the popover.
+async function confirmDelete(page: Page) {
+	await page.getByRole('button', { name: 'Delete format' }).click();
+	await page.getByRole('button', { name: 'Delete', exact: true }).click();
+}
+
 test('format CRUD: create, view, update, delete', async ({ page }) => {
 	await login(page);
 
@@ -49,20 +56,16 @@ test('format CRUD: create, view, update, delete', async ({ page }) => {
 	const row = page.getByRole('link', { name: `Test Format ${unique} Updated` });
 	await expect(row).toBeVisible();
 
-	// Delete (accept the confirm dialog)
+	// Delete (confirm via the popover)
 	await row.click();
 	await expect(page.getByRole('heading', { name: `Test Format ${unique} Updated` })).toBeVisible();
-	page.on('dialog', (d) => d.accept());
-	await page.getByRole('button', { name: 'Delete format' }).click();
+	await confirmDelete(page);
 	await expect(page).toHaveURL('/formats');
 	await expect(page.getByRole('link', { name: `Test Format ${unique} Updated` })).toHaveCount(0);
 });
 
 test('format delete is blocked when the format is assigned to a draft', async ({ page }) => {
 	await login(page);
-
-	// Both delete attempts below use window.confirm; accept every dialog.
-	page.on('dialog', (d) => d.accept());
 
 	// Create a format to attempt deletion of.
 	const unique = Date.now();
@@ -93,7 +96,7 @@ test('format delete is blocked when the format is assigned to a draft', async ({
 		);
 
 		// Attempt to delete -> PreDelete blocks it and the page surfaces the error.
-		await page.getByRole('button', { name: 'Delete format' }).click();
+		await confirmDelete(page);
 		await expect(page.getByText(/assigned drafts/)).toBeVisible();
 	} finally {
 		// Clean up the draft_format row so it can't affect other tests.
@@ -102,7 +105,7 @@ test('format delete is blocked when the format is assigned to a draft', async ({
 	}
 
 	// With the draft gone, the format can now be deleted.
-	await page.getByRole('button', { name: 'Delete format' }).click();
+	await confirmDelete(page);
 	await expect(page).toHaveURL('/formats');
 	await expect(page.getByRole('link', { name: `In Use Format ${unique}` })).toHaveCount(0);
 });

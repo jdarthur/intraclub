@@ -12,6 +12,23 @@
 	import type { Format } from '$lib/format';
 	import { listRatings } from '$lib/rating';
 	import type { Rating } from '$lib/rating';
+	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import {
+		NativeSelect,
+		NativeSelectOption
+	} from '$lib/components/ui/native-select/index.js';
+	import {
+		Popover,
+		PopoverClose,
+		PopoverContent,
+		PopoverHeader,
+		PopoverTitle,
+		PopoverTrigger
+	} from '$lib/components/ui/popover/index.js';
 
 	const id = () => page.params.id as string;
 
@@ -21,6 +38,7 @@
 	let error = $state('');
 	let saving = $state(false);
 	let deleting = $state(false);
+	let deleteOpen = $state(false);
 
 	// Possible ratings assigned to this format.
 	let possibleRatings = $state<Rating[]>([]);
@@ -77,7 +95,7 @@
 	}
 
 	async function handleDelete() {
-		if (!confirm('Delete this format?')) return;
+		deleteOpen = false;
 		error = '';
 		deleting = true;
 		try {
@@ -121,41 +139,53 @@
 </svelte:head>
 
 {#if loadError}
-	<h1>Format</h1>
-	<p class="error">{loadError}</p>
-	<a href="/formats">&larr; Back to formats</a>
+	<h1 class="text-2xl font-semibold tracking-tight">Format</h1>
+	<p class="text-sm font-medium text-destructive">{loadError}</p>
+	<a href="/formats" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to formats</a>
 {:else if !format}
-	<h1>Format</h1>
-	<p>Loading...</p>
+	<h1 class="text-2xl font-semibold tracking-tight">Format</h1>
+	<p class="text-muted-foreground">Loading...</p>
 {:else}
-	<h1>{format.name}</h1>
-	<a href="/formats">&larr; Back to formats</a>
+	<div class="flex items-center gap-4">
+		<h1 class="text-2xl font-semibold tracking-tight">{format.name}</h1>
+		<a href="/formats" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to formats</a>
+	</div>
 
-	<form onsubmit={handleSave}>
-		<label>
-			Name
-			<input type="text" bind:value={name} required />
-		</label>
-		<button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</button>
-	</form>
+	<Card class="mt-6 max-w-md">
+		<CardHeader>
+			<CardTitle class="text-base">Format details</CardTitle>
+		</CardHeader>
+		<CardContent>
+			<form onsubmit={handleSave} class="flex flex-col gap-4">
+				<div class="flex flex-col gap-2">
+					<Label for="name">Name</Label>
+					<Input id="name" type="text" bind:value={name} required />
+				</div>
+				<Button type="submit" disabled={saving} class="w-fit">
+					{saving ? 'Saving...' : 'Save changes'}
+				</Button>
+			</form>
+		</CardContent>
+	</Card>
 
-	<section class="ratings">
-		<h2>Possible ratings</h2>
-		<p class="hint">
+	<section class="mt-8 max-w-md">
+		<h2 class="text-xl font-semibold tracking-tight">Possible ratings</h2>
+		<p class="mt-1 text-sm text-muted-foreground">
 			The skill ratings that players can be assigned to in this format, ordered
 			highest-skill to lowest-skill.
 		</p>
 
 		{#if possibleRatings.length === 0}
-			<p>No ratings assigned yet.</p>
+			<p class="mt-4 text-muted-foreground">No ratings assigned yet.</p>
 		{:else}
-			<ul class="rating-list">
+			<ul class="mt-4 flex flex-col gap-2">
 				{#each possibleRatings as rating}
-					<li>
-						<span class="rating-name">{rating.name}</span>
-						<button
+					<li class="flex items-center justify-between gap-2 rounded-lg border p-2 pl-3">
+						<Badge variant="secondary" class="rating-name">{rating.name}</Badge>
+						<Button
 							type="button"
-							class="remove"
+							variant="outline"
+							size="sm"
 							onclick={() => handleRemoveRating(rating.id)}
 							disabled={ratingsSaving || possibleRatings.length === 1}
 							title={possibleRatings.length === 1
@@ -163,103 +193,61 @@
 								: undefined}
 						>
 							Remove
-						</button>
+						</Button>
 					</li>
 				{/each}
 			</ul>
 			{#if possibleRatings.length === 1}
-				<p class="hint">A format must keep at least one rating.</p>
+				<p class="mt-2 text-sm text-muted-foreground">A format must keep at least one rating.</p>
 			{/if}
 		{/if}
 
 		{#if unassignedRatings.length > 0}
-			<form class="add" onsubmit={handleAddRating}>
-				<select bind:value={selectedRatingId} aria-label="Rating to assign">
-					<option value="" disabled>Select a rating…</option>
+			<form onsubmit={handleAddRating} class="mt-4 flex items-center gap-2">
+				<NativeSelect
+					bind:value={selectedRatingId}
+					aria-label="Rating to assign"
+					class="flex-1"
+				>
+					<NativeSelectOption value="" disabled>Select a rating…</NativeSelectOption>
 					{#each unassignedRatings as rating}
-						<option value={rating.id}>{rating.name}</option>
+						<NativeSelectOption value={rating.id}>{rating.name}</NativeSelectOption>
 					{/each}
-				</select>
-				<button type="submit" disabled={ratingsSaving || !selectedRatingId}>
+				</NativeSelect>
+				<Button type="submit" disabled={ratingsSaving || !selectedRatingId}>
 					Add rating
-				</button>
+				</Button>
 			</form>
 		{:else if allRatings.length > 0}
-			<p class="hint">All ratings are already assigned.</p>
+			<p class="mt-4 text-sm text-muted-foreground">All ratings are already assigned.</p>
 		{/if}
 
 		{#if ratingsError}
-			<p class="error">{ratingsError}</p>
+			<p class="mt-3 text-sm font-medium text-destructive">{ratingsError}</p>
 		{/if}
 	</section>
 
-	<button type="button" onclick={handleDelete} disabled={deleting} class="danger">
-		{deleting ? 'Deleting...' : 'Delete format'}
-	</button>
+	<div class="mt-8">
+		<Popover bind:open={deleteOpen}>
+			<PopoverTrigger disabled={deleting} class={buttonVariants({ variant: 'destructive' })}>
+				{deleting ? 'Deleting...' : 'Delete format'}
+			</PopoverTrigger>
+			<PopoverContent class="w-80">
+				<PopoverHeader>
+					<PopoverTitle>Delete format?</PopoverTitle>
+					<p class="text-sm text-muted-foreground">
+						This permanently removes this format and cannot be undone.
+					</p>
+				</PopoverHeader>
+				<div class="flex justify-end gap-2">
+					<PopoverClose class={buttonVariants({ variant: 'outline', size: 'sm' })}>Cancel</PopoverClose>
+					<Button variant="destructive" size="sm" onclick={handleDelete}>Delete</Button>
+				</div>
+			</PopoverContent>
+		</Popover>
+	</div>
 
 	{#if error}
-		<p class="error">{error}</p>
+		<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
 	{/if}
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	.hint {
-		color: #666;
-		font-size: 0.9rem;
-	}
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin-top: 1rem;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	input {
-		padding: 0.35rem;
-	}
-	.ratings {
-		margin-top: 1.5rem;
-		max-width: 24rem;
-	}
-	.rating-list {
-		list-style: none;
-		padding: 0;
-		margin: 0.5rem 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-	}
-	.rating-list li {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		border: 1px solid #ccc;
-		padding: 0.4rem 0.6rem;
-	}
-	.rating-name {
-		font-weight: 600;
-	}
-	.remove {
-		color: #c00;
-	}
-	.add {
-		flex-direction: row;
-		align-items: center;
-	}
-	select {
-		padding: 0.35rem;
-		flex: 1;
-	}
-	.danger {
-		margin-top: 1.5rem;
-		color: #c00;
-	}
-</style>
