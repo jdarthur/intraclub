@@ -3,6 +3,11 @@
 	import { createScoringStructure, getScoreCountingTypes } from '$lib/scoringStructure';
 	import type { ScoreCountingType } from '$lib/scoringStructure';
 	import { goto } from '$app/navigation';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import { NativeSelect, NativeSelectOption } from '$lib/components/ui/native-select/index.js';
 
 	let countingTypes = $state<ScoreCountingType[]>([]);
 	let name = $state('');
@@ -49,59 +54,56 @@
 	<title>New scoring structure</title>
 </svelte:head>
 
-<h1>New scoring structure</h1>
-<a href="/scoring-structures">&larr; Back to scoring structures</a>
+<div class="flex items-center gap-4">
+	<h1 class="text-2xl font-semibold tracking-tight">New scoring structure</h1>
+	<a href="/scoring-structures" class="text-sm text-muted-foreground hover:text-foreground"
+		>&larr; Back to scoring structures</a
+	>
+</div>
 
-<form onsubmit={handleSubmit}>
-	<label>
-		Name
-		<input type="text" bind:value={name} required />
-	</label>
-	<label>
-		Score counting type
-		<select bind:value={countingType}>
-			{#each countingTypes as ct}
-				<option value={ct.type}>{ct.name}</option>
-			{/each}
-		</select>
-	</label>
-	<label>
-		Win threshold
-		<input type="number" min="1" bind:value={winThreshold} required />
-	</label>
-	<label>
-		Must win by
-		<input type="number" min="1" bind:value={mustWinBy} required />
-	</label>
-	<label>
-		Instant win threshold
-		<input type="number" min="0" bind:value={instantWinThreshold} placeholder="0 (disabled)" />
-	</label>
-	<button type="submit" disabled={submitting}>{submitting ? 'Creating...' : 'Create scoring structure'}</button>
-</form>
+<Card class="mt-6 max-w-md">
+	<CardHeader>
+		<CardTitle class="text-base">Scoring structure details</CardTitle>
+	</CardHeader>
+	<CardContent>
+		<form onsubmit={handleSubmit} class="flex flex-col gap-4">
+			<div class="flex flex-col gap-2">
+				<Label for="name">Name</Label>
+				<Input id="name" type="text" bind:value={name} required />
+			</div>
+			<div class="flex flex-col gap-2">
+				<Label for="countingType">Score counting type</Label>
+				<NativeSelect id="countingType" bind:value={countingType} class="w-full">
+					{#each countingTypes as ct}
+						<NativeSelectOption value={ct.type}>{ct.name}</NativeSelectOption>
+					{/each}
+				</NativeSelect>
+			</div>
+			<div class="flex flex-col gap-2">
+				<Label for="winThreshold">Win threshold</Label>
+				<Input id="winThreshold" type="number" min="1" bind:value={winThreshold} required />
+			</div>
+			<div class="flex flex-col gap-2">
+				<Label for="mustWinBy">Must win by</Label>
+				<Input id="mustWinBy" type="number" min="1" bind:value={mustWinBy} required />
+			</div>
+			<div class="flex flex-col gap-2">
+				<Label for="instantWinThreshold">Instant win threshold</Label>
+				<Input
+					id="instantWinThreshold"
+					type="number"
+					min="0"
+					bind:value={instantWinThreshold}
+					placeholder="0 (disabled)"
+				/>
+			</div>
+			<Button type="submit" disabled={submitting} class="w-fit">
+				{submitting ? 'Creating...' : 'Create scoring structure'}
+			</Button>
+		</form>
+	</CardContent>
+</Card>
 
 {#if error}
-	<p class="error">{error}</p>
+	<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin-top: 1rem;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	input,
-	select {
-		padding: 0.35rem;
-	}
-</style>
