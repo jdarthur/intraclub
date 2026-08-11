@@ -15,9 +15,13 @@ var RatingThree = "Lower-skilled player who might be prone to mistakes or beatab
 
 type RatingId database.RecordId
 
-func (id RatingId) UnmarshalJSON(bytes []byte) error {
+func (id *RatingId) UnmarshalJSON(bytes []byte) error {
 	rid := id.RecordId()
-	return (*database.RecordId)(&rid).UnmarshalJSON(bytes)
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*id = RatingId(rid)
+	return nil
 }
 
 func (id RatingId) MarshalJSON() ([]byte, error) {

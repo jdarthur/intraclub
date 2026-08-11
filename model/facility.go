@@ -28,6 +28,15 @@ func (id FacilityId) MarshalJSON() ([]byte, error) {
 	return id.RecordId().MarshalJSON()
 }
 
+func (id *FacilityId) UnmarshalJSON(bytes []byte) error {
+	rid := id.RecordId()
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*id = FacilityId(rid)
+	return nil
+}
+
 // Facility is a physical location where a Season is played.
 // It is owned by a particular UserId, but is publicly
 // accessible to all users (so that multiple seasons may

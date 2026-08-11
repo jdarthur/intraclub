@@ -13,6 +13,7 @@ import (
 	"intraclub/database"
 	"intraclub/model"
 	"intraclub/route"
+	"intraclub/route/draft"
 	"intraclub/route/format"
 	"intraclub/route/ruleset"
 	"intraclub/route/user"
@@ -96,6 +97,8 @@ func main() {
 	amendRuleset.Handle(rg, ruleset.AmendRulesetName{})
 
 	rg.GET("/draft_order_patterns", model.GetDraftOrderPatterns)
+
+	draft.RegisterRoutes(rg, db)
 
 	playoffStructures := api.NewCrudCommon(model.NewPlayoffStructure, false, db)
 	playoffStructures.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
