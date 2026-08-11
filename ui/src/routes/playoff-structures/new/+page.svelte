@@ -64,8 +64,7 @@
 		flex-direction: column;
 		gap: 0.25rem;
 	}
-	input,
-	select {
+	input {
 		padding: 0.35rem;
 	}
 </style>
