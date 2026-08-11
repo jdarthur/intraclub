@@ -75,6 +75,9 @@ dockertest:
 	@docker build -t $(TEST_DOCKER_NAME) -f Dockerfile.test .
 
 e2e:
+	$(info Resetting SQLite DB for a clean e2e baseline)
+	@db="$${INTRACLUB_DB_PATH:-intraclub.db}"; \
+	rm -f "$$db" "$$db-wal" "$$db-shm"
 	$(info Running Playwright e2e tests (headless, from ./ui))
 	@cd ui && npm run test:e2e
 
