@@ -15,6 +15,13 @@ async function login(page: Page) {
 	await expect(page).toHaveURL('/');
 }
 
+// Delete now confirms through an in-app shadcn Popover (no native window.confirm):
+// click the trigger, then the "Delete" button inside the popover.
+async function confirmDelete(page: Page) {
+	await page.getByRole('button', { name: 'Delete photo' }).click();
+	await page.getByRole('button', { name: 'Delete', exact: true }).click();
+}
+
 // A 1x1 transparent PNG. The backend stores raw bytes and doesn't decode the
 // image, so this is enough to exercise the upload path end to end.
 const PNG_1PX =
@@ -66,11 +73,10 @@ test('photo CRUD: upload, view, update, delete', async ({ page }) => {
 		.filter({ hasText: `${altText} Updated` });
 	await expect(row).toBeVisible();
 
-	// Delete (accept the confirm dialog)
+	// Delete (confirm via the popover)
 	await row.click();
 	await expect(page.getByRole('heading', { name: 'Photo' })).toBeVisible();
-	page.on('dialog', (d) => d.accept());
-	await page.getByRole('button', { name: 'Delete photo' }).click();
+	await confirmDelete(page);
 	await expect(page).toHaveURL('/photos');
 	await expect(page.getByRole('link', { name: `${altText} Updated` })).toHaveCount(0);
 });

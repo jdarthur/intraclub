@@ -2,6 +2,15 @@
 	import { onMount } from 'svelte';
 	import { listPhotos, dataUrlFor, photoTypeLabels } from '$lib/photo';
 	import type { Photo } from '$lib/photo';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import {
+		Table,
+		TableBody,
+		TableCell,
+		TableHead,
+		TableHeader,
+		TableRow
+	} from '$lib/components/ui/table/index.js';
 
 	let photos = $state<Photo[]>([]);
 	let loading = $state(true);
@@ -26,55 +35,53 @@
 	<title>Photos</title>
 </svelte:head>
 
-<h1>Photos</h1>
-<a href="/photos/new">New photo</a>
+<div class="flex items-center justify-between gap-4">
+	<h1 class="text-2xl font-semibold tracking-tight">Photos</h1>
+	<Button href="/photos/new">New photo</Button>
+</div>
 
 {#if loading}
-	<p>Loading...</p>
+	<p class="text-muted-foreground">Loading...</p>
 {:else if error}
-	<p class="error">{error}</p>
+	<p class="text-sm font-medium text-destructive">{error}</p>
 {:else if photos.length === 0}
-	<p>No photos yet.</p>
+	<p class="text-muted-foreground">No photos yet.</p>
 {:else}
-	<table>
-		<thead>
-			<tr>
-				<th>Thumbnail</th>
-				<th>Alt text</th>
-				<th>Type</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each photos as photo}
-				<tr>
-					<td class="thumb">
-						<a href={`/photos/${photo.id}`}>
-							<img src={dataUrlFor(photo)} alt={photo.alt_text || 'Photo thumbnail'} />
-						</a>
-					</td>
-					<td><a href={`/photos/${photo.id}`}>{photo.alt_text || '(no alt text)'}</a></td>
-					<td>{photoTypeLabel(photo.file_type)}</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
+	<div class="mt-4 overflow-hidden rounded-lg border">
+		<Table>
+			<TableHeader>
+				<TableRow>
+					<TableHead>Thumbnail</TableHead>
+					<TableHead>Alt text</TableHead>
+					<TableHead>Type</TableHead>
+				</TableRow>
+			</TableHeader>
+			<TableBody>
+				{#each photos as photo}
+					<TableRow>
+						<TableCell>
+							<a href={`/photos/${photo.id}`}>
+								<img class="thumb-img" src={dataUrlFor(photo)} alt={photo.alt_text || 'Photo thumbnail'} />
+							</a>
+						</TableCell>
+						<TableCell>
+							<a
+								href={`/photos/${photo.id}`}
+								class="font-medium text-primary underline-offset-4 hover:underline"
+							>
+								{photo.alt_text || '(no alt text)'}
+							</a>
+						</TableCell>
+						<TableCell>{photoTypeLabel(photo.file_type)}</TableCell>
+					</TableRow>
+				{/each}
+			</TableBody>
+		</Table>
+	</div>
 {/if}
 
 <style>
-	.error {
-		color: #c00;
-	}
-	table {
-		border-collapse: collapse;
-		margin-top: 1rem;
-	}
-	th,
-	td {
-		border: 1px solid #ccc;
-		padding: 0.4rem 0.8rem;
-		text-align: left;
-	}
-	.thumb img {
+	.thumb-img {
 		display: block;
 		width: 48px;
 		height: 48px;
