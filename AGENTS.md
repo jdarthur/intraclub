@@ -80,5 +80,9 @@ Verify: `go build ./...` succeeds; Go toolchain is go1.26.
 ## Notes
 - Tickets/issues are tracked **upstream on GitHub** (`jdarthur/intraclub`), not in this repo.
 - All changes must land on `main` **through a pull request** — no direct pushes to `main`.
+- **Always create a PR when marking a work item complete.** Do not mark a
+  work item (ticket, task, or checklist item) as finished until the change has
+  been opened as a pull request via `gh pr create`. A merged PR is what
+  actually completes the work; an un-merged local branch is not "done".
 - `gh` CLI (v2.97.0) is available and authorized for read/write against `origin` (`git@github.com:jdarthur/intraclub.git`) — use it for issue/PR workflows.
 
