@@ -99,6 +99,9 @@ func main() {
 	playoffStructures := api.NewCrudCommon(model.NewPlayoffStructure, false, db)
 	playoffStructures.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
 
+	photos := api.NewCrudCommon(model.NewPhoto, false, db)
+	photos.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
 	err = r.Run(cfg.addr)
 	if err != nil {
 		panic(err)
