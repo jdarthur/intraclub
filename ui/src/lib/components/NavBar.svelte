@@ -18,6 +18,7 @@
 		<a href="/formats">Formats</a>
 		<a href="/ratings">Ratings</a>
 		<a href="/rulesets">Rulesets</a>
+		<a href="/scoring-structures">Scoring Structures</a>
 		<a href="/playoff-structures">Playoff Structures</a>
 	</div>
 	<div class="actions">
