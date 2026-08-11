@@ -2,6 +2,15 @@
 	import { onMount } from 'svelte';
 	import { listFacilities } from '$lib/facility';
 	import type { Facility } from '$lib/facility';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import {
+		Table,
+		TableBody,
+		TableCell,
+		TableHead,
+		TableHeader,
+		TableRow
+	} from '$lib/components/ui/table/index.js';
 
 	let facilities = $state<Facility[]>([]);
 	let loading = $state(true);
@@ -22,48 +31,40 @@
 	<title>Facilities</title>
 </svelte:head>
 
-<h1>Facilities</h1>
-<a href="/facilities/new">New facility</a>
+<div class="flex items-center justify-between gap-4">
+	<h1 class="text-2xl font-semibold tracking-tight">Facilities</h1>
+	<Button href="/facilities/new">New facility</Button>
+</div>
 
 {#if loading}
-	<p>Loading...</p>
+	<p class="text-muted-foreground">Loading...</p>
 {:else if error}
-	<p class="error">{error}</p>
+	<p class="text-sm font-medium text-destructive">{error}</p>
 {:else if facilities.length === 0}
-	<p>No facilities yet.</p>
+	<p class="text-muted-foreground">No facilities yet.</p>
 {:else}
-	<table>
-		<thead>
-			<tr>
-				<th>Name</th>
-				<th>Address</th>
-				<th>Courts</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each facilities as facility}
-				<tr>
-					<td><a href={`/facilities/${facility.id}`}>{facility.name}</a></td>
-					<td>{facility.address}</td>
-					<td>{facility.courts}</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
+	<div class="mt-4 overflow-hidden rounded-lg border">
+		<Table>
+			<TableHeader>
+				<TableRow>
+					<TableHead>Name</TableHead>
+					<TableHead>Address</TableHead>
+					<TableHead>Courts</TableHead>
+				</TableRow>
+			</TableHeader>
+			<TableBody>
+				{#each facilities as facility}
+					<TableRow>
+						<TableCell>
+							<a href={`/facilities/${facility.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+								{facility.name}
+							</a>
+						</TableCell>
+						<TableCell>{facility.address}</TableCell>
+						<TableCell>{facility.courts}</TableCell>
+					</TableRow>
+				{/each}
+			</TableBody>
+		</Table>
+	</div>
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	table {
-		border-collapse: collapse;
-		margin-top: 1rem;
-	}
-	th,
-	td {
-		border: 1px solid #ccc;
-		padding: 0.4rem 0.8rem;
-		text-align: left;
-	}
-</style>

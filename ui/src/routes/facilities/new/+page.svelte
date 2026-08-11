@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { createFacility } from '$lib/facility';
 	import { goto } from '$app/navigation';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
 
 	let name = $state('');
 	let address = $state('');
@@ -33,50 +37,40 @@
 	<title>New facility</title>
 </svelte:head>
 
-<h1>New facility</h1>
-<a href="/facilities">&larr; Back to facilities</a>
+<div class="flex items-center gap-4">
+	<h1 class="text-2xl font-semibold tracking-tight">New facility</h1>
+	<a href="/facilities" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to facilities</a>
+</div>
 
-<form onsubmit={handleSubmit}>
-	<label>
-		Name
-		<input type="text" bind:value={name} required />
-	</label>
-	<label>
-		Address
-		<input type="text" bind:value={address} required />
-	</label>
-	<label>
-		Number of courts
-		<input type="number" bind:value={courts} min="1" required />
-	</label>
-	<label>
-		Layout photo ID (optional)
-		<input type="text" bind:value={layoutPhoto} placeholder="16-char hex ID" />
-	</label>
-	<button type="submit" disabled={submitting}>{submitting ? 'Creating...' : 'Create facility'}</button>
-</form>
+<Card class="mt-6 max-w-md">
+	<CardHeader>
+		<CardTitle class="text-base">Facility details</CardTitle>
+	</CardHeader>
+	<CardContent>
+		<form onsubmit={handleSubmit} class="flex flex-col gap-4">
+			<div class="flex flex-col gap-2">
+				<Label for="name">Name</Label>
+				<Input id="name" type="text" bind:value={name} required />
+			</div>
+			<div class="flex flex-col gap-2">
+				<Label for="address">Address</Label>
+				<Input id="address" type="text" bind:value={address} required />
+			</div>
+			<div class="flex flex-col gap-2">
+				<Label for="courts">Number of courts</Label>
+				<Input id="courts" type="number" bind:value={courts} min="1" required />
+			</div>
+			<div class="flex flex-col gap-2">
+				<Label for="layoutPhoto">Layout photo ID (optional)</Label>
+				<Input id="layoutPhoto" type="text" bind:value={layoutPhoto} placeholder="16-char hex ID" />
+			</div>
+			<Button type="submit" disabled={submitting} class="w-fit">
+				{submitting ? 'Creating...' : 'Create facility'}
+			</Button>
+		</form>
+	</CardContent>
+</Card>
 
 {#if error}
-	<p class="error">{error}</p>
+	<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin-top: 1rem;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	input {
-		padding: 0.35rem;
-	}
-</style>
