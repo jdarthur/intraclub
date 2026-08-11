@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { waitForHydration } from './helpers';
 
 // The Go backend runs with --dev-token from the repo root (see
 // playwright.config.ts), so POST /api/one_time_password returns the magic-link
@@ -21,6 +22,7 @@ test('playoff structure CRUD: create, view, update, delete', async ({ page }) =>
 	await page.goto('/playoff-structures');
 	await page.getByRole('link', { name: 'New playoff structure' }).click();
 	await expect(page).toHaveURL(/\/playoff-structures\/new$/);
+	await waitForHydration(page);
 	await page.getByLabel('Byes').fill('0');
 	await page.getByLabel('Number of teams').fill('8');
 	await page.getByRole('button', { name: 'Create playoff structure' }).click();

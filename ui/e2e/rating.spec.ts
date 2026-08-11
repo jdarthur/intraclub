@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { DatabaseSync } from 'node:sqlite';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { waitForHydration } from './helpers';
 
 // The Go backend runs with --dev-token from the repo root (see
 // playwright.config.ts), so POST /api/one_time_password returns the magic-link
@@ -30,6 +31,7 @@ test('rating CRUD: create, view, update, delete', async ({ page }) => {
 	await page.goto('/ratings');
 	await page.getByRole('link', { name: 'New rating' }).click();
 	await expect(page).toHaveURL(/\/ratings\/new$/);
+	await waitForHydration(page);
 	await page.getByLabel('Name').fill(`Test Rating ${unique}`);
 	await page.getByLabel('Description').fill(`Description ${unique}`);
 	await page.getByRole('button', { name: 'Create rating' }).click();
@@ -68,6 +70,7 @@ test('rating delete is blocked when the rating is assigned to a format', async (
 	// Create a rating to attempt deletion of.
 	const unique = Date.now();
 	await page.goto('/ratings/new');
+	await waitForHydration(page);
 	await page.getByLabel('Name').fill(`In Use Rating ${unique}`);
 	await page.getByLabel('Description').fill(`Description ${unique}`);
 	await page.getByRole('button', { name: 'Create rating' }).click();
