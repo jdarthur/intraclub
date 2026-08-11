@@ -9,6 +9,19 @@
 		deleteScoringStructure
 	} from '$lib/scoringStructure';
 	import type { ScoringStructure, ScoreCountingType } from '$lib/scoringStructure';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import { NativeSelect, NativeSelectOption } from '$lib/components/ui/native-select/index.js';
+	import {
+		Popover,
+		PopoverClose,
+		PopoverContent,
+		PopoverHeader,
+		PopoverTitle,
+		PopoverTrigger
+	} from '$lib/components/ui/popover/index.js';
 
 	const id = () => page.params.id as string;
 
@@ -23,6 +36,7 @@
 	let error = $state('');
 	let saving = $state(false);
 	let deleting = $state(false);
+	let deleteOpen = $state(false);
 
 	function countingTypeName(type: number): string {
 		return countingTypes.find((t) => t.type === type)?.name ?? String(type);
@@ -76,7 +90,7 @@
 	}
 
 	async function handleDelete() {
-		if (!confirm('Delete this scoring structure?')) return;
+		deleteOpen = false;
 		error = '';
 		deleting = true;
 		try {
@@ -95,107 +109,112 @@
 </svelte:head>
 
 {#if loadError}
-	<h1>Scoring Structure</h1>
-	<p class="error">{loadError}</p>
-	<a href="/scoring-structures">&larr; Back to scoring structures</a>
+	<h1 class="text-2xl font-semibold tracking-tight">Scoring Structure</h1>
+	<p class="text-sm font-medium text-destructive">{loadError}</p>
+	<a href="/scoring-structures" class="text-sm text-muted-foreground hover:text-foreground"
+		>&larr; Back to scoring structures</a
+	>
 {:else if !structure}
-	<h1>Scoring Structure</h1>
-	<p>Loading...</p>
+	<h1 class="text-2xl font-semibold tracking-tight">Scoring Structure</h1>
+	<p class="text-muted-foreground">Loading...</p>
 {:else}
-	<h1>{structure.name}</h1>
-	<a href="/scoring-structures">&larr; Back to scoring structures</a>
+	<div class="flex items-center gap-4">
+		<h1 class="text-2xl font-semibold tracking-tight">{structure.name}</h1>
+		<a href="/scoring-structures" class="text-sm text-muted-foreground hover:text-foreground"
+			>&larr; Back to scoring structures</a
+		>
+	</div>
 
-	<dl class="meta">
-		<div>
-			<dt>Counting type</dt>
-			<dd>{countingTypeName(structure.win_condition_counting_type)}</dd>
-		</div>
-		<div>
-			<dt>Win threshold</dt>
-			<dd>{structure.win_condition.win_threshold}</dd>
-		</div>
-		<div>
-			<dt>Must win by</dt>
-			<dd>{structure.win_condition.must_win_by}</dd>
-		</div>
-		<div>
-			<dt>Instant win threshold</dt>
-			<dd>{structure.win_condition.instant_win_threshold}</dd>
-		</div>
-	</dl>
+	<Card class="mt-6 max-w-md">
+		<CardHeader>
+			<CardTitle class="text-base">Scoring structure details</CardTitle>
+		</CardHeader>
+		<CardContent>
+			<dl class="flex flex-col gap-3">
+				<div class="flex flex-col gap-1">
+					<dt class="text-sm text-muted-foreground">Counting type</dt>
+					<dd>{countingTypeName(structure.win_condition_counting_type)}</dd>
+				</div>
+				<div class="flex flex-col gap-1">
+					<dt class="text-sm text-muted-foreground">Win threshold</dt>
+					<dd>{structure.win_condition.win_threshold}</dd>
+				</div>
+				<div class="flex flex-col gap-1">
+					<dt class="text-sm text-muted-foreground">Must win by</dt>
+					<dd>{structure.win_condition.must_win_by}</dd>
+				</div>
+				<div class="flex flex-col gap-1">
+					<dt class="text-sm text-muted-foreground">Instant win threshold</dt>
+					<dd>{structure.win_condition.instant_win_threshold}</dd>
+				</div>
+			</dl>
+		</CardContent>
+	</Card>
 
-	<h2>Edit</h2>
-	<form onsubmit={handleSave}>
-		<label>
-			Name
-			<input type="text" bind:value={name} required />
-		</label>
-		<label>
-			Score counting type
-			<select bind:value={countingType}>
-				{#each countingTypes as ct}
-					<option value={ct.type}>{ct.name}</option>
-				{/each}
-			</select>
-		</label>
-		<label>
-			Win threshold
-			<input type="number" min="1" bind:value={winThreshold} required />
-		</label>
-		<label>
-			Must win by
-			<input type="number" min="1" bind:value={mustWinBy} required />
-		</label>
-		<label>
-			Instant win threshold
-			<input type="number" min="0" bind:value={instantWinThreshold} placeholder="0 (disabled)" />
-		</label>
-		<button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save changes'}</button>
-	</form>
+	<Card class="mt-6 max-w-md">
+		<CardHeader>
+			<CardTitle class="text-base">Edit scoring structure</CardTitle>
+		</CardHeader>
+		<CardContent>
+			<form onsubmit={handleSave} class="flex flex-col gap-4">
+				<div class="flex flex-col gap-2">
+					<Label for="name">Name</Label>
+					<Input id="name" type="text" bind:value={name} required />
+				</div>
+				<div class="flex flex-col gap-2">
+					<Label for="countingType">Score counting type</Label>
+					<NativeSelect id="countingType" bind:value={countingType} class="w-full">
+						{#each countingTypes as ct}
+							<NativeSelectOption value={ct.type}>{ct.name}</NativeSelectOption>
+						{/each}
+					</NativeSelect>
+				</div>
+				<div class="flex flex-col gap-2">
+					<Label for="winThreshold">Win threshold</Label>
+					<Input id="winThreshold" type="number" min="1" bind:value={winThreshold} required />
+				</div>
+				<div class="flex flex-col gap-2">
+					<Label for="mustWinBy">Must win by</Label>
+					<Input id="mustWinBy" type="number" min="1" bind:value={mustWinBy} required />
+				</div>
+				<div class="flex flex-col gap-2">
+					<Label for="instantWinThreshold">Instant win threshold</Label>
+					<Input
+						id="instantWinThreshold"
+						type="number"
+						min="0"
+						bind:value={instantWinThreshold}
+						placeholder="0 (disabled)"
+					/>
+				</div>
+				<Button type="submit" disabled={saving} class="w-fit">
+					{saving ? 'Saving...' : 'Save changes'}
+				</Button>
+			</form>
+		</CardContent>
+	</Card>
 
-	<button type="button" onclick={handleDelete} disabled={deleting} class="danger">
-		{deleting ? 'Deleting...' : 'Delete scoring structure'}
-	</button>
+	<div class="mt-4">
+		<Popover bind:open={deleteOpen}>
+			<PopoverTrigger disabled={deleting} class={buttonVariants({ variant: 'destructive' })}>
+				{deleting ? 'Deleting...' : 'Delete scoring structure'}
+			</PopoverTrigger>
+			<PopoverContent class="w-80">
+				<PopoverHeader>
+					<PopoverTitle>Delete scoring structure?</PopoverTitle>
+					<p class="text-sm text-muted-foreground">
+						This permanently removes this scoring structure and cannot be undone.
+					</p>
+				</PopoverHeader>
+				<div class="flex justify-end gap-2">
+					<PopoverClose class={buttonVariants({ variant: 'outline', size: 'sm' })}>Cancel</PopoverClose>
+					<Button variant="destructive" size="sm" onclick={handleDelete}>Delete</Button>
+				</div>
+			</PopoverContent>
+		</Popover>
+	</div>
 
 	{#if error}
-		<p class="error">{error}</p>
+		<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
 	{/if}
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	.meta {
-		display: flex;
-		gap: 1.5rem;
-		margin: 1rem 0;
-	}
-	.meta dt {
-		font-size: 0.85rem;
-		color: #666;
-	}
-	.meta dd {
-		margin: 0;
-	}
-	form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		max-width: 24rem;
-		margin-top: 0.5rem;
-	}
-	label {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-	input,
-	select {
-		padding: 0.35rem;
-	}
-	.danger {
-		margin-top: 1rem;
-		color: #c00;
-	}
-</style>

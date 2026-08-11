@@ -57,13 +57,13 @@ test('scoring structure CRUD: create, view, update, delete', async ({ page }) =>
 	const row = page.getByRole('link', { name: `Test Scoring Structure ${unique} Updated` });
 	await expect(row).toBeVisible();
 
-	// Delete (accept the confirm dialog)
+	// Delete (confirm via the in-app Popover)
 	await row.click();
 	await expect(
 		page.getByRole('heading', { name: `Test Scoring Structure ${unique} Updated` })
 	).toBeVisible();
-	page.on('dialog', (d) => d.accept());
 	await page.getByRole('button', { name: 'Delete scoring structure' }).click();
+	await page.getByRole('button', { name: 'Delete', exact: true }).click();
 	await expect(page).toHaveURL('/scoring-structures');
 	await expect(
 		page.getByRole('link', { name: `Test Scoring Structure ${unique} Updated` })

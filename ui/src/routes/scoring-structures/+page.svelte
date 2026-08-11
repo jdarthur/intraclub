@@ -2,6 +2,15 @@
 	import { onMount } from 'svelte';
 	import { listScoringStructures, getScoreCountingTypes } from '$lib/scoringStructure';
 	import type { ScoringStructure, ScoreCountingType } from '$lib/scoringStructure';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import {
+		Table,
+		TableBody,
+		TableCell,
+		TableHead,
+		TableHeader,
+		TableRow
+	} from '$lib/components/ui/table/index.js';
 
 	let structures = $state<ScoringStructure[]>([]);
 	let countingTypes = $state<ScoreCountingType[]>([]);
@@ -30,48 +39,43 @@
 	<title>Scoring Structures</title>
 </svelte:head>
 
-<h1>Scoring Structures</h1>
-<a href="/scoring-structures/new">New scoring structure</a>
+<div class="flex items-center justify-between gap-4">
+	<h1 class="text-2xl font-semibold tracking-tight">Scoring Structures</h1>
+	<Button href="/scoring-structures/new">New scoring structure</Button>
+</div>
 
 {#if loading}
-	<p>Loading...</p>
+	<p class="text-muted-foreground">Loading...</p>
 {:else if error}
-	<p class="error">{error}</p>
+	<p class="text-sm font-medium text-destructive">{error}</p>
 {:else if structures.length === 0}
-	<p>No scoring structures yet.</p>
+	<p class="text-muted-foreground">No scoring structures yet.</p>
 {:else}
-	<table>
-		<thead>
-			<tr>
-				<th>Name</th>
-				<th>Counting type</th>
-				<th>Win threshold</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each structures as structure}
-				<tr>
-					<td><a href={`/scoring-structures/${structure.id}`}>{structure.name}</a></td>
-					<td>{countingTypeName(structure.win_condition_counting_type)}</td>
-					<td>{structure.win_condition.win_threshold}</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
+	<div class="mt-4 overflow-hidden rounded-lg border">
+		<Table>
+			<TableHeader>
+				<TableRow>
+					<TableHead>Name</TableHead>
+					<TableHead>Counting type</TableHead>
+					<TableHead>Win threshold</TableHead>
+				</TableRow>
+			</TableHeader>
+			<TableBody>
+				{#each structures as structure}
+					<TableRow>
+						<TableCell>
+							<a
+								href={`/scoring-structures/${structure.id}`}
+								class="font-medium text-primary underline-offset-4 hover:underline"
+							>
+								{structure.name}
+							</a>
+						</TableCell>
+						<TableCell>{countingTypeName(structure.win_condition_counting_type)}</TableCell>
+						<TableCell>{structure.win_condition.win_threshold}</TableCell>
+					</TableRow>
+				{/each}
+			</TableBody>
+		</Table>
+	</div>
 {/if}
-
-<style>
-	.error {
-		color: #c00;
-	}
-	table {
-		border-collapse: collapse;
-		margin-top: 1rem;
-	}
-	th,
-	td {
-		border: 1px solid #ccc;
-		padding: 0.4rem 0.8rem;
-		text-align: left;
-	}
-</style>
