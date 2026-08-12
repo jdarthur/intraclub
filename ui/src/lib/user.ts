@@ -44,6 +44,40 @@ export async function getUser(id: string): Promise<User> {
 	return unwrap(await authFetch(`${BASE}/${id}`));
 }
 
+/**
+ * Result of POST /api/import_users_from_csv. Field names are capitalized
+ * because the backend's `route.CsvImportResult` struct has no JSON tags.
+ */
+export interface CsvImportResult {
+	CreatedCount: number;
+	Created: User[];
+	AlreadyExisting: User[];
+}
+
+/**
+ * Import users from CSV text. The backend expects the CSV as a urlencoded form
+ * field named `file` (headers: `First Name`, `Last Name`, `Email`). Users whose
+ * email already exists are skipped and returned in `AlreadyExisting`.
+ */
+export async function importUsersFromCsv(csv: string): Promise<CsvImportResult> {
+	const res = await authFetch('/api/import_users_from_csv', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+		body: new URLSearchParams({ file: csv })
+	});
+	if (!res.ok) {
+		let message = `Request failed (${res.status})`;
+		try {
+			const body = await res.json();
+			if (body?.error) message = body.error;
+		} catch {
+			// non-JSON error body; fall back to the status message
+		}
+		throw new Error(message);
+	}
+	return (await res.json()) as CsvImportResult;
+}
+
 export function fullName(user: Pick<User, 'first_name' | 'last_name'>): string {
 	return `${user.first_name} ${user.last_name}`.trim();
 }

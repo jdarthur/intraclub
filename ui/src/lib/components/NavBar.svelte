@@ -24,6 +24,7 @@
 			<a href="/playoff-structures" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Playoff Structures</a>
 			<a href="/drafts" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Drafts</a>
 			<a href="/photos" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Photos</a>
+			<a href="/users/import" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Users</a>
 		</nav>
 		<div class="ml-auto flex items-center">
 			{#if loggedIn}
