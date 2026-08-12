@@ -341,13 +341,34 @@
 
 	<Tabs bind:value={activeTab} orientation="vertical" class="mt-6 flex gap-6">
 		<TabsList class="h-fit w-56 shrink-0 items-stretch">
-			<TabsTrigger value="captains" class="justify-start px-3 py-2 text-base">
+			<TabsTrigger
+				value="captains"
+				class="group justify-start gap-2.5 px-3 py-2 text-base data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-sm dark:data-[state=active]:bg-input/30"
+			>
+				<span
+					class="size-1.5 shrink-0 rounded-full bg-primary opacity-0 transition-opacity group-data-[state=active]:opacity-100"
+					aria-hidden="true"
+				></span>
 				Captains &amp; teams
 			</TabsTrigger>
-			<TabsTrigger value="players" class="justify-start px-3 py-2 text-base">
+			<TabsTrigger
+				value="players"
+				class="group justify-start gap-2.5 px-3 py-2 text-base data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-sm dark:data-[state=active]:bg-input/30"
+			>
+				<span
+					class="size-1.5 shrink-0 rounded-full bg-primary opacity-0 transition-opacity group-data-[state=active]:opacity-100"
+					aria-hidden="true"
+				></span>
 				Available players
 			</TabsTrigger>
-			<TabsTrigger value="cutoffs" class="justify-start px-3 py-2 text-base">
+			<TabsTrigger
+				value="cutoffs"
+				class="group justify-start gap-2.5 px-3 py-2 text-base data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-sm dark:data-[state=active]:bg-input/30"
+			>
+				<span
+					class="size-1.5 shrink-0 rounded-full bg-primary opacity-0 transition-opacity group-data-[state=active]:opacity-100"
+					aria-hidden="true"
+				></span>
 				Rating cutoffs
 			</TabsTrigger>
 		</TabsList>

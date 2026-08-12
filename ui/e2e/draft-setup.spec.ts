@@ -77,6 +77,13 @@ test('draft setup page configures captains, players, and rating cutoffs', async 
 	await expect(page.getByRole('heading', { name: draftName })).toBeVisible();
 	await waitForHydration(page);
 
+	// The active tab is visually indicated (bold) so it's clear at a glance
+	// which section is shown. Captains is the default tab.
+	await expect(page.getByRole('tab', { name: 'Captains & teams' })).toHaveCSS(
+		'font-weight',
+		'600'
+	);
+
 	await page.getByLabel('Captain', { exact: true }).selectOption({ label: captainOne });
 	await page.getByRole('button', { name: 'Add captain' }).click();
 	await page.getByLabel('Captain', { exact: true }).selectOption({ label: captainTwo });
