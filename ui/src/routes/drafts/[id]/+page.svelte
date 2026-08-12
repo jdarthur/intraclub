@@ -277,6 +277,9 @@
 <div class="flex items-center gap-4">
 	<h1 class="text-2xl font-semibold tracking-tight">{draft?.name ?? 'Draft'}</h1>
 	<div class="ml-auto flex items-center gap-3">
+		<a href={`/drafts/${id()}/draft`} class="text-sm text-muted-foreground hover:text-foreground">
+			Live draft board →
+		</a>
 		<a href={`/drafts/${id()}/grades`} class="text-sm text-muted-foreground hover:text-foreground">
 			Pre-draft grades →
 		</a>
