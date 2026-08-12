@@ -48,6 +48,7 @@
 		TabsList,
 		TabsTrigger
 	} from '$lib/components/ui/tabs/index.js';
+	import * as TransferList from '$lib/components/ui/transfer-list/index.js';
 
 	const id = () => page.params.id as string;
 
@@ -71,9 +72,10 @@
 	let initializing = $state(false);
 	let actionError = $state('');
 
-	// Available players configuration.
-	let playerToAdd = $state('');
-	let addingPlayer = $state(false);
+	// Available players configuration (transfer-list PoC). The core holds the
+	// in-memory source/target lists and selection; we persist diffs on save.
+	let transferCore = $state<TransferList.Core<User> | null>(null);
+	let savingPlayers = $state(false);
 
 	// Rating cutoffs configuration. Kept as an array of entry objects so each
 	// input can bind to a stable item property (binding to a dynamic object key
@@ -120,6 +122,18 @@
 			availablePlayers = availableList.filter((a) => a.draft_id === draftData.id);
 			ratingCutoffs = cutoffList.filter((c) => c.draft_id === draftData.id);
 			picks = pickList.filter((p) => p.draft_id === draftData.id);
+
+			// Seed the transfer list: source = every user not already in the
+			// pool, target = the currently available players.
+			const inPool = new Set(availablePlayers.map((a) => a.player_id));
+			transferCore = new TransferList.Core<User>({
+				initialSource: users.filter((u) => !inPool.has(u.id)),
+				initialTarget: availablePlayers
+					.map((a) => users.find((u) => u.id === a.player_id))
+					.filter((u): u is User => u !== undefined),
+				filterPredicate: (u, search) =>
+					fullName(u).toLowerCase().includes(search.toLowerCase())
+			});
 
 			// Seed the cutoff inputs from the existing rows.
 			cutoffEntries = ratingsToConfigure().map((rating) => {
@@ -179,28 +193,31 @@
 
 	// --- Available players ---
 
-	async function handleAddPlayer() {
+	// Persists the transfer-list state: adds players that moved into the
+	// target, removes players that moved back to the source.
+	async function handleSavePlayers() {
 		actionError = '';
-		if (!playerToAdd) return;
-		addingPlayer = true;
+		if (!transferCore) return;
+		const poolIds = new Set(availablePlayers.map((a) => a.player_id));
+		const targetIds = new Set(transferCore.target.map((u) => u.id));
+		const toAdd = transferCore.target
+			.filter((u) => !poolIds.has(u.id))
+			.map((u) => u.id);
+		const toRemove = availablePlayers.filter((a) => !targetIds.has(a.player_id));
+		if (toAdd.length === 0 && toRemove.length === 0) return;
+		savingPlayers = true;
 		try {
-			await assignDraftablePlayers(id(), [playerToAdd]);
-			playerToAdd = '';
+			if (toAdd.length > 0) {
+				await assignDraftablePlayers(id(), toAdd);
+			}
+			for (const row of toRemove) {
+				await deleteDraftAvailablePlayer(row.id);
+			}
 			await load();
 		} catch (e) {
-			actionError = e instanceof Error ? e.message : 'Failed to add player';
+			actionError = e instanceof Error ? e.message : 'Failed to save players';
 		} finally {
-			addingPlayer = false;
-		}
-	}
-
-	async function handleRemovePlayer(row: DraftAvailablePlayer) {
-		actionError = '';
-		try {
-			await deleteDraftAvailablePlayer(row.id);
-			await load();
-		} catch (e) {
-			actionError = e instanceof Error ? e.message : 'Failed to remove player';
+			savingPlayers = false;
 		}
 	}
 
@@ -455,40 +472,60 @@
 			</CardHeader>
 			<CardContent>
 				<p class="text-sm text-muted-foreground">
-					Add the players who are eligible to be drafted. Keep the count even-ish across
-					teams so each team ends up with a fair roster.
+					Move players into the pool to make them eligible to be drafted. Keep the count
+					even-ish across teams so each team ends up with a fair roster. Changes apply when
+					you save.
 				</p>
-				<div class="mt-4 flex flex-col gap-2">
-					<Label for="player-select">Player</Label>
-					<div class="flex gap-2">
-						<NativeSelect id="player-select" bind:value={playerToAdd} class="w-full">
-							<NativeSelectOption value="" disabled>Select a player…</NativeSelectOption>
-							{#each userOptions(availablePlayers.map((a) => a.player_id)) as u}
-								<NativeSelectOption value={u.id}>{fullName(u)}</NativeSelectOption>
-							{/each}
-						</NativeSelect>
-						<Button type="button" variant="outline" onclick={handleAddPlayer} disabled={addingPlayer}>
-							Add player
-						</Button>
+				{#if transferCore}
+					<div class="mt-4">
+						<TransferList.Root direction="horizontal">
+							<TransferList.Container>
+								<TransferList.Title title="All players" />
+								<TransferList.Toolbar
+									variant="source"
+									core={transferCore}
+									inputPlaceholder="Search players..."
+								/>
+								<TransferList.Body>
+									{#each transferCore.filteredSource as row (row.id)}
+										<TransferList.Item side="source" {row} core={transferCore}>
+											{fullName(row)}
+										</TransferList.Item>
+									{/each}
+								</TransferList.Body>
+							</TransferList.Container>
+							<TransferList.Container>
+								<TransferList.Title title="Available for draft" />
+								<TransferList.Toolbar
+									variant="target"
+									core={transferCore}
+									inputPlaceholder="Search players..."
+								/>
+								<TransferList.Body>
+									{#each transferCore.filteredTarget as row (row.id)}
+										<TransferList.Item side="target" {row} core={transferCore}>
+											{fullName(row)}
+										</TransferList.Item>
+									{/each}
+								</TransferList.Body>
+							</TransferList.Container>
+						</TransferList.Root>
+						<div class="mt-4 flex items-center gap-3">
+							<Button
+								type="button"
+								onclick={handleSavePlayers}
+								disabled={savingPlayers}
+							>
+								{savingPlayers ? 'Saving...' : 'Save players'}
+							</Button>
+							<span class="text-sm text-muted-foreground">
+								{transferCore.target.length} player{transferCore.target.length === 1 ? '' : 's'}
+								in pool
+							</span>
+						</div>
 					</div>
-				</div>
-				{#if availablePlayers.length === 0}
-					<p class="mt-4 text-sm text-muted-foreground">No available players yet.</p>
 				{:else}
-					<ul class="mt-4 flex flex-col gap-2">
-						{#each availablePlayers as player}
-							<li class="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-								<span>{userName(player.player_id)}</span>
-								<Button
-									type="button"
-									variant="ghost"
-									onclick={() => handleRemovePlayer(player)}
-								>
-									Remove
-								</Button>
-							</li>
-						{/each}
-					</ul>
+					<p class="mt-4 text-sm text-muted-foreground">Loading players...</p>
 				{/if}
 			</CardContent>
 		</Card>

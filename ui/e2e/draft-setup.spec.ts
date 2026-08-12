@@ -97,17 +97,17 @@ test('draft setup page configures captains, players, and rating cutoffs', async 
 
 	// --- Available players ---
 	await page.getByRole('tab', { name: 'Available players' }).click();
-	await page.getByLabel('Player', { exact: true }).selectOption({ label: rosterOne });
-	await page.getByRole('button', { name: 'Add player' }).click();
-	// Wait for the first add's reload to commit before adding the second, so the
-	// select/button DOM is stable.
-	await expect(page.getByRole('list').getByText(rosterOne)).toBeVisible();
-	await page.getByLabel('Player', { exact: true }).selectOption({ label: rosterTwo });
-	await page.getByRole('button', { name: 'Add player' }).click();
-	await expect(page.getByRole('list').getByText(rosterTwo)).toBeVisible();
+
+	// The two roster players start in the source panel; select and move them
+	// into the pool with the transfer list, then save.
+	await page.getByRole('button', { name: rosterOne }).click();
+	await page.getByRole('button', { name: rosterTwo }).click();
+	await page.getByRole('button', { name: 'Move selected to pool' }).click();
+	await page.getByRole('button', { name: 'Save players' }).click();
+	// Saving reloads; the players now sit in the target (in-pool) panel.
+	await expect(page.getByText(rosterTwo)).toBeVisible();
 
 	// Two captains (auto-added) + two roster players = 4 across 2 teams.
-	await expect(page.getByRole('list').getByText(rosterOne)).toBeVisible();
 	await expect(page.getByText('4 available players across 2 teams (2 per team)')).toBeVisible();
 
 	// --- Rating cutoffs ---
