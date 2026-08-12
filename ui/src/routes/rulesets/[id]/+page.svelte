@@ -75,7 +75,7 @@
 </script>
 
 <svelte:head>
-	<title>{ruleset ? ruleset.name : 'Ruleset'}</title>
+	<title>Intraclub | {ruleset ? ruleset.name : 'Ruleset'}</title>
 </svelte:head>
 
 {#if loadError}

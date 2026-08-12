@@ -36,7 +36,7 @@
 </script>
 
 <svelte:head>
-	<title>Scoring Structures</title>
+	<title>Intraclub | Scoring Structures</title>
 </svelte:head>
 
 <div class="flex items-center justify-between gap-4">

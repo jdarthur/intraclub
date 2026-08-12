@@ -30,7 +30,7 @@
 </script>
 
 <svelte:head>
-	<title>New playoff structure</title>
+	<title>Intraclub | New playoff structure</title>
 </svelte:head>
 
 <div class="flex items-center gap-4">

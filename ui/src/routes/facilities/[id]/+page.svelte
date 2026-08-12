@@ -81,7 +81,7 @@
 </script>
 
 <svelte:head>
-	<title>{facility ? facility.name : 'Facility'}</title>
+	<title>Intraclub | {facility ? facility.name : 'Facility'}</title>
 </svelte:head>
 
 {#if loadError}

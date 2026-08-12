@@ -27,7 +27,7 @@
 </script>
 
 <svelte:head>
-	<title>Import users</title>
+	<title>Intraclub | Import users</title>
 </svelte:head>
 
 <div class="flex items-center gap-4">

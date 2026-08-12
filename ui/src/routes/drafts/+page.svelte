@@ -47,7 +47,7 @@
 </script>
 
 <svelte:head>
-	<title>Drafts</title>
+	<title>Intraclub | Drafts</title>
 </svelte:head>
 
 <div class="flex items-center justify-between gap-4">

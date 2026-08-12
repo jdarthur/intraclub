@@ -48,7 +48,7 @@
 </script>
 
 <svelte:head>
-	<title>Logging in...</title>
+	<title>Intraclub | Logging in...</title>
 </svelte:head>
 
 {#if status === 'exchanging'}

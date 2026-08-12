@@ -26,7 +26,7 @@
 </script>
 
 <svelte:head>
-	<title>New ruleset</title>
+	<title>Intraclub | New ruleset</title>
 </svelte:head>
 
 <div class="flex items-center gap-4">

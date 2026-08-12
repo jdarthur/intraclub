@@ -105,7 +105,7 @@
 </script>
 
 <svelte:head>
-	<title>{structure ? structure.name : 'Scoring Structure'}</title>
+	<title>Intraclub | {structure ? structure.name : 'Scoring Structure'}</title>
 </svelte:head>
 
 {#if loadError}

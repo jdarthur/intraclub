@@ -135,7 +135,7 @@
 </script>
 
 <svelte:head>
-	<title>{format ? format.name : 'Format'}</title>
+	<title>Intraclub | {format ? format.name : 'Format'}</title>
 </svelte:head>
 
 {#if loadError}

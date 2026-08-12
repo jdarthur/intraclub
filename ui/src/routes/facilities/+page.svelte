@@ -28,7 +28,7 @@
 </script>
 
 <svelte:head>
-	<title>Facilities</title>
+	<title>Intraclub | Facilities</title>
 </svelte:head>
 
 <div class="flex items-center justify-between gap-4">

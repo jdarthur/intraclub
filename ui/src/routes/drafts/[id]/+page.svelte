@@ -271,7 +271,7 @@
 </script>
 
 <svelte:head>
-	<title>{draft ? draft.name : 'Draft'}</title>
+	<title>Intraclub | {draft ? draft.name : 'Draft'}</title>
 </svelte:head>
 
 <div class="flex items-center gap-4">

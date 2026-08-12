@@ -28,7 +28,7 @@
 </script>
 
 <svelte:head>
-	<title>Playoff Structures</title>
+	<title>Intraclub | Playoff Structures</title>
 </svelte:head>
 
 <div class="flex items-center justify-between gap-4">

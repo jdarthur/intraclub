@@ -28,7 +28,7 @@
 </script>
 
 <svelte:head>
-	<title>Formats</title>
+	<title>Intraclub | Formats</title>
 </svelte:head>
 
 <div class="flex items-center justify-between gap-4">
