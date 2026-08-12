@@ -22,17 +22,38 @@ func getDevContext() context.Context {
 }
 
 func seedDevUsers(db database.Provider) *User {
-	user1 := NewUser()
-	user1.FirstName = "JD"
-	user1.LastName = "Arthur"
-	user1.Email = "jdarthur@gatech.edu"
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	v, err := database.CreateOne(ctx, db, user1)
-	if err != nil {
-		panic(err)
+	devUsers := []struct {
+		FirstName string
+		LastName  string
+		Email     string
+	}{
+		{"JD", "Arthur", "jdarthur@gatech.edu"},
+		{"Avery", "Chen", "avery.chen@example.com"},
+		{"Bailey", "Nguyen", "bailey.nguyen@example.com"},
+		{"Cameron", "Patel", "cameron.patel@example.com"},
+		{"Dana", "Kim", "dana.kim@example.com"},
+		{"Elliot", "Garcia", "elliot.garcia@example.com"},
+		{"Frankie", "Rossi", "frankie.rossi@example.com"},
+		{"Grayson", "Walsh", "grayson.walsh@example.com"},
+		{"Harper", "Okafor", "harper.okafor@example.com"},
+		{"Imani", "Silva", "imani.silva@example.com"},
+	}
+
+	var v *User
+	for _, u := range devUsers {
+		user := NewUser()
+		user.FirstName = u.FirstName
+		user.LastName = u.LastName
+		user.Email = EmailAddress(u.Email)
+
+		created, err := database.CreateOne(ctx, db, user)
+		if err != nil {
+			panic(err)
+		}
+		v = created
 	}
 	return v
 }
