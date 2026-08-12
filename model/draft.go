@@ -56,10 +56,10 @@ func (t TeamCaptainAssignment) DynamicallyValid(ctx context.Context, db database
 // RatingId that the user will consequently have based on the rating
 // cutoff values assigned for the Draft
 type DraftSelection struct {
-	Round  int
-	Pick   int
-	User   *User
-	Rating RatingId
+	Round  int      `json:"round"`
+	Pick   int      `json:"pick"`
+	User   *User    `json:"user"`
+	Rating RatingId `json:"rating"`
 }
 
 type DraftId database.RecordId

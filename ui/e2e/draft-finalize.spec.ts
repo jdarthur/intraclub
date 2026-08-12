@@ -213,6 +213,26 @@ test('finalizing a completed draft assigns rosters and creates a Season', async 
 		expect(rosterUserIds.has(id)).toBeTruthy();
 	}
 
+	// --- Results page: read-only view of final teams, rosters, ratings, and
+	// the created Season ---
+	await page.goto(`/drafts/${draftId}/results`);
+	await waitForHydration(page);
+	// Wait for the page to finish loading (the Season link appears once the
+	// draft + results + seasons have all resolved).
+	await expect(page.getByRole('link', { name: seasonName })).toBeVisible();
+	await expect(page.getByRole('heading', { name: draftName })).toBeVisible();
+	// Completion state is shown and links back to the setup page.
+	await expect(page.getByText('Completed')).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Draft setup' })).toBeVisible();
+	// Both teams and their drafted members are listed with assigned ratings.
+	await expect(page.getByText('Team 1')).toBeVisible();
+	await expect(page.getByText('Team 2')).toBeVisible();
+	// Captains appear both in the "Captain:" line and their roster entry, so
+	// scope to the roster list item to avoid a strict-mode match.
+	await expect(page.getByText(`${alexName} (captain)`)).toBeVisible();
+	await expect(page.getByText(`${blakeName} (captain)`)).toBeVisible();
+	await expect(page.getByText(`${people[2].first} ${people[2].last}`)).toBeVisible();
+
 	// Clean up the draft so the table doesn't accumulate rows across runs.
 	const cleanup = await page.request.delete(`${API}/draft/${draftId}`, {
 		headers: { 'X-INTRACLUB-TOKEN': token }

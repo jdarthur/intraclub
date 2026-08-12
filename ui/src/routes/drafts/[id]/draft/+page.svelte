@@ -273,6 +273,12 @@
 		<a href={`/drafts/${id()}`} class="text-sm text-muted-foreground hover:text-foreground">
 			&larr; Draft setup
 		</a>
+		<a
+			href={`/drafts/${id()}/results`}
+			class="text-sm text-muted-foreground hover:text-foreground"
+		>
+			Results →
+		</a>
 	</div>
 </div>
 

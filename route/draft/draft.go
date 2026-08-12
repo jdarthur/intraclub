@@ -226,6 +226,64 @@ func (c SelectByCaptain) Handler(req api.Request[*SelectBody]) (any, int, error)
 	return gin.H{api.ResourceKey: draft}, http.StatusOK, nil
 }
 
+// DraftTeamResults groups one team's DraftSelection rows together with the
+// team's captain and draft order. It is one entry in the GetDraftResults
+// response.
+type DraftTeamResults struct {
+	TeamId     model.TeamId           `json:"team_id"`
+	CaptainId  database.UserId        `json:"captain_id"`
+	DraftOrder int                    `json:"draft_order"`
+	Selections []model.DraftSelection `json:"selections"`
+}
+
+// DraftResults is the response body for GetDraftResults: the draft's teams (in
+// draft order) with each team's rosters and per-player assigned ratings.
+type DraftResults struct {
+	Teams []DraftTeamResults `json:"teams"`
+}
+
+// GetDraftResults returns a read-only summary of a draft's final teams and
+// rosters, including each player's assigned rating. It is readable by anyone
+// who can view the draft (Draft is AccessibleToEveryone), mirroring the
+// model.Draft.GetDraftSelections / GetDraftSelectionsByCaptainId helpers.
+type GetDraftResults struct{}
+
+func (c GetDraftResults) Path() (api.HttpMethod, string) {
+	return api.HttpMethodGet, api.AppendPathId(BaseRoute) + "/results"
+}
+
+func (c GetDraftResults) RequestBody() (*EmptyBody, bool) {
+	return &EmptyBody{}, false
+}
+
+func (c GetDraftResults) Handler(req api.Request[*EmptyBody]) (any, int, error) {
+	draft, err := database.GetExistingRecordById(req.Context, req.DatabaseProvider, &model.Draft{}, req.PathId)
+	if err != nil {
+		return nil, http.StatusBadRequest, err
+	}
+
+	captains, err := draft.GetCaptains(req.Context, req.DatabaseProvider)
+	if err != nil {
+		return nil, http.StatusBadRequest, err
+	}
+
+	teams := make([]DraftTeamResults, 0, len(captains))
+	for _, captain := range captains {
+		selections, err := draft.GetDraftSelections(req.DatabaseProvider, captain.TeamId)
+		if err != nil {
+			return nil, http.StatusBadRequest, err
+		}
+		teams = append(teams, DraftTeamResults{
+			TeamId:     captain.TeamId,
+			CaptainId:  captain.CaptainId,
+			DraftOrder: captain.DraftOrder,
+			Selections: selections,
+		})
+	}
+
+	return gin.H{api.ResourceKey: DraftResults{Teams: teams}}, http.StatusOK, nil
+}
+
 // AssignDraftedPlayersToTeams finalizes a completed draft by assigning each
 // drafted player to their team with their draft rating (see
 // model.Draft.AssignDraftedPlayersToTeams).
