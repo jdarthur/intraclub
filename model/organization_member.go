@@ -111,6 +111,14 @@ func (m *OrganizationMember) SetDeletedAt(deletedAt *time.Time) {
 	m.DeletedAt = deletedAt
 }
 
+// NewOrganizationMember allocates a new *OrganizationMember record. Calling
+// this function (as opposed to doing e.g. `v := &OrganizationMember{}`) allows
+// us to easily navigate to all the points in the code which allocate a new
+// OrganizationMember.
+func NewOrganizationMember() *OrganizationMember {
+	return &OrganizationMember{}
+}
+
 func (m *OrganizationMember) NewRecord() database.CrudRecord {
 	return new(OrganizationMember)
 }

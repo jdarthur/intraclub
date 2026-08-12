@@ -15,6 +15,7 @@ import (
 	"intraclub/route"
 	"intraclub/route/draft"
 	"intraclub/route/format"
+	"intraclub/route/organization"
 	"intraclub/route/ruleset"
 	"intraclub/route/user"
 
@@ -76,6 +77,10 @@ func main() {
 
 	facilities := api.NewCrudCommon(model.NewFacility, false, db)
 	facilities.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	organizations := api.NewCrudCommon(model.NewOrganization, false, db)
+	organizations.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+	organization.RegisterRoutes(rg, db)
 
 	rg.GET("/score_counting_types", model.GetScoreCountingTypes)
 	scoringStructures := api.NewCrudCommon(model.NewScoringStructure, false, db)

@@ -84,6 +84,14 @@ func (a Request[T]) ParseQuery(v any) error {
 	return json.Unmarshal(b, v)
 }
 
+// HTTPRequest returns the underlying net/http.Request for this API request.
+// It is primarily used by routes that need to read path parameters beyond the
+// standard :id parameter (e.g. nested resource routes such as
+// /organization/:id/members/:userId).
+func (a Request[T]) HTTPRequest() *http.Request {
+	return a.request
+}
+
 // RouteFamily is a typed helper struct to implement a common interface for
 // API endpoints. Most API routes should use common helpers such as CrudCommon,
 // but this helper can be used for, e.g., special one-off routes or routes
