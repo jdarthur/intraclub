@@ -408,6 +408,92 @@ func TestDraftFullFlow(t *testing.T) {
 	}
 }
 
+func TestDraftResultsEndpoint(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	router := newTestRouter(t, db)
+	commissioner := newStoredUser(t, db)
+	format := newDefaultFormat(t, db)
+
+	captains := make([]*model.User, 3)
+	captainTokens := make(map[database.UserId]string)
+	for i := 0; i < 3; i++ {
+		c := newStoredUser(t, db)
+		captains[i] = c
+		captainTokens[c.ID] = newToken(t, c.ID)
+	}
+
+	draftID := createDraftViaHTTP(t, router, commissioner.ID, format.ID, "Results Draft")
+	captainIDs := make([]string, len(captains))
+	for i, c := range captains {
+		captainIDs[i] = c.ID.String()
+	}
+	w := doJSON(t, router, http.MethodPost, "/api/draft/"+draftID+"/initialize", map[string]any{
+		"captains": captainIDs,
+	}, newToken(t, commissioner.ID))
+	require.Equal(t, http.StatusOK, w.Code, "initialize: %s", w.Body.String())
+
+	// Assign rating cutoffs for every rating except the lowest.
+	draft, err := database.GetExistingRecordById(context.Background(), db, &model.Draft{}, mustParseRecordID(t, draftID))
+	require.NoError(t, err)
+	possibleRatings, err := format.GetPossibleRatings(context.Background(), db)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(possibleRatings), 2)
+	for i, r := range possibleRatings[:len(possibleRatings)-1] {
+		w = doJSON(t, router, http.MethodPost, "/api/draft/"+draftID+"/assign_rating_cutoff", map[string]any{
+			"rating": r.String(),
+			"cutoff": i + 1,
+		}, newToken(t, commissioner.ID))
+		require.Equal(t, http.StatusOK, w.Code, "assign rating cutoff: %s", w.Body.String())
+	}
+
+	// Drive the draft to completion so every team has selections.
+	completeDraftViaHTTP(t, router, db, draftID, captainTokens)
+	require.True(t, draft.IsDraftCompleted(context.Background(), db))
+
+	// The results endpoint returns each team (in draft order) with its roster
+	// and per-player assigned ratings. It is readable by a non-owner user.
+	outsider := newStoredUser(t, db)
+	w = doJSON(t, router, http.MethodGet, "/api/draft/"+draftID+"/results", nil, newToken(t, outsider.ID))
+	require.Equal(t, http.StatusOK, w.Code, "results: %s", w.Body.String())
+
+	var resp struct {
+		Resource struct {
+			Teams []struct {
+				TeamId     string `json:"team_id"`
+				CaptainId  string `json:"captain_id"`
+				DraftOrder int    `json:"draft_order"`
+				Selections []struct {
+					Round  int    `json:"round"`
+					Pick   int    `json:"pick"`
+					Rating string `json:"rating"`
+					User   struct {
+						ID string `json:"id"`
+					} `json:"user"`
+				} `json:"selections"`
+			} `json:"teams"`
+		} `json:"resource"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Len(t, resp.Resource.Teams, len(captains))
+
+	// Teams are returned in draft order and every selection has a rating.
+	selectionsTotal := 0
+	for i, team := range resp.Resource.Teams {
+		require.Equal(t, i, team.DraftOrder)
+		require.Equal(t, captains[i].ID.String(), team.CaptainId)
+		require.NotEmpty(t, team.TeamId)
+		for _, sel := range team.Selections {
+			require.Greater(t, sel.Round, 0)
+			require.Greater(t, sel.Pick, 0)
+			require.NotEmpty(t, sel.Rating)
+			require.NotEmpty(t, sel.User.ID)
+		}
+		selectionsTotal += len(team.Selections)
+	}
+	// Every drafted player (captains + extra players) is accounted for.
+	require.Equal(t, len(captains), selectionsTotal)
+}
+
 func TestDraftRatingCutoffCRUD(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	router := newTestRouter(t, db)

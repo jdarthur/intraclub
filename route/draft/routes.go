@@ -40,6 +40,8 @@ func RegisterRoutes(e *gin.RouterGroup, db database.Provider) {
 	selectFamily.Handle(e, SelectByCaptain{})
 	assignFamily := api.RouteFamily[*EmptyBody]{DatabaseProvider: db}
 	assignFamily.Handle(e, AssignDraftedPlayersToTeams{})
+	resultsFamily := api.RouteFamily[*EmptyBody]{DatabaseProvider: db}
+	resultsFamily.Handle(e, GetDraftResults{})
 	seasonFamily := api.RouteFamily[*CreateSeasonBody]{DatabaseProvider: db}
 	seasonFamily.Handle(e, CreateSeason{})
 	patternFamily := api.RouteFamily[*SetDraftOrderPatternBody]{DatabaseProvider: db}

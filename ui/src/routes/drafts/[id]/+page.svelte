@@ -283,6 +283,9 @@
 		<a href={`/drafts/${id()}/grades`} class="text-sm text-muted-foreground hover:text-foreground">
 			Pre-draft grades →
 		</a>
+		<a href={`/drafts/${id()}/results`} class="text-sm text-muted-foreground hover:text-foreground">
+			Results →
+		</a>
 		<a href="/drafts" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to drafts</a>
 	</div>
 </div>

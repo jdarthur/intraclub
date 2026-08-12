@@ -21,6 +21,7 @@
 // (e.g. "Snake") rather than an opaque interface value. Record IDs are 16-char
 // hex strings; an empty string represents "not set" (InvalidRecordId).
 import { authFetch } from '$lib/auth';
+import type { User } from '$lib/user';
 
 export interface Draft {
 	id: string;
@@ -197,4 +198,35 @@ export async function createSeason(id: string, input: CreateSeasonInput): Promis
 			body: JSON.stringify(input)
 		})
 	);
+}
+
+// DraftSelection is one player's result in a completed draft: the round/pick
+// they were taken at, the drafted user, and their assigned rating.
+export interface DraftSelection {
+	round: number;
+	pick: number;
+	user: User;
+	rating: string;
+}
+
+// DraftTeamResults groups one team's DraftSelection rows with its captain and
+// draft order. It is one entry in the getDraftResults response.
+export interface DraftTeamResults {
+	team_id: string;
+	captain_id: string;
+	draft_order: number;
+	selections: DraftSelection[];
+}
+
+// DraftResults is the response of getDraftResults: the draft's teams (in draft
+// order) with each team's rosters and per-player assigned ratings.
+export interface DraftResults {
+	teams: DraftTeamResults[];
+}
+
+// getDraftResults fetches a read-only summary of a draft's final teams and
+// rosters, including each player's assigned rating
+// (GET /api/draft/:id/results).
+export async function getDraftResults(id: string): Promise<DraftResults> {
+	return unwrap(await authFetch(`${BASE}/${id}/results`));
 }
