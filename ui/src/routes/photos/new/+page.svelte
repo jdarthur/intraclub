@@ -53,7 +53,7 @@
 </script>
 
 <svelte:head>
-	<title>New photo</title>
+	<title>Intraclub | New photo</title>
 </svelte:head>
 
 <div class="flex items-center gap-4">

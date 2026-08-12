@@ -106,7 +106,7 @@
 </script>
 
 <svelte:head>
-	<title>{season ? season.name : 'Season'}</title>
+	<title>Intraclub | {season ? season.name : 'Season'}</title>
 </svelte:head>
 
 <div class="flex items-center gap-4">

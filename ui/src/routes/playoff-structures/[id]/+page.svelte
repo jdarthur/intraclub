@@ -81,7 +81,7 @@
 </script>
 
 <svelte:head>
-	<title>Playoff Structure</title>
+	<title>Intraclub | Playoff Structure</title>
 </svelte:head>
 
 {#if loadError}

@@ -108,7 +108,7 @@
 </script>
 
 <svelte:head>
-	<title>Photo</title>
+	<title>Intraclub | Photo</title>
 </svelte:head>
 
 {#if loadError}

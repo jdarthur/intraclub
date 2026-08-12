@@ -26,7 +26,7 @@
 </script>
 
 <svelte:head>
-	<title>New format</title>
+	<title>Intraclub | New format</title>
 </svelte:head>
 
 <div class="flex items-center gap-4">

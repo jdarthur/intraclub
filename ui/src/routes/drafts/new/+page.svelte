@@ -71,7 +71,7 @@
 </script>
 
 <svelte:head>
-	<title>New draft</title>
+	<title>Intraclub | New draft</title>
 </svelte:head>
 
 <div class="flex items-center gap-4">

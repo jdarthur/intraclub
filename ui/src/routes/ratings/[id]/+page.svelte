@@ -73,7 +73,7 @@
 </script>
 
 <svelte:head>
-	<title>{rating ? rating.name : 'Rating'}</title>
+	<title>Intraclub | {rating ? rating.name : 'Rating'}</title>
 </svelte:head>
 
 {#if loadError}

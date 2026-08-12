@@ -51,7 +51,7 @@
 </script>
 
 <svelte:head>
-	<title>New scoring structure</title>
+	<title>Intraclub | New scoring structure</title>
 </svelte:head>
 
 <div class="flex items-center gap-4">

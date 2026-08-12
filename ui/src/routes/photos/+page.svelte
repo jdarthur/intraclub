@@ -32,7 +32,7 @@
 </script>
 
 <svelte:head>
-	<title>Photos</title>
+	<title>Intraclub | Photos</title>
 </svelte:head>
 
 <div class="flex items-center justify-between gap-4">

@@ -264,7 +264,7 @@
 </script>
 
 <svelte:head>
-	<title>{draft ? `${draft.name} — Live draft` : 'Live draft'}</title>
+	<title>Intraclub | {draft ? `${draft.name} — Live draft` : 'Live draft'}</title>
 </svelte:head>
 
 <div class="flex items-center gap-4">

@@ -3,7 +3,7 @@
 </script>
 
 <svelte:head>
-	<title>Log in</title>
+	<title>Intraclub | Log in</title>
 </svelte:head>
 
 <h1>Log in</h1>
