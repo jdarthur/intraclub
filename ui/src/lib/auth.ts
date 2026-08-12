@@ -31,6 +31,29 @@ export function isLoggedIn(): boolean {
 	return getToken() !== null;
 }
 
+// decodeBase64Url decodes a base64url-encoded string (as used in JWT payloads).
+function decodeBase64Url(s: string): string {
+	const base64 = s.replace(/-/g, '+').replace(/_/g, '/');
+	const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+	return atob(padded);
+}
+
+// getCurrentUserId returns the authenticated user's id from the stored JWT's
+// `sub` claim (the backend puts the user id there; see api/api_auth.go), or
+// null if there is no valid token.
+export function getCurrentUserId(): string | null {
+	const token = getToken();
+	if (!token) return null;
+	try {
+		const payload = token.split('.')[1];
+		if (!payload) return null;
+		const claims = JSON.parse(decodeBase64Url(payload));
+		return typeof claims.sub === 'string' ? claims.sub : null;
+	} catch {
+		return null;
+	}
+}
+
 let lastToken: string | null = null;
 let expiredHandled = false;
 
