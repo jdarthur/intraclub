@@ -77,9 +77,16 @@ test('draft setup page configures captains, players, and rating cutoffs', async 
 	await expect(page.getByRole('heading', { name: draftName })).toBeVisible();
 	await waitForHydration(page);
 
-	await page.getByLabel('Captain').selectOption({ label: captainOne });
+	// The active tab is visually indicated (bold) so it's clear at a glance
+	// which section is shown. Captains is the default tab.
+	await expect(page.getByRole('tab', { name: 'Captains & teams' })).toHaveCSS(
+		'font-weight',
+		'600'
+	);
+
+	await page.getByLabel('Captain', { exact: true }).selectOption({ label: captainOne });
 	await page.getByRole('button', { name: 'Add captain' }).click();
-	await page.getByLabel('Captain').selectOption({ label: captainTwo });
+	await page.getByLabel('Captain', { exact: true }).selectOption({ label: captainTwo });
 	await page.getByRole('button', { name: 'Add captain' }).click();
 	await page.getByRole('button', { name: 'Initialize draft' }).click();
 
@@ -89,12 +96,13 @@ test('draft setup page configures captains, players, and rating cutoffs', async 
 	await expect(page.getByRole('table').getByText(captainOne)).toBeVisible();
 
 	// --- Available players ---
-	await page.getByLabel('Player').selectOption({ label: rosterOne });
+	await page.getByRole('tab', { name: 'Available players' }).click();
+	await page.getByLabel('Player', { exact: true }).selectOption({ label: rosterOne });
 	await page.getByRole('button', { name: 'Add player' }).click();
 	// Wait for the first add's reload to commit before adding the second, so the
 	// select/button DOM is stable.
 	await expect(page.getByRole('list').getByText(rosterOne)).toBeVisible();
-	await page.getByLabel('Player').selectOption({ label: rosterTwo });
+	await page.getByLabel('Player', { exact: true }).selectOption({ label: rosterTwo });
 	await page.getByRole('button', { name: 'Add player' }).click();
 	await expect(page.getByRole('list').getByText(rosterTwo)).toBeVisible();
 
@@ -103,6 +111,7 @@ test('draft setup page configures captains, players, and rating cutoffs', async 
 	await expect(page.getByText('4 available players across 2 teams (2 per team)')).toBeVisible();
 
 	// --- Rating cutoffs ---
+	await page.getByRole('tab', { name: 'Rating cutoffs' }).click();
 	await page.getByLabel("Men's 1").fill('2');
 	await page.getByLabel("Men's 2").fill('4');
 	await page.getByRole('button', { name: 'Save cutoffs' }).click();
@@ -112,6 +121,7 @@ test('draft setup page configures captains, players, and rating cutoffs', async 
 	await expect(page.getByText('Ready to grade & pick')).toBeVisible();
 	await page.reload();
 	await waitForHydration(page);
+	await page.getByRole('tab', { name: 'Rating cutoffs' }).click();
 	await expect(page.getByLabel("Men's 1")).toHaveValue('2');
 	await expect(page.getByLabel("Men's 2")).toHaveValue('4');
 	await expect(page.getByText('Ready to grade & pick')).toBeVisible();
