@@ -1,9 +1,24 @@
 <script lang="ts">
 	import { isLoggedIn, clearToken } from '$lib/auth';
 	import { goto } from '$app/navigation';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
+	import {
+		Popover,
+		PopoverContent,
+		PopoverTrigger
+	} from '$lib/components/ui/popover/index.js';
+	import logo from '$lib/assets/favicon.svg';
 
 	let loggedIn = $state(isLoggedIn());
+
+	const settingsLinks = [
+		{ href: '/facilities', label: 'Facilities' },
+		{ href: '/formats', label: 'Formats' },
+		{ href: '/ratings', label: 'Ratings' },
+		{ href: '/rulesets', label: 'Rulesets' },
+		{ href: '/scoring-structures', label: 'Scoring Structures' },
+		{ href: '/playoff-structures', label: 'Playoff Structures' }
+	];
 
 	function logout() {
 		clearToken();
@@ -14,14 +29,23 @@
 
 <header class="sticky top-0 z-40 w-full border-b bg-background">
 	<div class="mx-auto flex h-14 max-w-6xl items-center gap-6 px-6">
-		<a href="/" class="text-base font-semibold tracking-tight">IntraClub</a>
+		<a href="/" class="flex items-center gap-2 text-base font-semibold tracking-tight">
+			<img src={logo} alt="" class="size-6" />
+			IntraClub
+		</a>
 		<nav class="flex items-center gap-1 text-sm">
-			<a href="/facilities" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Facilities</a>
-			<a href="/formats" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Formats</a>
-			<a href="/ratings" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Ratings</a>
-			<a href="/rulesets" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Rulesets</a>
-			<a href="/scoring-structures" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Scoring Structures</a>
-			<a href="/playoff-structures" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Playoff Structures</a>
+			<Popover>
+				<PopoverTrigger class={buttonVariants({ variant: 'ghost', size: 'sm' })}>Settings</PopoverTrigger>
+				<PopoverContent class="flex flex-col gap-0.5 p-1.5" align="start">
+					{#each settingsLinks as link}
+						<a
+							href={link.href}
+							class="rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+							>{link.label}</a
+						>
+					{/each}
+				</PopoverContent>
+			</Popover>
 			<a href="/drafts" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Drafts</a>
 			<a href="/photos" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Photos</a>
 			<a href="/users/import" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Users</a>
