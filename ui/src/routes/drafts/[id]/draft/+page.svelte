@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
-	import { getDraft, selectPlayer } from '$lib/draft';
+	import { goto } from '$app/navigation';
+	import { getDraft, selectPlayer, assignDraftedPlayersToTeams, createSeason } from '$lib/draft';
 	import type { Draft } from '$lib/draft';
 	import { listFormats, getFormatPossibleRatings } from '$lib/format';
 	import type { Format } from '$lib/format';
@@ -16,6 +17,8 @@
 	import type { DraftAvailablePlayer } from '$lib/draftAvailablePlayer';
 	import { listDraftPicks } from '$lib/draftPick';
 	import type { DraftPick } from '$lib/draftPick';
+	import { listFacilities } from '$lib/facility';
+	import type { Facility } from '$lib/facility';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import {
@@ -24,6 +27,12 @@
 		CardHeader,
 		CardTitle
 	} from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import {
+		NativeSelect,
+		NativeSelectOption
+	} from '$lib/components/ui/native-select/index.js';
 	import {
 		Table,
 		TableBody,
@@ -49,11 +58,20 @@
 	let captains = $state<DraftCaptain[]>([]);
 	let availablePlayers = $state<DraftAvailablePlayer[]>([]);
 	let picks = $state<DraftPick[]>([]);
+	let facilities = $state<Facility[]>([]);
 
 	let loading = $state(true);
 	let loadError = $state('');
 	let actionError = $state('');
 	let picking = $state(false);
+
+	// Finalize-draft form state.
+	let showFinalize = $state(false);
+	let finalizeName = $state('');
+	let finalizeFacility = $state('');
+	let finalizeStartTime = $state('');
+	let finalizing = $state(false);
+	let finalizeError = $state('');
 
 	async function load() {
 		loading = true;
@@ -61,19 +79,24 @@
 		actionError = '';
 		try {
 			const draftData = await getDraft(id());
-			const [formatList, userList, ratingList, captainList, availableList, pickList] =
+			const [formatList, userList, ratingList, captainList, availableList, pickList, facilityList] =
 				await Promise.all([
 					listFormats(),
 					listUsers(),
 					listRatings(),
 					listDraftCaptains(),
 					listDraftAvailablePlayers(),
-					listDraftPicks()
+					listDraftPicks(),
+					listFacilities()
 				]);
 
 			draft = draftData;
 			users = userList;
 			ratingsById = Object.fromEntries(ratingList.map((r) => [r.id, r]));
+			facilities = facilityList;
+			if (!finalizeFacility && facilityList.length > 0) {
+				finalizeFacility = facilityList[0].id;
+			}
 
 			const fmt = formatList.find((f) => f.id === draftData.format) ?? null;
 			format = fmt;
@@ -213,6 +236,31 @@
 			picking = false;
 		}
 	}
+
+	async function handleFinalize(e: Event) {
+		e.preventDefault();
+		finalizeError = '';
+		if (!isCompleted) return;
+		if (!finalizeName.trim()) {
+			finalizeError = 'Season name must not be empty.';
+			return;
+		}
+		finalizing = true;
+		try {
+			// Assign each drafted player to their team with their draft rating,
+			// then create the Season from the completed draft.
+			await assignDraftedPlayersToTeams(id());
+			const season = await createSeason(id(), {
+				name: finalizeName.trim(),
+				facility: finalizeFacility,
+				start_time: finalizeStartTime
+			});
+			await goto(`/seasons/${season.id}`);
+		} catch (err) {
+			finalizeError = err instanceof Error ? err.message : 'Failed to finalize the draft';
+			finalizing = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -271,6 +319,90 @@
 
 	{#if actionError}
 		<p class="mt-4 text-sm font-medium text-destructive">{actionError}</p>
+	{/if}
+
+	<!-- Finalize flow: only available once every available player has been
+	     picked. Assigns drafted players to their teams, then creates a Season. -->
+	{#if isCompleted}
+		<Card class="mt-6">
+			<CardHeader>
+				<CardTitle class="text-base">Finalize draft</CardTitle>
+			</CardHeader>
+			<CardContent>
+				{#if !showFinalize}
+					<p class="text-sm text-muted-foreground">
+						All {totalPlayers} players have been drafted. Finalizing assigns the drafted
+						rosters to their teams and creates a new Season.
+					</p>
+					<Button
+						type="button"
+						class="mt-4"
+						onclick={() => {
+							finalizeError = '';
+							showFinalize = true;
+						}}
+					>
+						Finalize draft
+					</Button>
+				{:else}
+					<form onsubmit={handleFinalize} class="mt-2 space-y-4">
+						<div class="grid gap-4 sm:grid-cols-2">
+							<div>
+								<Label for="season-name">Season name</Label>
+								<Input
+									id="season-name"
+									class="mt-1.5"
+									bind:value={finalizeName}
+									placeholder="e.g. Men's Intraclub 2025"
+									required
+								/>
+							</div>
+							<div>
+								<Label for="season-start-time">Start time (HH:MM)</Label>
+								<Input
+									id="season-start-time"
+									class="mt-1.5"
+									bind:value={finalizeStartTime}
+									placeholder="e.g. 08:30"
+									required
+								/>
+							</div>
+						</div>
+						<div>
+							<Label for="season-facility">Facility</Label>
+							<NativeSelect
+								id="season-facility"
+								class="mt-1.5"
+								bind:value={finalizeFacility}
+							>
+								{#each facilities as facility}
+									<NativeSelectOption value={facility.id}>{facility.name}</NativeSelectOption>
+								{/each}
+							</NativeSelect>
+						</div>
+						{#if finalizeError}
+							<p class="text-sm font-medium text-destructive">{finalizeError}</p>
+						{/if}
+						<div class="flex items-center gap-3">
+							<Button type="submit" disabled={finalizing}>
+								{finalizing ? 'Finalizing…' : 'Create season'}
+							</Button>
+							<Button
+								type="button"
+								variant="outline"
+								disabled={finalizing}
+								onclick={() => {
+									showFinalize = false;
+									finalizeError = '';
+								}}
+							>
+								Cancel
+							</Button>
+						</div>
+					</form>
+				{/if}
+			</CardContent>
+		</Card>
 	{/if}
 
 	<div class="mt-6 grid gap-6 lg:grid-cols-2">

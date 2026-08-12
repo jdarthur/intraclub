@@ -100,6 +100,18 @@ func main() {
 
 	draft.RegisterRoutes(rg, db)
 
+	// Read-only REST surface for Seasons and their drafted rosters (used by
+	// /seasons/[id] and the draft finalize flow). Rosters are reconstructed from
+	// the public draft/season join tables (season_team, team_rating) plus the
+	// draft's captains, since Team/TeamAssignment records are restricted to team
+	// members only.
+	seasons := api.NewCrudCommon(model.NewSeason, false, db)
+	seasons.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
+	seasonTeams := api.NewCrudCommon(func() *model.SeasonTeam { return &model.SeasonTeam{} }, false, db)
+	seasonTeams.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
+	teamRatings := api.NewCrudCommon(func() *model.TeamRating { return &model.TeamRating{} }, false, db)
+	teamRatings.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
+
 	playoffStructures := api.NewCrudCommon(model.NewPlayoffStructure, false, db)
 	playoffStructures.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
 

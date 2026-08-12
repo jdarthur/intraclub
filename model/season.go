@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"intraclub/database"
@@ -19,11 +20,43 @@ func (id SeasonId) String() string {
 	return id.RecordId().String()
 }
 
+func (id SeasonId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
+func (id *SeasonId) UnmarshalJSON(bytes []byte) error {
+	rid := id.RecordId()
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*id = SeasonId(rid)
+	return nil
+}
+
 type StartTime time.Time
 
 func NewStartTime(hour int, minute int) StartTime {
 	t := time.Date(1, 1, 1, hour, minute, 0, 0, time.UTC)
 	return StartTime(t)
+}
+
+// MarshalJSON renders the daily kickoff time as a 24-hour "HH:MM" string (e.g.
+// "08:30"), matching the shape the create-season endpoint accepts.
+func (s StartTime) MarshalJSON() ([]byte, error) {
+	return []byte("\"" + time.Time(s).Format("15:04") + "\""), nil
+}
+
+func (s *StartTime) UnmarshalJSON(bytes []byte) error {
+	raw := strings.Trim(string(bytes), "\"")
+	if raw == "" {
+		return nil
+	}
+	t, err := time.Parse("15:04", raw)
+	if err != nil {
+		return err
+	}
+	*s = NewStartTime(t.Hour(), t.Minute())
+	return nil
 }
 
 func (s StartTime) StaticallyValid() error {
@@ -44,14 +77,14 @@ func (s StartTime) String() string {
 }
 
 type Season struct {
-	ID               SeasonId           `json:"id"` // unique identifier for this Season
-	Name             string             // descriptive name for this season, e.g. _Men's Intraclub 2025_
-	Facility         FacilityId         // ID of the Facility at which this Season is played
-	StartTime        StartTime          // time of day when the first matches kick off (e.g. _8:30 AM_)
-	DraftId          DraftId            // Draft results for this Season
-	ScheduleID       ScheduleId         `json:"schedule_id"` // ID of the Schedule for this Season
-	PlayoffStructure PlayoffStructureId // ID of the PlayoffStructure for the Season
-	Owner            database.UserId    // commissioner who owns this season
+	ID               SeasonId           `json:"id"`            // unique identifier for this Season
+	Name             string             `json:"name"`          // descriptive name for this season, e.g. _Men's Intraclub 2025_
+	Facility         FacilityId         `json:"facility"`      // ID of the Facility at which this Season is played
+	StartTime        StartTime          `json:"start_time"`    // time of day when the first matches kick off (e.g. _8:30 AM_)
+	DraftId          DraftId            `json:"draft_id"`      // Draft results for this Season
+	ScheduleID       ScheduleId         `json:"schedule_id"`   // ID of the Schedule for this Season
+	PlayoffStructure PlayoffStructureId `json:"playoff_structure"` // ID of the PlayoffStructure for the Season
+	Owner            database.UserId    `json:"owner"`         // commissioner who owns this season
 }
 
 func (s *Season) GetOwner() database.UserId {
