@@ -85,6 +85,8 @@ Verify: `go build ./...` succeeds; Go toolchain is go1.26.
   work item (ticket, task, or checklist item) as finished until the change has
   been opened as a pull request via `gh pr create`. A merged PR is what
   actually completes the work; an un-merged local branch is not "done". Always 
-  provide a link to the upstream PR if you create one.
+  provide a link to the upstream PR if you create one, and always put "Closes #XYZ"
+  in the PR body in order to auto-link to the related ticket on PR merge. This only
+  applies if the current task is scoped from a Github ticket
 - `gh` CLI (v2.97.0) is available and authorized for read/write against `origin` (`git@github.com:jdarthur/intraclub.git`) — use it for issue/PR workflows.
 
