@@ -132,3 +132,92 @@ test('draft setup page configures captains, players, and rating cutoffs', async 
 	});
 	expect(cleanup.ok()).toBeTruthy();
 });
+
+test('available players pool filters by organization with a hard boundary', async ({
+	page
+}) => {
+	await login(page);
+	const token = await page.evaluate(() => localStorage.getItem('intraclub_jwt') ?? '');
+	expect(token).toBeTruthy();
+
+	const unique = Date.now();
+
+	// Two fresh users: one will be an org member, the other an outsider.
+	const people = [
+		{ first: `Mia${unique}`, last: 'Member' },
+		{ first: `Noah${unique}`, last: 'Outsider' }
+	];
+	const csv = [
+		'First Name, Last Name, Email',
+		...people.map((p) => `${p.first}, ${p.last}, ${p.first.toLowerCase()}@example.com`)
+	].join('\n');
+	const importRes = await page.request.post(`${API}/import_users_from_csv`, {
+		form: { file: csv }
+	});
+	expect(importRes.ok()).toBeTruthy();
+	const importBody = await importRes.json();
+	const userIds = [...importBody.Created, ...importBody.AlreadyExisting].map(
+		(u: { id: string }) => u.id
+	);
+	expect(userIds).toHaveLength(people.length);
+
+	// Create an organization and add only the first user as a member.
+	const orgName = `Filter Org ${unique}`;
+	const orgRes = await page.request.post(`${API}/organization`, {
+		headers: { 'Content-Type': 'application/json', 'X-INTRACLUB-TOKEN': token },
+		data: { name: orgName }
+	});
+	expect(orgRes.ok()).toBeTruthy();
+	const orgId = (await orgRes.json()).resource.id as string;
+	const addRes = await page.request.post(`${API}/organization/${orgId}/members`, {
+		headers: { 'Content-Type': 'application/json', 'X-INTRACLUB-TOKEN': token },
+		data: { user_id: userIds[0] }
+	});
+	expect(addRes.ok()).toBeTruthy();
+
+	// Create a draft for the seed format.
+	const formatRes = await page.request.get(`${API}/format`);
+	const formats = (await formatRes.json()).resource as { id: string; name: string }[];
+	const format = formats.find((f) => f.name === SEED_FORMAT);
+	expect(format).toBeTruthy();
+	const draftRes = await page.request.post(`${API}/draft`, {
+		headers: { 'Content-Type': 'application/json', 'X-INTRACLUB-TOKEN': token },
+		data: { name: `Filter Draft ${unique}`, format: format!.id }
+	});
+	expect(draftRes.ok()).toBeTruthy();
+	const draftId = (await draftRes.json()).resource.id as string;
+
+	const memberName = `${people[0].first} ${people[0].last}`;
+	const outsiderName = `${people[1].first} ${people[1].last}`;
+
+	await page.goto(`/drafts/${draftId}`);
+	await expect(page.getByRole('heading', { name: `Filter Draft ${unique}` })).toBeVisible();
+	await waitForHydration(page);
+	await page.getByRole('tab', { name: 'Available players' }).click();
+
+	// No filter selected: both users appear in the source panel.
+	await expect(page.getByRole('button', { name: memberName })).toBeVisible();
+	await expect(page.getByRole('button', { name: outsiderName })).toBeVisible();
+
+	// Toggle the org chip: only members of the org remain in the source, and
+	// the source title reflects the filtered pool.
+	await page.getByRole('button', { name: orgName }).click();
+	await expect(page.getByRole('button', { name: memberName })).toBeVisible();
+	await expect(page.getByRole('button', { name: outsiderName })).toHaveCount(0);
+	await expect(page.getByText('All players (filtered) — 1 member')).toBeVisible();
+
+	// Move the member into the pool, then save.
+	await page.getByRole('button', { name: memberName }).click();
+	await page.getByRole('button', { name: 'Move selected to pool' }).click();
+	await expect(page.getByText('1 player in pool')).toBeVisible();
+
+	// Deselect the filter: the outsider is restored to the source.
+	await page.getByRole('button', { name: 'All users' }).click();
+	await expect(page.getByRole('button', { name: outsiderName })).toBeVisible();
+
+	// Clean up the draft so the table doesn't accumulate rows across runs.
+	const cleanup = await page.request.delete(`${API}/draft/${draftId}`, {
+		headers: { 'X-INTRACLUB-TOKEN': token }
+	});
+	expect(cleanup.ok()).toBeTruthy();
+});

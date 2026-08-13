@@ -29,6 +29,8 @@
 	import type { DraftRatingCutoff } from '$lib/draftRatingCutoff';
 	import { listDraftPicks } from '$lib/draftPick';
 	import type { DraftPick } from '$lib/draftPick';
+	import { listOrganizations, listMembers } from '$lib/organization';
+	import type { Organization } from '$lib/organization';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import {
@@ -57,6 +59,12 @@
 	let possibleRatings = $state<Rating[]>([]);
 	let ratingsById = $state<Record<string, Rating>>({});
 	let users = $state<User[]>([]);
+
+	// Organizations and their membership roster, used to filter the "Available
+	// players" source pool (transient UI filter only — nothing persisted).
+	let organizations = $state<Organization[]>([]);
+	let userIdsByOrg = $state<Map<string, Set<string>>>(new Map());
+	let selectedOrgIds = $state<string[]>([]);
 
 	let captains = $state<DraftCaptain[]>([]);
 	let availablePlayers = $state<DraftAvailablePlayer[]>([]);
@@ -99,7 +107,8 @@
 				captainList,
 				availableList,
 				cutoffList,
-				pickList
+				pickList,
+				organizationList
 			] = await Promise.all([
 				listFormats(),
 				listUsers(),
@@ -107,12 +116,29 @@
 				listDraftCaptains(),
 				listDraftAvailablePlayers(),
 				listDraftRatingCutoffs(),
-				listDraftPicks()
+				listDraftPicks(),
+				listOrganizations()
 			]);
 
 			draft = draftData;
 			users = userList;
 			ratingsById = Object.fromEntries(ratingList.map((r) => [r.id, r]));
+
+			// Build the org -> member userIds map (N+1 per org is acceptable for
+			// the small number of organizations).
+			organizations = organizationList;
+			userIdsByOrg = new Map(
+				await Promise.all(
+					organizationList.map(async (org) => {
+						const members = await listMembers(org.id);
+						return [org.id, new Set(members.map((m) => m.id))] as [
+							string,
+							Set<string>
+						];
+					})
+				)
+			);
+			selectedOrgIds = [];
 
 			const fmt = formatList.find((f) => f.id === draftData.format) ?? null;
 			format = fmt;
@@ -192,6 +218,52 @@
 	}
 
 	// --- Available players ---
+
+	// Union of member userIds across the currently selected organizations.
+	// Empty selection -> empty set (means "no filter", handled by callers).
+	function memberIdsOfSelectedOrgs(): Set<string> {
+		const ids = new Set<string>();
+		for (const orgId of selectedOrgIds) {
+			for (const uid of userIdsByOrg.get(orgId) ?? []) {
+				ids.add(uid);
+			}
+		}
+		return ids;
+	}
+
+	function isOrgSelected(orgId: string): boolean {
+		return selectedOrgIds.includes(orgId);
+	}
+
+	function toggleOrg(orgId: string) {
+		selectedOrgIds = isOrgSelected(orgId)
+			? selectedOrgIds.filter((id) => id !== orgId)
+			: [...selectedOrgIds, orgId];
+		recomputeSource();
+	}
+
+	// Recomputes the transfer core's source list from the org filter. This is
+	// what enforces the hard pool boundary: with orgs selected, ONLY members of
+	// those orgs can ever appear in the source (and therefore be moved).
+	// `target` (already-available players) is left untouched so in-progress
+	// additions aren't clobbered by a filter change.
+	function recomputeSource() {
+		if (!transferCore) return;
+		const inPool = new Set(availablePlayers.map((a) => a.player_id));
+		const targetIds = new Set(transferCore.target.map((u) => u.id));
+		const base = users.filter((u) => !inPool.has(u.id) && !targetIds.has(u.id));
+		if (selectedOrgIds.length === 0) {
+			transferCore.source = base;
+		} else {
+			const memberIds = memberIdsOfSelectedOrgs();
+			transferCore.source = base.filter((u) => memberIds.has(u.id));
+		}
+		// Drop stale selections referencing users no longer in the source.
+		transferCore.selectedSourceItems.clear();
+		transferCore.sourceSearchQuery = '';
+	}
+
+	const filteredMemberCount = $derived(memberIdsOfSelectedOrgs().size);
 
 	// Persists the transfer-list state: adds players that moved into the
 	// target, removes players that moved back to the source.
@@ -478,9 +550,47 @@
 				</p>
 				{#if transferCore}
 					<div class="mt-4">
+						<div class="mb-4 flex flex-wrap items-center gap-2">
+							<span class="text-sm font-medium">Organizations</span>
+							{#if organizations.length === 0}
+								<span class="text-sm text-muted-foreground">
+									No organizations yet.
+								</span>
+							{:else}
+								<button
+									type="button"
+									class="rounded-full border px-3 py-1 text-sm transition-colors {selectedOrgIds.length === 0
+										? 'border-primary bg-primary text-primary-foreground'
+										: 'border-input text-muted-foreground hover:text-foreground'}"
+									onclick={() => {
+										selectedOrgIds = [];
+										recomputeSource();
+									}}
+								>
+									All users
+								</button>
+								{#each organizations as org (org.id)}
+									<button
+										type="button"
+										class="rounded-full border px-3 py-1 text-sm transition-colors {isOrgSelected(org.id)
+											? 'border-primary bg-primary text-primary-foreground'
+											: 'border-input text-muted-foreground hover:text-foreground'}"
+										onclick={() => toggleOrg(org.id)}
+									>
+										{org.name}
+									</button>
+								{/each}
+							{/if}
+						</div>
 						<TransferList.Root direction="horizontal">
 							<TransferList.Container>
-								<TransferList.Title title="All players" />
+								<TransferList.Title
+									title={
+										selectedOrgIds.length > 0
+											? `All players (filtered) — ${filteredMemberCount} member${filteredMemberCount === 1 ? '' : 's'}`
+											: 'All players'
+									}
+								/>
 								<TransferList.Toolbar
 									variant="source"
 									core={transferCore}
