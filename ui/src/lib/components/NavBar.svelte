@@ -49,6 +49,7 @@
 				</PopoverContent>
 			</Popover>
 			<a href="/drafts" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Drafts</a>
+			<a href="/teams" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Teams</a>
 			<a href="/photos" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Photos</a>
 			<a href="/users" class="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">Users</a>
 		</nav>
