@@ -146,7 +146,14 @@
 			{#each teams as team}
 				<Card>
 					<CardHeader>
-						<CardTitle class="text-base">{team.name}</CardTitle>
+						<CardTitle class="text-base">
+							<a
+								href={`/teams/${team.teamId}`}
+								class="text-primary underline-offset-4 hover:underline"
+							>
+								{team.name}
+							</a>
+						</CardTitle>
 					</CardHeader>
 					<CardContent>
 						{#if team.members.length === 0}

@@ -17,6 +17,7 @@ import (
 	"intraclub/route/format"
 	"intraclub/route/organization"
 	"intraclub/route/ruleset"
+	"intraclub/route/team"
 	"intraclub/route/user"
 
 	"github.com/gin-gonic/gin"
@@ -116,6 +117,13 @@ func main() {
 	seasonTeams.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
 	teamRatings := api.NewCrudCommon(func() *model.TeamRating { return &model.TeamRating{} }, false, db)
 	teamRatings.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
+
+	// Teams are largely immutable after the draft finalizes: they are exposed
+	// only through the constrained read + role-assignment surface in
+	// route/team (no generic create/update/delete on the raw records). Roster
+	// reads are restricted to team members, sysadmins, and season
+	// commissioners; only a team's captain / co-captains can assign roles.
+	team.RegisterRoutes(rg, db)
 
 	playoffStructures := api.NewCrudCommon(model.NewPlayoffStructure, false, db)
 	playoffStructures.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)

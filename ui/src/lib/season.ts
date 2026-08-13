@@ -4,13 +4,13 @@
 //
 //	GET  /api/season            -> { resource: Season[] }
 //	GET  /api/season/:id        -> { resource: Season }
-//	GET  /api/team              -> { resource: Team[] }
 //	GET  /api/season_team       -> { resource: SeasonTeam[] }   (join)
-//	GET  /api/team_assignment   -> { resource: TeamAssignment[] } (members)
 //	GET  /api/team_rating       -> { resource: TeamRating[] }   (draft rating)
 //
-// Record IDs are 16-char hex strings. A Season's start_time is the daily kickoff
-// time as a 24-hour "HH:MM" string (e.g. "08:30").
+// Teams and their member assignments are exposed via the constrained surface
+// in src/lib/team.ts (see GET /api/team, GET /api/team/:id). Record IDs are
+// 16-char hex strings. A Season's start_time is the daily kickoff time as a
+// 24-hour "HH:MM" string (e.g. "08:30").
 import { authFetch } from '$lib/auth';
 
 export interface Season {
