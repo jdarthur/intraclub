@@ -17,10 +17,25 @@ func (id LineupId) String() string {
 	return id.RecordId().String()
 }
 
+func (id LineupId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
+func (id *LineupId) UnmarshalJSON(bytes []byte) error {
+	rid := database.RecordId(0)
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*id = LineupId(rid)
+	return nil
+}
+
 type Lineup struct {
-	ID     LineupId `json:"id"`
-	TeamId TeamId // TeamId for this particular Lineup
-	WeekId WeekId // Week that this Lineup applies to
+	ID        LineupId `json:"id"`
+	TeamId    TeamId   `json:"team_id"` // TeamId for this particular Lineup
+	WeekId    WeekId   `json:"week_id"` // Week that this Lineup applies to
+	Confirmed bool     `json:"confirmed"` // set by the captain/co-captain once the lineup is final
+	Official  bool     `json:"official"`  // set by the season commissioner, requires Confirmed
 }
 
 func (l *Lineup) GetOwner() database.UserId {
@@ -106,4 +121,10 @@ func (l *Lineup) PostDelete(ctx context.Context, db database.Provider) error {
 
 func (l *Lineup) NewRecord() database.CrudRecord {
 	return new(Lineup)
+}
+
+// NewLineup returns a new Lineup record. It is the conventional constructor
+// used by the generic CRUD route registration.
+func NewLineup() *Lineup {
+	return &Lineup{}
 }

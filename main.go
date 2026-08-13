@@ -16,6 +16,7 @@ import (
 	"intraclub/route/availability"
 	"intraclub/route/draft"
 	"intraclub/route/format"
+	"intraclub/route/lineup"
 	"intraclub/route/organization"
 	"intraclub/route/ruleset"
 	"intraclub/route/schedule"
@@ -133,6 +134,8 @@ func main() {
 	availability.RegisterRoutes(rg, db)
 
 	schedule.RegisterRoutes(rg, db)
+
+	lineup.RegisterRoutes(rg, db)
 
 	playoffStructures := api.NewCrudCommon(model.NewPlayoffStructure, false, db)
 	playoffStructures.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
