@@ -17,14 +17,27 @@ func (id WeeklyMatchupId) String() string {
 	return id.RecordId().String()
 }
 
+func (id WeeklyMatchupId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
+func (id *WeeklyMatchupId) UnmarshalJSON(bytes []byte) error {
+	rid := id.RecordId()
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*id = WeeklyMatchupId(rid)
+	return nil
+}
+
 // TeamMatchup is a lightweight value type representing a single matchup entry
 // (home vs away, or a bye). It is no longer stored inline within WeeklyMatchup;
 // instead each entry is normalized into a WeeklyMatchupTeamMatchup record.
 // This type remains for API serialization and convenience constructors.
 type TeamMatchup struct {
-	HomeTeam TeamId
-	AwayTeam TeamId
-	Bye      bool
+	HomeTeam TeamId `json:"home_team_id"`
+	AwayTeam TeamId `json:"away_team_id"`
+	Bye      bool   `json:"bye"`
 }
 
 // Validate checks that the matchup entry is well-formed: bye entries have no away team,
@@ -70,8 +83,8 @@ func teamMatchupFromRecord(wmtm *WeeklyMatchupTeamMatchup) *TeamMatchup {
 // WeeklyMatchupTeamMatchup records rather than inline.
 type WeeklyMatchup struct {
 	ID       WeeklyMatchupId `json:"id"`
-	WeekId   WeekId   // Week that this WeeklyMatchup corresponds to, i.e. a particular date
-	SeasonId SeasonId // Season that this WeeklyMatchup corresponds to
+	WeekId   WeekId          `json:"week_id"`   // Week that this WeeklyMatchup corresponds to, i.e. a particular date
+	SeasonId SeasonId        `json:"season_id"` // Season that this WeeklyMatchup corresponds to
 }
 
 func (w *WeeklyMatchup) GetOwner() database.UserId {

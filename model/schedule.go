@@ -17,9 +17,22 @@ func (id ScheduleId) String() string {
 	return id.RecordId().String()
 }
 
+func (id ScheduleId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
+func (id *ScheduleId) UnmarshalJSON(bytes []byte) error {
+	rid := id.RecordId()
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*id = ScheduleId(rid)
+	return nil
+}
+
 type Schedule struct {
 	ID       ScheduleId `json:"id"`
-	SeasonId SeasonId
+	SeasonId SeasonId   `json:"season_id"`
 }
 
 func (s *Schedule) GetOwner() database.UserId {
