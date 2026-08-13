@@ -14,6 +14,16 @@
 	import { getCurrentUserId } from '$lib/auth';
 	import { listWeeksForSeason } from '$lib/week';
 	import type { Week } from '$lib/week';
+	import { listTeams } from '$lib/team';
+	import type { TeamRoster } from '$lib/team';
+	import {
+		AVAILABILITY_OPTIONS,
+		getAvailabilityForUser,
+		getAvailabilityForTeam,
+		setAvailability,
+		availabilityLabel
+	} from '$lib/availability';
+	import type { AvailabilityOption } from '$lib/availability';
 	import {
 		createSchedule,
 		getScheduleForSeason,
@@ -47,6 +57,13 @@
 	let weeks = $state<Week[]>([]);
 	let scheduleDetail = $state<ScheduleDetail | null>(null);
 
+	// player availability state
+	let rosters = $state<TeamRoster[]>([]);
+	let myAvailability = $state<Record<string, AvailabilityOption>>({});
+	let teamAvailability = $state<Record<string, Record<string, AvailabilityOption>>>({});
+	let availabilityError = $state('');
+	let savingWeek = $state<string | null>(null);
+
 	let loading = $state(true);
 	let loadError = $state('');
 
@@ -79,7 +96,8 @@
 				ratingList,
 				facilityList,
 				weekList,
-				scheduleData
+				scheduleData,
+				rosterList
 			] = await Promise.all([
 				getSeason(id()),
 				listSeasonTeams(),
@@ -89,7 +107,8 @@
 				listRatings(),
 				listFacilities(),
 				listWeeksForSeason(id()),
-				getScheduleForSeason(id())
+				getScheduleForSeason(id()),
+				listTeams()
 			]);
 			season = seasonData;
 			seasonTeams = seasonTeamList.filter((st) => st.season_id === seasonData.id);
@@ -100,6 +119,8 @@
 			facilities = facilityList;
 			weeks = weekList;
 			scheduleDetail = scheduleData;
+			rosters = rosterList;
+			await loadAvailability();
 		} catch (e) {
 			loadError = e instanceof Error ? e.message : 'Failed to load season';
 		} finally {
@@ -147,6 +168,34 @@
 			})
 	);
 
+	// --- player availability derived state --------------------------------
+
+	const currentUserId = $derived(getCurrentUserId() ?? '');
+
+	// The teams in this season that the current user is on (from the
+	// reconstructed roster), used to gate the "set my availability" inputs.
+	const myTeams = $derived(
+		teams.filter((t) => t.members.some((m) => m.user_id === currentUserId))
+	);
+
+	// The teams in this season where the current user is a captain or
+	// co-captain (from the role-bearing TeamRoster list), which gate the team
+	// availability view.
+	const myCaptainTeamIds = $derived(
+		rosters
+			.filter((r) =>
+				r.assignments.some(
+					(a) =>
+						a.user_id === currentUserId &&
+						(a.role === 'captain' || a.role === 'co_captain')
+				)
+			)
+			.map((r) => r.team.id)
+			.filter((tid) => teams.some((t) => t.teamId === tid))
+	);
+
+	const captainTeam = $derived(teams.find((t) => myCaptainTeamIds.includes(t.teamId)));
+
 	function sortedMembers(members: TeamRating[]) {
 		return [...members].sort((a, b) => userName(a.user_id).localeCompare(userName(b.user_id)));
 	}
@@ -163,6 +212,57 @@
 		const d = new Date(week.date);
 		const date = Number.isNaN(d.getTime()) ? week.date : d.toLocaleDateString();
 		return week.note ? `${date} — ${week.note}` : date;
+	}
+
+	// --- player availability actions --------------------------------------
+
+	// loadAvailability fetches the current user's availability for the season's
+	// weeks, and (when they are a captain/co-captain) their team's availability
+	// for the team view.
+	async function loadAvailability() {
+		if (!season || !currentUserId) return;
+		const draftId = season.draft_id;
+		try {
+			const mine = await getAvailabilityForUser(draftId);
+			myAvailability = Object.fromEntries(mine.map((a) => [a.week_id, a.available]));
+			availabilityError = '';
+		} catch (e) {
+			availabilityError = e instanceof Error ? e.message : 'Failed to load availability';
+			return;
+		}
+
+		if (myCaptainTeamIds.length === 0) return;
+		try {
+			const combined: Record<string, Record<string, AvailabilityOption>> = {};
+			for (const teamId of myCaptainTeamIds) {
+				const entries = await getAvailabilityForTeam(teamId, draftId);
+				for (const entry of entries) {
+					combined[entry.user_id] = Object.fromEntries(
+						entry.availabilities.map((a) => [a.week_id, a.available])
+					);
+				}
+			}
+			teamAvailability = combined;
+		} catch (e) {
+			availabilityError = e instanceof Error ? e.message : 'Failed to load team availability';
+		}
+	}
+
+	// setWeekAvailability saves the current user's availability for a week and
+	// refreshes the availability data (including the team view, if shown) from
+	// the API so the UI reflects the saved value.
+	async function setWeekAvailability(weekId: string, value: string) {
+		const option = Number(value) as AvailabilityOption;
+		savingWeek = weekId;
+		availabilityError = '';
+		try {
+			await setAvailability(weekId, option);
+			await loadAvailability();
+		} catch (e) {
+			availabilityError = e instanceof Error ? e.message : 'Failed to save availability';
+		} finally {
+			savingWeek = null;
+		}
 	}
 
 	// --- schedule create / assign actions -----------------------------------
@@ -430,6 +530,100 @@
 						{/each}
 					</ul>
 				{/if}
+			{/if}
+		</CardContent>
+	</Card>
+
+	<!-- Player availability -->
+	<Card class="mt-6">
+		<CardHeader>
+			<CardTitle class="text-base">Player availability</CardTitle>
+		</CardHeader>
+		<CardContent>
+			{#if availabilityError}
+				<p class="mb-4 text-sm font-medium text-destructive">{availabilityError}</p>
+			{/if}
+
+			{#if weeks.length === 0}
+				<p class="text-sm text-muted-foreground">
+					No weeks have been added to this season yet.
+				</p>
+			{:else if myTeams.length === 0}
+				<p class="text-sm text-muted-foreground">
+					You are not on a team in this season, so there is nothing to set.
+				</p>
+			{:else}
+				<p class="mb-4 text-sm text-muted-foreground">
+					Set your availability for each week. Captains and co-captains can also view their
+					team's availability below.
+				</p>
+				<ul class="flex flex-col gap-3">
+					{#each weeks as week (week.id)}
+						<li class="flex items-center justify-between gap-4">
+							<Label for={`availability-${week.id}`} class="text-sm font-medium">
+								{weekLabel(week)}
+							</Label>
+							<div class="flex items-center gap-3">
+								{#if savingWeek === week.id}
+									<span class="text-xs text-muted-foreground">Saving…</span>
+								{/if}
+								<NativeSelect
+									id={`availability-${week.id}`}
+									value={String(myAvailability[week.id] ?? 0)}
+									oninput={(e) =>
+										setWeekAvailability(
+											week.id,
+											(e.currentTarget as HTMLSelectElement).value
+										)
+									}
+								>
+									{#each AVAILABILITY_OPTIONS as opt}
+										<NativeSelectOption value={String(opt.value)}>
+											{opt.label}
+										</NativeSelectOption>
+									{/each}
+								</NativeSelect>
+							</div>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+
+			{#if captainTeam}
+				<div class="mt-6">
+					<h3 class="mb-2 text-sm font-semibold">
+						{captainTeam.name} — team availability
+					</h3>
+					<div class="overflow-x-auto">
+						<table class="w-full text-sm">
+							<thead>
+								<tr class="border-b text-left text-muted-foreground">
+									<th class="py-1 pr-4 font-medium">Player</th>
+									{#each weeks as week}
+										<th class="py-1 pr-4 font-medium">{weekLabel(week)}</th>
+									{/each}
+								</tr>
+							</thead>
+							<tbody>
+								{#each sortedMembers(captainTeam.members) as member}
+									<tr class="border-b">
+										<td class="py-1 pr-4">
+											{userName(member.user_id)}
+											{#if member.user_id === captainTeam.captainId}
+												<span class="text-xs text-muted-foreground">(captain)</span>
+											{/if}
+										</td>
+										{#each weeks as week}
+											<td class="py-1 pr-4">
+												{availabilityLabel(teamAvailability[member.user_id]?.[week.id] ?? 0)}
+											</td>
+										{/each}
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</div>
 			{/if}
 		</CardContent>
 	</Card>
