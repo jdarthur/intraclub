@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"intraclub/database"
+
+	"github.com/stretchr/testify/require"
 )
 
 func newStoredWeek(t *testing.T, db database.Provider, season *Season) *Week {
@@ -91,4 +93,36 @@ func TestWeeksSorted(t *testing.T) {
 	if weeks[2].ID != week2.ID {
 		t.Fatal("expected week2 at index 2")
 	}
+}
+
+func TestWeekEditableBySeasonCommissioner(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	season, seasonCommissioner := newDefaultSeasonWithTeams(t, db, 2)
+
+	week := newStoredWeek(t, db, season)
+
+	editable := week.EditableBy(context.Background(), db)
+	// When the week's Draft is assigned to a Season, only that Season's
+	// commissioner(s) may edit it (not the draft owner / participants).
+	require.ElementsMatch(t, []database.UserId{seasonCommissioner.ID}, editable)
+}
+
+func TestWeekEditableByDraftOwnerWhenNoSeason(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	owner := newStoredUser(t, db)
+
+	draft := NewDraft()
+	draft.Owner = owner.ID
+	draft.Format = newDefaultStoredFormat(t, db).ID
+	draftV, err := database.CreateOne(context.Background(), db, draft)
+	require.NoError(t, err)
+
+	week := NewWeek()
+	week.DraftId = draftV.ID
+	week.Date = time.Now()
+	weekV, err := database.CreateOne(context.Background(), db, week)
+	require.NoError(t, err)
+
+	editable := weekV.EditableBy(context.Background(), db)
+	require.ElementsMatch(t, []database.UserId{owner.ID}, editable)
 }

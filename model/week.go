@@ -20,11 +20,24 @@ func (id WeekId) String() string {
 	return id.RecordId().String()
 }
 
+func (id WeekId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
+func (id *WeekId) UnmarshalJSON(bytes []byte) error {
+	rid := id.RecordId()
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*id = WeekId(rid)
+	return nil
+}
+
 type Week struct {
-	ID      WeekId `json:"id"`
-	DraftId DraftId
-	Date    time.Time
-	Note    string
+	ID      WeekId    `json:"id"`
+	DraftId DraftId   `json:"draft_id"`
+	Date    time.Time `json:"date"`
+	Note    string    `json:"note"`
 }
 
 func (w *Week) GetOwner() database.UserId {
@@ -105,7 +118,7 @@ func (w *Week) EditableBy(ctx context.Context, db database.Provider) []database.
 	// if Season is set up, then this Week is editable by any of the Season
 	// commissioners. Otherwise, it is only editable by the Draft owner
 	if season != nil {
-		EditableBySeason(ctx, db, season.ID)
+		return EditableBySeason(ctx, db, season.ID)
 	}
 	return []database.UserId{draft.Owner}
 }

@@ -19,6 +19,7 @@ import (
 	"intraclub/route/ruleset"
 	"intraclub/route/team"
 	"intraclub/route/user"
+	"intraclub/route/week"
 
 	"github.com/gin-gonic/gin"
 )
@@ -124,6 +125,8 @@ func main() {
 	// reads are restricted to team members, sysadmins, and season
 	// commissioners; only a team's captain / co-captains can assign roles.
 	team.RegisterRoutes(rg, db)
+
+	week.RegisterRoutes(rg, db)
 
 	playoffStructures := api.NewCrudCommon(model.NewPlayoffStructure, false, db)
 	playoffStructures.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
