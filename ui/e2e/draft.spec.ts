@@ -52,3 +52,30 @@ test('draft create navigates to its setup page and appears in the list', async (
 	});
 	expect(res.ok()).toBeTruthy();
 });
+
+test('a created draft can be deleted by its owner from the setup page', async ({ page }) => {
+	await login(page);
+
+	const unique = Date.now();
+	const draftName = `Delete Me Draft ${unique}`;
+
+	// Create
+	await page.goto('/drafts');
+	await page.getByRole('link', { name: 'New draft' }).click();
+	await waitForHydration(page);
+	await page.getByLabel('Name').fill(draftName);
+	await page.getByLabel('Format').selectOption({ label: SEED_FORMAT });
+	await page.getByRole('button', { name: 'Create draft' }).click();
+
+	// Lands on the setup page, which shows the delete control for the owner.
+	await expect(page).toHaveURL(/\/drafts\/[0-9a-f]+$/);
+	await expect(page.getByRole('heading', { name: draftName })).toBeVisible();
+	const deleteTrigger = page.getByRole('button', { name: 'Delete draft' });
+	await expect(deleteTrigger).toBeVisible();
+
+	// Confirm deletion; the page navigates back to the list.
+	await deleteTrigger.click();
+	await page.getByRole('button', { name: 'Delete', exact: true }).click();
+	await expect(page).toHaveURL(/\/drafts$/);
+	await expect(page.getByRole('link', { name: draftName })).toHaveCount(0);
+});

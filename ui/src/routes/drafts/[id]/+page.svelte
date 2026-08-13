@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import { getCurrentUserId } from '$lib/auth';
 	import {
 		getDraft,
 		initializeDraft,
 		assignDraftablePlayers,
-		assignRatingCutoff
+		assignRatingCutoff,
+		deleteDraft
 	} from '$lib/draft';
 	import type { Draft } from '$lib/draft';
 	import { listFormats } from '$lib/format';
@@ -30,7 +33,7 @@
 	import { listDraftPicks } from '$lib/draftPick';
 	import type { DraftPick } from '$lib/draftPick';
 	import { Badge } from '$lib/components/ui/badge/index.js';
-	import { Button } from '$lib/components/ui/button/index.js';
+	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import {
 		Card,
 		CardContent,
@@ -42,6 +45,14 @@
 		NativeSelect,
 		NativeSelectOption
 	} from '$lib/components/ui/native-select/index.js';
+	import {
+		Popover,
+		PopoverClose,
+		PopoverContent,
+		PopoverHeader,
+		PopoverTitle,
+		PopoverTrigger
+	} from '$lib/components/ui/popover/index.js';
 	import {
 		Tabs,
 		TabsContent,
@@ -85,6 +96,27 @@
 
 	// Which setup section is shown in the sidebar at a time.
 	let activeTab = $state('captains');
+
+	// Delete the draft (owner only). Deleting cascades to all of the draft's
+	// join rows (see model.Draft.PostDelete).
+	let deleting = $state(false);
+	let deleteOpen = $state(false);
+
+	// The owner of the draft, from the JWT `sub` claim.
+	const currentUserId = getCurrentUserId();
+
+	async function handleDelete() {
+		deleteOpen = false;
+		actionError = '';
+		deleting = true;
+		try {
+			await deleteDraft(id());
+			await goto('/drafts');
+		} catch (e) {
+			actionError = e instanceof Error ? e.message : 'Failed to delete draft';
+			deleting = false;
+		}
+	}
 
 	async function load() {
 		loading = true;
@@ -312,6 +344,29 @@
 		<a href={`/drafts/${id()}/results`} class="text-sm text-muted-foreground hover:text-foreground">
 			Results →
 		</a>
+		{#if currentUserId !== null && draft?.owner === currentUserId}
+			<Popover bind:open={deleteOpen}>
+				<PopoverTrigger
+					disabled={deleting}
+					class={buttonVariants({ variant: 'destructive', size: 'sm' })}
+				>
+					{deleting ? 'Deleting...' : 'Delete draft'}
+				</PopoverTrigger>
+				<PopoverContent class="w-80">
+					<PopoverHeader>
+						<PopoverTitle>Delete draft?</PopoverTitle>
+						<p class="text-sm text-muted-foreground">
+							This permanently removes this draft, its teams, players and picks, and
+							cannot be undone.
+						</p>
+					</PopoverHeader>
+					<div class="flex justify-end gap-2">
+						<PopoverClose class={buttonVariants({ variant: 'outline', size: 'sm' })}>Cancel</PopoverClose>
+						<Button variant="destructive" size="sm" onclick={handleDelete}>Delete</Button>
+					</div>
+				</PopoverContent>
+			</Popover>
+		{/if}
 		<a href="/drafts" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to drafts</a>
 	</div>
 </div>
