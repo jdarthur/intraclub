@@ -39,21 +39,34 @@ test('organization CRUD: create, manage membership, update, delete', async ({ pa
 	await expect(page).toHaveURL(/\/organizations\/[0-9a-f]+$/);
 	await expect(page.getByRole('heading', { name: `Test Org ${unique}` })).toBeVisible();
 
-	// Add a member: pick the seeded dev user Avery Chen
-	const averyOption = page.locator('select option', { hasText: 'Avery Chen' });
-	const averyValue = await averyOption.getAttribute('value');
-	await page.getByLabel('Member to add').selectOption(averyValue!);
-	await page.getByRole('button', { name: 'Add' }).click();
-	await expect(page.locator('ul').getByText('Avery Chen')).toBeVisible();
-
-	// Remove the member
-	await page.getByRole('button', { name: 'Remove' }).click();
-	await expect(page.getByText(/No members yet/)).toBeVisible();
-
-	// Update the name
+	// Update the name (Details tab is active by default)
 	await page.getByLabel('Name').fill(`Test Org ${unique} Updated`);
 	await page.getByRole('button', { name: 'Save changes' }).click();
 	await expect(page.getByRole('heading', { name: `Test Org ${unique} Updated` })).toBeVisible();
+
+	// Manage membership in the Members tab via the transfer list.
+	await page.getByRole('tab', { name: 'Members' }).click();
+
+	// Add a member: select the seeded dev user Avery Chen, move to the pool, save.
+	await page.getByRole('button', { name: 'Avery Chen' }).click();
+	await page.getByRole('button', { name: 'Move selected to pool' }).click();
+	await page.getByRole('button', { name: 'Save members' }).click();
+	await expect(page.getByText(/1 member/)).toBeVisible();
+
+	// Reload to build a fresh transfer list from the server. This avoids racing
+	// the add's async reload with the mutation below (a stale core can
+	// overwrite an in-flight change and make the save no-op).
+	await page.reload();
+	await waitForHydration(page);
+	await page.getByRole('tab', { name: 'Members' }).click();
+
+	// Remove the member: select Avery in the target, move back to source, save.
+	const averyTarget = page.getByRole('button', { name: 'Avery Chen' });
+	await averyTarget.getByRole('checkbox').click();
+	await expect(averyTarget.getByRole('checkbox')).toHaveAttribute('aria-checked', 'true');
+	await page.getByRole('button', { name: 'Move selected out of pool' }).click();
+	await page.getByRole('button', { name: 'Save members' }).click();
+	await expect(page.getByText(/0 members/)).toBeVisible();
 
 	// The list reflects the update
 	await page.goto('/organizations');
