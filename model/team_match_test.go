@@ -43,10 +43,23 @@ func newStoredTeamMatch(t *testing.T, db database.Provider) *TeamMatch {
 }
 
 // newStoredLineupPairing builds a LineupPairing belonging to the given lineup,
-// with two freshly-created users added as members of the lineup's team.
+// with two freshly-created users added as members of the lineup's team. The two
+// players are assigned ratings matching the format's line 0 so the pairing
+// passes DynamicallyValid's rating check.
 func newStoredLineupPairing(t *testing.T, db database.Provider, lineup *Lineup, team *Team) *LineupPairing {
 	player1 := newStoredUser(t, db)
 	player2 := newStoredUser(t, db)
+
+	// Resolve the format line 0's required ratings so the players carry them.
+	week, err := database.GetExistingRecordById(context.Background(), db, &Week{}, lineup.WeekId.RecordId())
+	require.NoError(t, err)
+	draft, err := database.GetExistingRecordById(context.Background(), db, &Draft{}, week.DraftId.RecordId())
+	require.NoError(t, err)
+	format, err := database.GetExistingRecordById(context.Background(), db, &Format{}, draft.Format.RecordId())
+	require.NoError(t, err)
+	lines, err := format.GetLines(context.Background(), db)
+	require.NoError(t, err)
+	line := lines[0]
 
 	for _, player := range []database.UserId{player1.ID, player2.ID} {
 		assignment := &TeamAssignment{
@@ -55,6 +68,18 @@ func newStoredLineupPairing(t *testing.T, db database.Provider, lineup *Lineup, 
 			Role:   TeamRoleMember,
 		}
 		_, err := database.CreateOne(context.Background(), db, assignment)
+		require.NoError(t, err)
+	}
+
+	ratings := []database.UserId{player1.ID, player2.ID}
+	required := []RatingId{line.Player1Rating, line.Player2Rating}
+	for i, player := range ratings {
+		teamRating := &TeamRating{
+			TeamId:   team.ID,
+			UserId:   player,
+			RatingId: required[i],
+		}
+		_, err := database.CreateOne(context.Background(), db, teamRating)
 		require.NoError(t, err)
 	}
 

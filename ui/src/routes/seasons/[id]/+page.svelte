@@ -30,6 +30,13 @@
 		assignWeeklyMatchup
 	} from '$lib/schedule';
 	import type { ScheduleDetail, WeeklyMatchup } from '$lib/schedule';
+	import {
+		getLineupDetail,
+		setLineup,
+		confirmLineup,
+		markOfficial
+	} from '$lib/lineup';
+	import type { LineupDetail, PairingInput } from '$lib/lineup';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import {
 		Card,
@@ -63,6 +70,13 @@
 	let teamAvailability = $state<Record<string, Record<string, AvailabilityOption>>>({});
 	let availabilityError = $state('');
 	let savingWeek = $state<string | null>(null);
+
+	// weekly lineup state
+	let lineupDetails = $state<Record<string, Record<string, LineupDetail>>>({});
+	let lineupDrafts = $state<Record<string, PairingInput[]>>({});
+	let editingLineupWeek = $state<string | null>(null);
+	let lineupError = $state('');
+	let savingLineup = $state(false);
 
 	let loading = $state(true);
 	let loadError = $state('');
@@ -121,6 +135,7 @@
 			scheduleDetail = scheduleData;
 			rosters = rosterList;
 			await loadAvailability();
+			await loadLineups();
 		} catch (e) {
 			loadError = e instanceof Error ? e.message : 'Failed to load season';
 		} finally {
@@ -262,6 +277,95 @@
 			availabilityError = e instanceof Error ? e.message : 'Failed to save availability';
 		} finally {
 			savingWeek = null;
+		}
+	}
+
+	// --- weekly lineup actions -----------------------------------------------
+
+	// loadLineups fetches the LineupDetail for every team x week combination the
+	// current user can act on: their own team (if captain/co-captain) and all
+	// teams (if commissioner, so they can mark lineups official).
+	async function loadLineups() {
+		const teamsToLoad = isCommissioner ? teams : captainTeam ? [captainTeam] : [];
+		const details: Record<string, Record<string, LineupDetail>> = {};
+		for (const team of teamsToLoad) {
+			details[team.teamId] = {};
+			for (const week of weeks) {
+				try {
+					details[team.teamId][week.id] = await getLineupDetail(team.teamId, week.id);
+				} catch {
+					// ignore individual failures; the row just stays empty
+				}
+			}
+		}
+		lineupDetails = details;
+	}
+
+	// members eligible to play a slot in a line, filtered by the required rating.
+	function lineupPlayerOptions(ratingId: string) {
+		return sortedMembers(captainTeam!.members.filter((m) => m.rating_id === ratingId));
+	}
+
+	function setLineupPlayer(weekId: string, idx: number, slot: 'player1' | 'player2', value: string) {
+		lineupDrafts[weekId][idx][slot] = value;
+	}
+
+	// startEditLineup seeds the draft rows from the existing pairings (if any),
+	// one row per format line.
+	function startEditLineup(weekId: string) {
+		const detail = lineupDetails[captainTeam!.teamId]?.[weekId];
+		const pairings = detail?.pairings ?? [];
+		lineupDrafts[weekId] =
+			detail?.lines.map((line, idx) => {
+				const p = pairings.find((x) => x.format_line_index === idx);
+				return {
+					player1: p?.player1 ?? '',
+					player2: p?.player2 ?? '',
+					format_line_index: idx
+				};
+			}) ?? [];
+		editingLineupWeek = weekId;
+		lineupError = '';
+	}
+
+	async function saveLineup(weekId: string) {
+		if (!captainTeam) return;
+		const pairings = (lineupDrafts[weekId] ?? []).filter((p) => p.player1 && p.player2);
+		savingLineup = true;
+		lineupError = '';
+		try {
+			await setLineup(captainTeam.teamId, weekId, pairings);
+			editingLineupWeek = null;
+			await loadLineups();
+		} catch (e) {
+			lineupError = e instanceof Error ? e.message : 'Failed to save lineup';
+		} finally {
+			savingLineup = false;
+		}
+	}
+
+	async function confirmWeekLineup(weekId: string) {
+		if (!captainTeam) return;
+		const detail = lineupDetails[captainTeam.teamId]?.[weekId];
+		if (!detail?.lineup) return;
+		lineupError = '';
+		try {
+			await confirmLineup(detail.lineup.id);
+			await loadLineups();
+		} catch (e) {
+			lineupError = e instanceof Error ? e.message : 'Failed to confirm lineup';
+		}
+	}
+
+	async function markWeekOfficial(teamId: string, weekId: string) {
+		const detail = lineupDetails[teamId]?.[weekId];
+		if (!detail?.lineup) return;
+		lineupError = '';
+		try {
+			await markOfficial(detail.lineup.id);
+			await loadLineups();
+		} catch (e) {
+			lineupError = e instanceof Error ? e.message : 'Failed to mark lineup official';
 		}
 	}
 
@@ -624,6 +728,184 @@
 						</table>
 					</div>
 				</div>
+			{/if}
+		</CardContent>
+	</Card>
+
+	<!-- Weekly lineups -->
+	<Card class="mt-6">
+		<CardHeader>
+			<CardTitle class="text-base">Weekly lineups</CardTitle>
+		</CardHeader>
+		<CardContent>
+			{#if lineupError}
+				<p class="mb-4 text-sm font-medium text-destructive">{lineupError}</p>
+			{/if}
+
+			{#if weeks.length === 0}
+				<p class="text-sm text-muted-foreground">
+					No weeks have been added to this season yet.
+				</p>
+			{:else if isCommissioner}
+				<p class="mb-4 text-sm text-muted-foreground">
+					Mark confirmed lineups official. A lineup must be confirmed by the team captain
+					before it can be marked official.
+				</p>
+				<ul class="flex flex-col gap-4">
+					{#each weeks as week (week.id)}
+						<li class="rounded-lg border p-4">
+							<span class="text-sm font-medium">{weekLabel(week)}</span>
+							<ul class="mt-2 flex flex-col gap-2 text-sm">
+								{#each teams as team}
+									{@const d = lineupDetails[team.teamId]?.[week.id]}
+									<li class="flex items-center justify-between gap-3">
+										<span>
+											{team.name}
+											{#if d?.lineup?.confirmed}
+												<span class="text-xs text-muted-foreground"> — confirmed</span>
+											{/if}
+											{#if d?.lineup?.official}
+												<span class="text-xs text-muted-foreground"> — official</span>
+											{/if}
+										</span>
+										{#if d?.lineup?.confirmed && !d.lineup.official}
+											<Button
+												type="button"
+												size="sm"
+												onclick={() => markWeekOfficial(team.teamId, week.id)}
+											>
+												Mark official
+											</Button>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+						</li>
+					{/each}
+				</ul>
+			{:else if captainTeam}
+				<p class="mb-4 text-sm text-muted-foreground">
+					Build and confirm {captainTeam.name}'s weekly lineup from the team's rated players.
+				</p>
+				<ul class="flex flex-col gap-4">
+					{#each weeks as week (week.id)}
+						{@const detail = lineupDetails[captainTeam.teamId]?.[week.id]}
+						{@const confirmed = detail?.lineup?.confirmed}
+						{@const official = detail?.lineup?.official}
+						<li class="rounded-lg border p-4">
+							<div class="mb-2 flex items-center justify-between">
+								<span class="text-sm font-medium">{weekLabel(week)}</span>
+								{#if official}
+									<Badge variant="secondary">Official</Badge>
+								{:else if confirmed}
+									<Badge variant="secondary">Confirmed</Badge>
+								{/if}
+							</div>
+
+							{#if editingLineupWeek === week.id}
+								{#each lineupDrafts[week.id] ?? [] as row, idx (idx)}
+									{@const line = detail?.lines[idx]}
+									<div class="mb-3 flex flex-wrap items-end gap-3">
+										<div class="flex flex-col gap-1">
+											<Label for={`${week.id}-lineup-p1-${idx}`} class="text-xs">Player 1</Label>
+											<NativeSelect
+												id={`${week.id}-lineup-p1-${idx}`}
+												value={row.player1}
+												oninput={(e) =>
+													setLineupPlayer(
+														week.id,
+														idx,
+														'player1',
+														(e.currentTarget as HTMLSelectElement).value
+													)
+												}
+											>
+												<NativeSelectOption value="" disabled>Select…</NativeSelectOption>
+												{#each lineupPlayerOptions(line?.player_1_rating ?? '') as m}
+													<NativeSelectOption value={m.user_id}>
+														{userName(m.user_id)}
+													</NativeSelectOption>
+												{/each}
+											</NativeSelect>
+										</div>
+										<div class="flex flex-col gap-1">
+											<Label for={`${week.id}-lineup-p2-${idx}`} class="text-xs">Player 2</Label>
+											<NativeSelect
+												id={`${week.id}-lineup-p2-${idx}`}
+												value={row.player2}
+												oninput={(e) =>
+													setLineupPlayer(
+														week.id,
+														idx,
+														'player2',
+														(e.currentTarget as HTMLSelectElement).value
+													)
+												}
+											>
+												<NativeSelectOption value="" disabled>Select…</NativeSelectOption>
+												{#each lineupPlayerOptions(line?.player_2_rating ?? '') as m}
+													<NativeSelectOption value={m.user_id}>
+														{userName(m.user_id)}
+													</NativeSelectOption>
+												{/each}
+											</NativeSelect>
+										</div>
+										{#if line}
+											<span class="pb-1 text-xs text-muted-foreground">
+												{ratingName(line.player_1_rating)} / {ratingName(line.player_2_rating)}
+											</span>
+										{/if}
+									</div>
+								{/each}
+								<div class="mt-2 flex items-center gap-3">
+									<Button type="button" size="sm" onclick={() => saveLineup(week.id)} disabled={savingLineup}>
+										{savingLineup ? 'Saving…' : 'Save'}
+									</Button>
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										onclick={() => (editingLineupWeek = null)}
+									>
+										Cancel
+									</Button>
+								</div>
+							{:else}
+								<div class="flex items-center justify-between gap-3">
+									<span class="text-sm text-muted-foreground">
+										{#if (detail?.pairings.length ?? 0) > 0}
+											{detail!.pairings.length} line(s) assigned
+										{:else}
+											No lineup set.
+										{/if}
+									</span>
+									<div class="flex items-center gap-2">
+										{#if !confirmed && !official}
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												onclick={() => startEditLineup(week.id)}
+											>
+												Build
+											</Button>
+											{#if detail?.lineup}
+												<Button type="button" size="sm" onclick={() => confirmWeekLineup(week.id)}>
+													Confirm
+												</Button>
+											{/if}
+										{/if}
+									</div>
+								</div>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			{:else}
+				<p class="text-sm text-muted-foreground">
+					You are not a captain or co-captain on a team in this season, and you are not a
+					commissioner.
+				</p>
 			{/if}
 		</CardContent>
 	</Card>

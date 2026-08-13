@@ -17,13 +17,26 @@ func (id LineupPairingId) String() string {
 	return id.RecordId().String()
 }
 
+func (id LineupPairingId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
+func (id *LineupPairingId) UnmarshalJSON(bytes []byte) error {
+	rid := database.RecordId(0)
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*id = LineupPairingId(rid)
+	return nil
+}
+
 type LineupPairing struct {
-	ID              LineupPairingId `json:"id"` // unique ID for this LineupPairing
-	LineupId        LineupId        // This correlates a LineupPairing into a group with other pairing and assigns to a Week
-	TeamId          TeamId          // Players must be on this team
-	Player1         database.UserId // Player in slot 1 for the format / line
-	Player2         database.UserId // Player in slot 2 for the format / line
-	FormatLineIndex int             // index in the Format.Lines list that this pairing applies to
+	ID              LineupPairingId `json:"id"`           // unique ID for this LineupPairing
+	LineupId        LineupId        `json:"lineup_id"`   // This correlates a LineupPairing into a group with other pairing and assigns to a Week
+	TeamId          TeamId          `json:"team_id"`     // Players must be on this team
+	Player1         database.UserId `json:"player1"`     // Player in slot 1 for the format / line
+	Player2         database.UserId `json:"player2"`     // Player in slot 2 for the format / line
+	FormatLineIndex int             `json:"format_line_index"` // index in the Format.Lines list that this pairing applies to
 }
 
 func (l *LineupPairing) UniquenessEquivalent(other *LineupPairing) error {
@@ -112,7 +125,11 @@ func (l *LineupPairing) DynamicallyValid(ctx context.Context, db database.Provid
 	if l.FormatLineIndex >= len(lines) {
 		return fmt.Errorf("format line index out of range: %d, max %d", l.FormatLineIndex, len(lines)-1)
 	}
-	return nil
+
+	// enforce that both players carry the ratings required by their format line
+	// (the acceptance criterion for lineups: pairings are validated against team
+	// membership + format ratings).
+	return l.ValidatePlayerRatings(ctx, db)
 }
 
 func (l *LineupPairing) GetFormat(ctx context.Context, db database.Provider) (*Format, error) {
@@ -167,4 +184,10 @@ func (l *LineupPairing) ValidatePlayerRatings(ctx context.Context, db database.P
 
 func (l *LineupPairing) NewRecord() database.CrudRecord {
 	return new(LineupPairing)
+}
+
+// NewLineupPairing returns a new LineupPairing record. It is the conventional
+// constructor used by the generic CRUD route registration.
+func NewLineupPairing() *LineupPairing {
+	return &LineupPairing{}
 }
