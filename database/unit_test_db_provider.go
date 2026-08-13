@@ -53,11 +53,23 @@ func (u *UnitTestDbProvider) GetAll(ctx context.Context, recordType CrudRecord) 
 }
 
 func (u *UnitTestDbProvider) GetAllWhere(ctx context.Context, recordType CrudRecord, where WhereFunc) ([]CrudRecord, error) {
+	// Snapshot the records under the lock, then evaluate the where predicate
+	// outside it. The predicate may itself re-enter the provider — e.g. a
+	// record's AccessibleTo/EditableBy resolving its members via another
+	// GetAllWhere/GetOne (Team → TeamAssignment). Because u.mu is a plain,
+	// non-reentrant Mutex, holding it while running the predicate would
+	// deadlock on that nested read. The snapshot is stable, so the predicate
+	// is safe to run unlocked.
 	u.mu.Lock()
-	defer u.mu.Unlock()
-	output := make([]CrudRecord, 0)
 	cache := u.getOrCreateRecordCache(recordType)
+	records := make([]CrudRecord, 0, len(cache))
 	for _, record := range cache {
+		records = append(records, record)
+	}
+	u.mu.Unlock()
+
+	output := make([]CrudRecord, 0, len(records))
+	for _, record := range records {
 		if where == nil || where(ctx, record) {
 			output = append(output, record)
 		}

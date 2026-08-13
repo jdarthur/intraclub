@@ -66,6 +66,15 @@ CREATE TABLE private_record (
 	shared_to TEXT,
 	value     TEXT
 );
+CREATE TABLE reentrant_group (
+	id    TEXT PRIMARY KEY,
+	name  TEXT
+);
+CREATE TABLE reentrant_membership (
+	id       TEXT PRIMARY KEY,
+	group_id TEXT,
+	user_id  TEXT
+);
 `
 
 // contractSqliteMemorySeq ensures each SQLite in-memory contract-test provider
