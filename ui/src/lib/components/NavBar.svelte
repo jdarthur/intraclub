@@ -12,6 +12,7 @@
 	let loggedIn = $state(isLoggedIn());
 
 	const settingsLinks = [
+		{ href: '/seasons', label: 'Seasons' },
 		{ href: '/organizations', label: 'Organizations' },
 		{ href: '/facilities', label: 'Facilities' },
 		{ href: '/formats', label: 'Formats' },
