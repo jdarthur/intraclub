@@ -13,6 +13,7 @@ import (
 	"intraclub/database"
 	"intraclub/model"
 	"intraclub/route"
+	"intraclub/route/availability"
 	"intraclub/route/draft"
 	"intraclub/route/format"
 	"intraclub/route/organization"
@@ -128,6 +129,8 @@ func main() {
 	team.RegisterRoutes(rg, db)
 
 	week.RegisterRoutes(rg, db)
+
+	availability.RegisterRoutes(rg, db)
 
 	schedule.RegisterRoutes(rg, db)
 

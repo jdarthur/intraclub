@@ -37,10 +37,10 @@ func (opt AvailabilityOption) Valid() bool {
 }
 
 type Availability struct {
-	ID        database.RecordId `json:"id"`
-	UserId    database.UserId
-	WeekId    WeekId
-	Available AvailabilityOption
+	ID        database.RecordId  `json:"id"`
+	UserId    database.UserId    `json:"user_id"`
+	WeekId    WeekId             `json:"week_id"`
+	Available AvailabilityOption `json:"available"`
 }
 
 func (a *Availability) GetOwner() database.UserId {
