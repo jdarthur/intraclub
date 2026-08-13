@@ -11,6 +11,15 @@
 	import type { Rating } from '$lib/rating';
 	import { listFacilities } from '$lib/facility';
 	import type { Facility } from '$lib/facility';
+	import { getCurrentUserId } from '$lib/auth';
+	import { listWeeksForSeason } from '$lib/week';
+	import type { Week } from '$lib/week';
+	import {
+		createSchedule,
+		getScheduleForSeason,
+		assignWeeklyMatchup
+	} from '$lib/schedule';
+	import type { ScheduleDetail, WeeklyMatchup } from '$lib/schedule';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import {
 		Card,
@@ -18,6 +27,13 @@
 		CardHeader,
 		CardTitle
 	} from '$lib/components/ui/card/index.js';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import {
+		NativeSelect,
+		NativeSelectOption
+	} from '$lib/components/ui/native-select/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 
 	const id = () => page.params.id as string;
 
@@ -28,24 +44,53 @@
 	let users = $state<User[]>([]);
 	let ratingsById = $state<Record<string, Rating>>({});
 	let facilities = $state<Facility[]>([]);
+	let weeks = $state<Week[]>([]);
+	let scheduleDetail = $state<ScheduleDetail | null>(null);
 
 	let loading = $state(true);
 	let loadError = $state('');
+
+	// schedule builder state
+	let creatingSchedule = $state(false);
+	let scheduleError = $state('');
+	let editingWeekId = $state<string | null>(null);
+	let draftRows = $state<Record<string, EditRow[]>>({});
+
+	interface EditRow {
+		home: string;
+		away: string;
+		bye: boolean;
+	}
+
+	const isCommissioner = $derived(
+		scheduleDetail !== null && scheduleDetail.commissioners.includes(getCurrentUserId() ?? '')
+	);
 
 	async function load() {
 		loading = true;
 		loadError = '';
 		try {
-			const [seasonData, seasonTeamList, teamRatingList, draftCaptainList, userList, ratingList, facilityList] =
-				await Promise.all([
-					getSeason(id()),
-					listSeasonTeams(),
-					listTeamRatings(),
-					listDraftCaptains(),
-					listUsers(),
-					listRatings(),
-					listFacilities()
-				]);
+			const [
+				seasonData,
+				seasonTeamList,
+				teamRatingList,
+				draftCaptainList,
+				userList,
+				ratingList,
+				facilityList,
+				weekList,
+				scheduleData
+			] = await Promise.all([
+				getSeason(id()),
+				listSeasonTeams(),
+				listTeamRatings(),
+				listDraftCaptains(),
+				listUsers(),
+				listRatings(),
+				listFacilities(),
+				listWeeksForSeason(id()),
+				getScheduleForSeason(id())
+			]);
 			season = seasonData;
 			seasonTeams = seasonTeamList.filter((st) => st.season_id === seasonData.id);
 			teamRatings = teamRatingList;
@@ -53,6 +98,8 @@
 			users = userList;
 			ratingsById = Object.fromEntries(ratingList.map((r) => [r.id, r]));
 			facilities = facilityList;
+			weeks = weekList;
+			scheduleDetail = scheduleData;
 		} catch (e) {
 			loadError = e instanceof Error ? e.message : 'Failed to load season';
 		} finally {
@@ -103,6 +150,103 @@
 	function sortedMembers(members: TeamRating[]) {
 		return [...members].sort((a, b) => userName(a.user_id).localeCompare(userName(b.user_id)));
 	}
+
+	function teamName(teamId: string): string {
+		return teams.find((t) => t.teamId === teamId)?.name ?? teamId;
+	}
+
+	function weeklyMatchupFor(weekId: string): WeeklyMatchup | undefined {
+		return scheduleDetail?.weekly_matchups.find((wm) => wm.week_id === weekId);
+	}
+
+	function weekLabel(week: Week): string {
+		const d = new Date(week.date);
+		const date = Number.isNaN(d.getTime()) ? week.date : d.toLocaleDateString();
+		return week.note ? `${date} — ${week.note}` : date;
+	}
+
+	// --- schedule create / assign actions -----------------------------------
+
+	async function loadSchedule() {
+		scheduleDetail = await getScheduleForSeason(id());
+	}
+
+	async function handleCreateSchedule() {
+		creatingSchedule = true;
+		scheduleError = '';
+		try {
+			await createSchedule(id());
+			await loadSchedule();
+		} catch (e) {
+			scheduleError = e instanceof Error ? e.message : 'Failed to create schedule';
+		} finally {
+			creatingSchedule = false;
+		}
+	}
+
+	function rowsFromMatchup(wm: WeeklyMatchup | undefined): EditRow[] {
+		if (wm && wm.matchups.length > 0) {
+			return wm.matchups.map((m) => ({
+				home: m.home_team_id,
+				away: m.bye ? '' : m.away_team_id,
+				bye: m.bye
+			}));
+		}
+		return [{ home: '', away: '', bye: false }];
+	}
+
+	function startEdit(weekId: string) {
+		draftRows[weekId] = rowsFromMatchup(weeklyMatchupFor(weekId));
+		editingWeekId = weekId;
+		scheduleError = '';
+	}
+
+	function addRow(weekId: string) {
+		draftRows[weekId].push({ home: '', away: '', bye: false });
+	}
+
+	function removeRow(weekId: string, index: number) {
+		draftRows[weekId].splice(index, 1);
+	}
+
+	function setHome(weekId: string, index: number, value: string) {
+		draftRows[weekId][index].home = value;
+	}
+
+	function setAway(weekId: string, index: number, value: string) {
+		draftRows[weekId][index].away = value;
+	}
+
+	function toggleBye(weekId: string, index: number, checked: boolean) {
+		const row = draftRows[weekId][index];
+		row.bye = checked;
+		if (checked) row.away = '';
+	}
+
+	function cancelEdit() {
+		editingWeekId = null;
+		scheduleError = '';
+	}
+
+	async function saveWeek(weekId: string) {
+		if (!scheduleDetail?.schedule) return;
+		scheduleError = '';
+		const rows = draftRows[weekId] ?? [];
+		const matchups = rows
+			.filter((r) => r.home)
+			.map((r) => ({
+				home_team_id: r.home,
+				away_team_id: r.bye ? '' : r.away,
+				bye: r.bye
+			}));
+		try {
+			await assignWeeklyMatchup(scheduleDetail.schedule.id, weekId, matchups);
+			editingWeekId = null;
+			await loadSchedule();
+		} catch (e) {
+			scheduleError = e instanceof Error ? e.message : 'Failed to save weekly matchup';
+		}
+	}
 </script>
 
 <svelte:head>
@@ -136,6 +280,157 @@
 				<span class="text-muted-foreground">Start time: {season.start_time}</span>
 				<span class="text-muted-foreground">{teams.length} teams</span>
 			</div>
+		</CardContent>
+	</Card>
+
+	<!-- Schedule -->
+	<Card class="mt-6">
+		<CardHeader>
+			<CardTitle class="text-base">Season schedule</CardTitle>
+		</CardHeader>
+		<CardContent>
+			{#if scheduleError}
+				<p class="mb-4 text-sm font-medium text-destructive">{scheduleError}</p>
+			{/if}
+
+			{#if scheduleDetail && !scheduleDetail.schedule}
+				{#if isCommissioner}
+					<p class="text-sm text-muted-foreground">
+						No schedule yet. Create one to assign weekly matchups to each week.
+					</p>
+					<Button class="mt-4" onclick={handleCreateSchedule} disabled={creatingSchedule}>
+						{creatingSchedule ? 'Creating…' : 'Create schedule'}
+					</Button>
+				{:else}
+					<p class="text-sm text-muted-foreground">
+						No schedule has been created for this season yet.
+					</p>
+				{/if}
+			{:else if scheduleDetail}
+				{#if weeks.length === 0}
+					<p class="text-sm text-muted-foreground">
+						No weeks have been added to this season yet.
+					</p>
+				{:else}
+					<ul class="flex flex-col gap-4">
+						{#each weeks as week (week.id)}
+							{#if editingWeekId === week.id}
+								<li class="rounded-lg border p-4">
+									<div class="mb-3 flex items-center justify-between">
+										<span class="text-sm font-medium">{weekLabel(week)}</span>
+										<Button
+											type="button"
+											variant="ghost"
+											size="sm"
+											onclick={cancelEdit}
+										>
+											Cancel
+										</Button>
+									</div>
+									{#if teams.length === 0}
+										<p class="text-sm text-muted-foreground">No teams to schedule.</p>
+									{:else}
+										{#each draftRows[week.id] ?? [] as row, i (i)}
+											<div class="mb-3 flex flex-wrap items-end gap-3">
+												<div class="flex flex-col gap-1">
+													<Label for={`${week.id}-home-${i}`} class="text-xs">Home</Label>
+													<NativeSelect
+														id={`${week.id}-home-${i}`}
+														value={row.home}
+														oninput={(e) =>
+															setHome(week.id, i, (e.currentTarget as HTMLSelectElement).value)
+														}
+													>
+														<NativeSelectOption value="" disabled>Select team…</NativeSelectOption>
+														{#each teams as t}
+															<NativeSelectOption value={t.teamId}>{t.name}</NativeSelectOption>
+														{/each}
+													</NativeSelect>
+												</div>
+												<div class="flex flex-col gap-1">
+													<Label for={`${week.id}-away-${i}`} class="text-xs">Away</Label>
+													<NativeSelect
+														id={`${week.id}-away-${i}`}
+														value={row.away}
+														disabled={row.bye}
+														oninput={(e) =>
+															setAway(week.id, i, (e.currentTarget as HTMLSelectElement).value)
+														}
+													>
+														<NativeSelectOption value="" disabled>Select team…</NativeSelectOption>
+														{#each teams as t}
+															<NativeSelectOption value={t.teamId}>{t.name}</NativeSelectOption>
+														{/each}
+													</NativeSelect>
+												</div>
+												<div class="flex items-center gap-2 pb-1">
+													<Checkbox
+														checked={row.bye}
+														onCheckedChange={(checked) => toggleBye(week.id, i, checked)}
+													/>
+													<Label class="text-sm">Bye</Label>
+												</div>
+												<Button
+													type="button"
+													variant="ghost"
+													size="sm"
+													onclick={() => removeRow(week.id, i)}
+												>
+													Remove
+												</Button>
+											</div>
+										{/each}
+										<div class="mt-2 flex items-center gap-3">
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												onclick={() => addRow(week.id)}
+											>
+												Add matchup
+											</Button>
+											<Button type="button" size="sm" onclick={() => saveWeek(week.id)}>
+												Save
+											</Button>
+										</div>
+									{/if}
+								</li>
+							{:else}
+								<li class="rounded-lg border p-4">
+									<div class="mb-2 flex items-center justify-between">
+										<span class="text-sm font-medium">{weekLabel(week)}</span>
+										{#if isCommissioner}
+											<Button
+												type="button"
+												variant="outline"
+												size="sm"
+												onclick={() => startEdit(week.id)}
+											>
+												Edit
+											</Button>
+										{/if}
+									</div>
+									{#if (weeklyMatchupFor(week.id)?.matchups.length ?? 0) > 0}
+										<ul class="flex flex-col gap-1 text-sm">
+											{#each weeklyMatchupFor(week.id)!.matchups as m}
+												<li>
+													{#if m.bye}
+														{teamName(m.home_team_id)} — bye
+													{:else}
+														{teamName(m.home_team_id)} vs {teamName(m.away_team_id)}
+													{/if}
+												</li>
+											{/each}
+										</ul>
+									{:else}
+										<p class="text-sm text-muted-foreground">No matchups assigned.</p>
+									{/if}
+								</li>
+							{/if}
+						{/each}
+					</ul>
+				{/if}
+			{/if}
 		</CardContent>
 	</Card>
 
