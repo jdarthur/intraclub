@@ -16,6 +16,7 @@ import (
 	"intraclub/route/availability"
 	"intraclub/route/draft"
 	"intraclub/route/format"
+	"intraclub/route/lateaddition"
 	"intraclub/route/lineup"
 	"intraclub/route/match"
 	"intraclub/route/organization"
@@ -66,6 +67,11 @@ func main() {
 
 	whoAmI := api.RouteFamily[*model.User]{DatabaseProvider: db}
 	whoAmI.Handle(rg, user.WhoAmI{})
+
+	// whoami/roles lists the current user's role names; the UI uses it to gate
+	// sysadmin-only controls (e.g. season late additions).
+	roles := api.RouteFamily[*model.User]{DatabaseProvider: db}
+	roles.Handle(rg, user.Roles{})
 
 	importHandler := &route.CsvImportHandler{DatabaseProvider: db}
 	rg.Handle(api.HttpMethodPost.String(), "/import_users_from_csv", importHandler.HandleCsvImport)
@@ -166,6 +172,16 @@ func main() {
 	seasonTeams.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
 	teamRatings := api.NewCrudCommon(func() *model.TeamRating { return &model.TeamRating{} }, false, db)
 	teamRatings.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
+
+	// SeasonLateAdditions link a Season to Users added after the draft was
+	// completed. The generic surface is read-only (the season page shows them);
+	// writes go exclusively through the custom routes in route/lateaddition,
+	// which enforce the model's sysadmin-only EditableBy constraint (the
+	// generic create path does not check EditableBy).
+	seasonLateAdditions := api.NewCrudCommon(func() *model.SeasonLateAddition { return &model.SeasonLateAddition{} }, false, db)
+	seasonLateAdditions.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
+	lateAdditions := api.RouteFamily[*lateaddition.AddLateAdditionBody]{DatabaseProvider: db}
+	lateAdditions.Handle(rg, lateaddition.AddLateAddition{}, lateaddition.RemoveLateAddition{})
 
 	// Teams are largely immutable after the draft finalizes: they are exposed
 	// only through the constrained read + role-assignment surface in

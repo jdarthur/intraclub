@@ -166,6 +166,23 @@ func IsUserSystemAdministrator(ctx context.Context, db database.Provider, userId
 	return user.HasRole(ctx, db, SystemAdministrator)
 }
 
+// GetRoles returns the names of all roles assigned to this user, in the order
+// the assignments were created.
+func (u *User) GetRoles(ctx context.Context, db database.Provider) ([]string, error) {
+	filter := func(_ context.Context, c *UserRoleAssignment) bool {
+		return c.UserId == u.ID
+	}
+	assignments, err := database.GetAllWhere[*UserRoleAssignment](ctx, db, filter)
+	if err != nil {
+		return nil, err
+	}
+	names := make([]string, 0, len(assignments))
+	for _, a := range assignments {
+		names = append(names, a.Role.String())
+	}
+	return names, nil
+}
+
 func (u *User) HasRole(ctx context.Context, db database.Provider, role Role) (bool, error) {
 
 	filter := func(_ context.Context, c *UserRoleAssignment) bool {

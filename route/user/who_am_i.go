@@ -18,7 +18,10 @@ func (c WhoAmI) Path() (api.HttpMethod, string) {
 }
 
 func (c WhoAmI) RequestBody() (*model.User, bool) {
-	return &model.User{}, true
+	// whoami takes no request body: the caller's identity comes from the token.
+	// Declaring a body here makes the generic wrapper bind + StaticallyValid a
+	// zero-valued User and 400 before the handler runs (see #196).
+	return nil, false
 }
 
 func (c WhoAmI) Handler(req api.Request[*model.User]) (any, int, error) {
