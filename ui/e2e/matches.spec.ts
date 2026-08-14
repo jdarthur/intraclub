@@ -28,7 +28,7 @@ async function tokenFor(page: Page, email: string): Promise<string> {
 	return jwt;
 }
 
-test('commissioner generates week matches, records scores, completes a match, and standings reflect it', async ({
+test('commissioner generates week matches, records scores, completes a match, closes the week, and standings reflect it', async ({
 	page
 }) => {
 	await login(page, 'jdarthur@gatech.edu');
@@ -270,6 +270,27 @@ test('commissioner generates week matches, records scores, completes a match, an
 	await expect(page.getByRole('cell', { name: 'Team 1' })).toBeVisible();
 	const standingsRow = page.locator('tr', { hasText: 'Team 1' });
 	await expect(standingsRow).toContainText('1');
+
+	// Close the week as the commissioner. Completing the home match decided both
+	// individual matches (home won, away lost), so all matches are complete.
+	const closeRes = await page.request.post(`${API}/week/${week.id}/close`, {
+		headers: { 'X-INTRACLUB-TOKEN': token }
+	});
+	expect(closeRes.ok(), `close week failed: ${await closeRes.text()}`).toBeTruthy();
+
+	// Reload and confirm the week card now shows the Closed badge, and the
+	// standings still reflect the completed team match after the week closes.
+	await page.reload();
+	await waitForHydration(page);
+	await expect(page.getByRole('heading', { name: seasonName })).toBeVisible();
+	await expect(
+		page
+			.locator('[data-slot="card"]')
+			.filter({ hasText: 'Match scoring' })
+			.getByText('Closed', { exact: true })
+	).toBeVisible();
+	await expect(page.getByRole('cell', { name: 'Team 1' })).toBeVisible();
+	await expect(page.locator('tr', { hasText: 'Team 1' })).toContainText('1');
 
 	// Clean up the draft so the table doesn't accumulate rows across runs.
 	const cleanup = await page.request.delete(`${API}/draft/${draftId}`, {
