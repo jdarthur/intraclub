@@ -583,6 +583,12 @@
 	<h1 class="text-2xl font-semibold tracking-tight">{season?.name ?? 'Season'}</h1>
 	<div class="ml-auto flex items-center gap-3">
 		{#if season}
+			<a
+				href={`/seasons/${season.id}/proposals`}
+				class="text-sm text-muted-foreground hover:text-foreground"
+			>
+				Commissioner proposals
+			</a>
 			<a href={`/drafts/${season.draft_id}`} class="text-sm text-muted-foreground hover:text-foreground">
 				&larr; View draft
 			</a>

@@ -22,10 +22,10 @@ import (
 // field is not a breaking wire change; in-process reads can reassemble the
 // relationship rows into the old map shape via `CommissionerProposal.GetVotes`.
 type CommissionerProposal struct {
-	ID              database.RecordId `json:"id"` // unique ID for this proposal
-	Description     string            // description of the change or action
-	SeasonId        SeasonId          // season that this pertains to
-	MustBeUnanimous bool              // true if this proposal must get unanimous consent to pass
+	ID              database.RecordId `json:"id"`               // unique ID for this proposal
+	Description     string            `json:"description"`      // description of the change or action
+	SeasonId        SeasonId          `json:"season_id"`        // season that this pertains to
+	MustBeUnanimous bool              `json:"must_be_unanimous"` // true if this proposal must get unanimous consent to pass
 }
 
 func (c *CommissionerProposal) GetOwner() database.UserId {
@@ -285,9 +285,9 @@ func (c *CommissionerProposal) NewRecord() database.CrudRecord {
 // migration/backfill.
 type CommissionerProposalVote struct {
 	ID         database.RecordId `json:"id"`
-	ProposalId database.RecordId
-	UserId     database.UserId
-	Vote       bool
+	ProposalId database.RecordId `json:"proposal_id"`
+	UserId     database.UserId   `json:"user_id"`
+	Vote       bool              `json:"vote"`
 }
 
 func (v *CommissionerProposalVote) GetOwner() database.UserId {
