@@ -216,19 +216,24 @@ func (r *Ruleset) HandleReorderSection(ctx context.Context, db database.Provider
 		}
 	}
 
-	// Build new ordered list by inserting target after the "After" section
+	// Build new ordered list by inserting target after the "After" section.
+	// An empty After moves the target to the front of the list.
 	var newRelations []*RulesetSection
-	found := false
-	for _, sr := range otherRelations {
-		newRelations = append(newRelations, sr)
-		if sr.SectionId == a.After {
-			newRelations = append(newRelations, targetRelation)
-			found = true
+	if a.After.Empty() {
+		newRelations = append(newRelations, targetRelation)
+		newRelations = append(newRelations, otherRelations...)
+	} else {
+		found := false
+		for _, sr := range otherRelations {
+			newRelations = append(newRelations, sr)
+			if sr.SectionId == a.After {
+				newRelations = append(newRelations, targetRelation)
+				found = true
+			}
 		}
-	}
-
-	if !found {
-		return nil, fmt.Errorf("after section ID %s was not found in ruleset %s", a.After, r.ID)
+		if !found {
+			return nil, fmt.Errorf("after section ID %s was not found in ruleset %s", a.After, r.ID)
+		}
 	}
 
 	// Update section indices for all relations

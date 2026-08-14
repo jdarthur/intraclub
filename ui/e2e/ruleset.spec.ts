@@ -62,3 +62,48 @@ test('ruleset CRUD: create, view, amend (update), delete', async ({ page }) => {
 	await expect(page).toHaveURL('/rulesets');
 	await expect(page.getByRole('link', { name: `Test Ruleset ${unique} Amended` })).toHaveCount(0);
 });
+
+test('ruleset sections: add, edit, reorder', async ({ page }) => {
+	await login(page);
+
+	const unique = Date.now();
+
+	// Create a ruleset
+	await page.goto('/rulesets');
+	await page.getByRole('link', { name: 'New ruleset' }).click();
+	await expect(page).toHaveURL(/\/rulesets\/new$/);
+	await waitForHydration(page);
+	await page.getByLabel('Name').fill(`Section Test ${unique}`);
+	await page.getByRole('button', { name: 'Create ruleset' }).click();
+	await expect(page.getByRole('heading', { name: `Section Test ${unique}` })).toBeVisible();
+
+	// Add two sections
+	await page.getByLabel('Title').fill('First Section');
+	await page.getByLabel('Contents').fill('First contents');
+	await page.getByRole('button', { name: 'Add section' }).click();
+	await expect(page.getByText('1. First Section')).toBeVisible();
+	await expect(page.getByText('First contents')).toBeVisible();
+	// Adding a section amends the ruleset into a new revision and navigates to
+	// it; wait for that revision's data fetches to settle so the next add reads
+	// the current section list.
+	await waitForHydration(page);
+
+	await page.getByLabel('Title').fill('Second Section');
+	await page.getByLabel('Contents').fill('Second contents');
+	await page.getByRole('button', { name: 'Add section' }).click();
+	await expect(page.getByText('2. Second Section')).toBeVisible();
+
+	// Edit the first section (rename it)
+	const firstRow = page.locator('li', { hasText: 'First Section' });
+	await firstRow.getByRole('button', { name: 'Edit' }).click();
+	await page.locator('input[id^="edit-title-"]').fill('Renamed Section');
+	await page.getByRole('button', { name: 'Save section' }).click();
+	await expect(page.getByText('1. Renamed Section')).toBeVisible();
+
+	// Reorder: move the second section up so it becomes the first
+	const secondRow = page.locator('li', { hasText: 'Second Section' });
+	await secondRow.getByRole('button', { name: '↑' }).click();
+	await expect(page.getByText('1. Second Section')).toBeVisible();
+	await expect(page.getByText('2. Renamed Section')).toBeVisible();
+});
+

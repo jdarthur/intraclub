@@ -14,9 +14,13 @@ import (
 // RulesetId is a unique identifier for the Ruleset type
 type RulesetId database.RecordId
 
-func (id RulesetId) UnmarshalJSON(bytes []byte) error {
+func (id *RulesetId) UnmarshalJSON(bytes []byte) error {
 	rid := id.RecordId()
-	return (*database.RecordId)(&rid).UnmarshalJSON(bytes)
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*id = RulesetId(rid)
+	return nil
 }
 
 func (id RulesetId) MarshalJSON() ([]byte, error) {
@@ -385,9 +389,13 @@ func (r *Ruleset) EditName(ctx context.Context, db database.Provider, newName st
 
 type RuleSectionId database.RecordId
 
-func (id RuleSectionId) UnmarshalJSON(bytes []byte) error {
+func (id *RuleSectionId) UnmarshalJSON(bytes []byte) error {
 	rid := id.RecordId()
-	return (*database.RecordId)(&rid).UnmarshalJSON(bytes)
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*id = RuleSectionId(rid)
+	return nil
 }
 
 func (id RuleSectionId) MarshalJSON() ([]byte, error) {

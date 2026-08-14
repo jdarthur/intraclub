@@ -226,8 +226,115 @@ func TestSupersededByOwnerMustBeIdentical(t *testing.T) {
 
 }
 
-func TestRulesetPostDeleteCascadesChildren(t *testing.T) {
+func TestRuleSectionIdJSONRoundTrip(t *testing.T) {
+	// RuleSectionId / RulesetId must be parsed back from JSON bodies (used by
+	// the RuleAmendment request). A value-receiver UnmarshalJSON silently
+	// discards the parsed value, so this guards the pointer-receiver fix.
+	rid, err := database.RecordIdFromString("1234567890abcdef")
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := RuleSectionId(rid)
+	raw, err := id.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed RuleSectionId
+	if err := parsed.UnmarshalJSON(raw); err != nil {
+		t.Fatal(err)
+	}
+	if parsed != id {
+		t.Fatalf("expected %s after round trip, got %s", id, parsed)
+	}
+}
+
+func TestRulesetIdJSONRoundTrip(t *testing.T) {
+	rid, err := database.RecordIdFromString("fedcba9876543210")
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := RulesetId(rid)
+	raw, err := id.MarshalJSON()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed RulesetId
+	if err := parsed.UnmarshalJSON(raw); err != nil {
+		t.Fatal(err)
+	}
+	if parsed != id {
+		t.Fatalf("expected %s after round trip, got %s", id, parsed)
+	}
+}
+
+func TestRulesetReorderSectionToFront(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
+	ruleset := newValidStoredRulesetWithXSections(t, db, 3)
+
+	sections, err := ruleset.GetSections(context.Background(), db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sections) != 3 {
+		t.Fatalf("expected 3 sections, got %d", len(sections))
+	}
+	first, second := sections[0], sections[1]
+
+	// Move the second section to the front (empty After).
+	amended, err := ruleset.Amend(context.Background(), db, &RuleAmendment{
+		Type:          RuleAmendmentTypeReorderSection,
+		TargetSection: second,
+		After:         RuleSectionId(database.InvalidRecordId),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error reordering section to front: %s", err)
+	}
+
+	got, err := amended.GetSections(context.Background(), db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("expected 3 sections after reorder, got %d", len(got))
+	}
+	if got[0] != second || got[1] != first {
+		t.Fatalf("expected [%s %s ...] after reorder, got [%s %s ...]", second, first, got[0], got[1])
+	}
+}
+
+func TestRulesetReorderSectionAfter(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	ruleset := newValidStoredRulesetWithXSections(t, db, 3)
+
+	sections, err := ruleset.GetSections(context.Background(), db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, third := sections[0], sections[2]
+
+	// Move the first section after the third (to the end).
+	amended, err := ruleset.Amend(context.Background(), db, &RuleAmendment{
+		Type:          RuleAmendmentTypeReorderSection,
+		TargetSection: first,
+		After:         third,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error reordering section: %s", err)
+	}
+
+	got, err := amended.GetSections(context.Background(), db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("expected 3 sections after reorder, got %d", len(got))
+	}
+	if got[2] != first {
+		t.Fatalf("expected first section to move to end, got last %s", got[2])
+	}
+}
+
+func TestRulesetPostDeleteCascadesChildren(t *testing.T) {	db := database.NewUnitTestDBProvider()
 	ruleset := newValidStoredRuleset(t, db)
 
 	section := &RuleSection{Parent: ruleset.ID, Title: "title", Markdown: "contents", Owner: ruleset.Owner}
