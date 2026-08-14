@@ -19,6 +19,7 @@ import (
 	"intraclub/route/lineup"
 	"intraclub/route/match"
 	"intraclub/route/organization"
+	"intraclub/route/proposal"
 	"intraclub/route/ruleset"
 	"intraclub/route/schedule"
 	"intraclub/route/team"
@@ -106,6 +107,19 @@ func main() {
 
 	amendRuleset := api.RouteFamily[*ruleset.AmendNameBody]{DatabaseProvider: db}
 	amendRuleset.Handle(rg, ruleset.AmendRulesetName{})
+
+	// Commissioner proposals are the "manage club rules" feature: a season
+	// commissioner proposes a rule change / administrative action and the
+	// season's participants (commissioners + team captains) ratify it by
+	// majority or unanimous consent. Generic CRUD covers create / list / read /
+	// update / delete of proposals; writes to votes go exclusively through the
+	// custom cast-vote endpoint in route/proposal (which validates the voter is
+	// a season participant), so the vote records are exposed read-only here.
+	proposals := api.NewCrudCommon(model.NewCommissionerProposal, false, db)
+	proposals.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+	proposalVotes := api.NewCrudCommon(func() *model.CommissionerProposalVote { return &model.CommissionerProposalVote{} }, false, db)
+	proposalVotes.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
+	proposal.RegisterRoutes(rg, db)
 
 	rg.GET("/draft_order_patterns", model.GetDraftOrderPatterns)
 
