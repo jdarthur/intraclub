@@ -105,14 +105,17 @@ func (c *CrudCommon[T]) createCrudRecord(route Route[T], request Request[T]) (an
 	body := request.Body
 	body.SetOwner(request.Token.UserId)
 
-	// Create endpoint does not need ownership/access authentication as there is not a
-	// record yet which has any AccessibleTo / EditableBy functions defined.
-	//
-	// On creation, the CrudRecord which is being created will set all the fields necessary
-	// to validate these things on future get/update/delete requests (e.g. setting a team ID
-	// to enforce accessible-only-to-team constraints or setting a user ID to enforce only
-	// editable by creator constraints
-	// a
+	// Enforce the model's EditableBy on the create path. After stamping the
+	// caller as owner, verify that the caller may edit a record with these field
+	// values. For owner-based models this always passes (the caller just became
+	// the owner); for sysadmin-only / season-scoped models it correctly denies
+	// non-privileged users. Denial is 403 so clients can distinguish "forbidden"
+	// from an invalid body (400).
+	wac := database.WithAccessControl[T]{Database: c.DatabaseProvider, AccessControlUser: request.Token.UserId}
+	if !wac.CanUserEdit(body) {
+		return nil, http.StatusForbidden, errors.New("user is not allowed to create this record")
+	}
+
 	v, err := database.CreateOne(request.Context, c.DatabaseProvider, body)
 	if err != nil {
 		return nil, http.StatusBadRequest, err

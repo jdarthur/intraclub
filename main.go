@@ -176,8 +176,7 @@ func main() {
 	// SeasonLateAdditions link a Season to Users added after the draft was
 	// completed. The generic surface is read-only (the season page shows them);
 	// writes go exclusively through the custom routes in route/lateaddition,
-	// which enforce the model's sysadmin-only EditableBy constraint (the
-	// generic create path does not check EditableBy).
+	// which enforce the model's sysadmin-only EditableBy constraint.
 	seasonLateAdditions := api.NewCrudCommon(func() *model.SeasonLateAddition { return &model.SeasonLateAddition{} }, false, db)
 	seasonLateAdditions.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
 	lateAdditions := api.RouteFamily[*lateaddition.AddLateAdditionBody]{DatabaseProvider: db}

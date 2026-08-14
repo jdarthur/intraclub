@@ -3,9 +3,7 @@
 //
 // The generic CRUD surface in main.go is registered read-only for this type;
 // writes go exclusively through the routes in this package, which enforce the
-// model's sysadmin-only EditableBy constraint. (The generic create path does
-// not check EditableBy, so a plain POST /api/season_late_addition would
-// otherwise let any logged-in user add late players.)
+// model's sysadmin-only EditableBy constraint.
 package lateaddition
 
 import (
