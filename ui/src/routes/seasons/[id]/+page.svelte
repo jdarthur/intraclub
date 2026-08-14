@@ -62,6 +62,7 @@
 	} from '$lib/components/ui/native-select/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+	import Standings from '$lib/components/Standings.svelte';
 
 	const id = () => page.params.id as string;
 
@@ -1194,41 +1195,8 @@
 	</Card>
 
 	<!-- Standings -->
-	<Card class="mt-6">
-		<CardHeader>
-			<CardTitle class="text-base">Standings</CardTitle>
-		</CardHeader>
-		<CardContent>
-			{#if standings.length === 0}
-				<p class="text-sm text-muted-foreground">
-					No completed matches yet. Standings update as team matches are completed.
-				</p>
-			{:else}
-				<div class="overflow-x-auto">
-					<table class="w-full text-sm">
-						<thead>
-							<tr class="border-b text-left text-muted-foreground">
-								<th class="py-1 pr-4 font-medium">Team</th>
-								<th class="py-1 pr-4 font-medium">Wins</th>
-								<th class="py-1 pr-4 font-medium">Losses</th>
-								<th class="py-1 pr-4 font-medium">Ties</th>
-							</tr>
-						</thead>
-						<tbody>
-							{#each standings as entry}
-								<tr class="border-b">
-									<td class="py-1 pr-4 font-medium">{teamName(entry.team_id)}</td>
-									<td class="py-1 pr-4">{entry.wins}</td>
-									<td class="py-1 pr-4">{entry.losses}</td>
-									<td class="py-1 pr-4">{entry.ties}</td>
-								</tr>
-							{/each}
-						</tbody>
-					</table>
-				</div>
-			{/if}
-		</CardContent>
-	</Card>
+	<Standings {standings} {teamName} />
+
 
 	{#if teams.length === 0}
 		<p class="mt-6 text-sm text-muted-foreground">No teams have been added to this season yet.</p>
