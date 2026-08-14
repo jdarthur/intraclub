@@ -48,6 +48,10 @@
 	// Secondary (tie-breaker) scoring structures assigned to this structure,
 	// ordered by SecondaryIndex.
 	let secondaries = $state<ScoringStructure[]>([]);
+	// Local draft of secondary edits, built incrementally. The backend requires
+	// a composite to have exactly the required number of secondaries, so edits
+	// accumulate here and are committed in one call via the Save button.
+	let draftSecondaries = $state<ScoringStructure[]>([]);
 	let allStructures = $state<ScoringStructure[]>([]);
 	let selectedSecondaryId = $state('');
 	let secondariesError = $state('');
@@ -71,7 +75,17 @@
 	const eligibleStructures = $derived(
 		secondaryType === null
 			? []
-			: allStructures.filter((s) => s.win_condition_counting_type === secondaryType)
+			: allStructures.filter(
+					(s) =>
+						s.win_condition_counting_type === secondaryType &&
+						!draftSecondaries.some((d) => d.id === s.id)
+				)
+	);
+	// The backend requires a composite to have exactly this many secondaries.
+	const canSaveSecondaries = $derived(
+		secondaryType !== null &&
+			requiredSecondaryCount !== null &&
+			draftSecondaries.length === requiredSecondaryCount
 	);
 	const secondaryTypeName = $derived(
 		countingTypes.find((t) => t.type === secondaryType)?.name.toLowerCase() ?? ''
@@ -118,6 +132,7 @@
 	async function loadSecondaries() {
 		try {
 			secondaries = await getScoringStructureSecondaries(id());
+			draftSecondaries = secondaries;
 		} catch (e) {
 			secondariesError = e instanceof Error ? e.message : 'Failed to load secondary scoring structures';
 		}
@@ -129,12 +144,15 @@
 		}
 	}
 
-	async function saveSecondaries(secondaryIds: string[]) {
+	async function saveSecondaries() {
 		secondariesError = '';
 		secondariesSaving = true;
 		try {
-			secondaries = await setScoringStructureSecondaries(id(), secondaryIds);
-			selectedSecondaryId = '';
+			secondaries = await setScoringStructureSecondaries(
+				id(),
+				draftSecondaries.map((s) => s.id)
+			);
+			draftSecondaries = secondaries;
 		} catch (err) {
 			secondariesError = err instanceof Error ? err.message : 'Failed to update secondary scoring structures';
 		} finally {
@@ -142,22 +160,23 @@
 		}
 	}
 
-	function handleAddSecondary(e: Event) {
-		e.preventDefault();
-		if (!selectedSecondaryId) return;
-		saveSecondaries([...secondaries.map((s) => s.id), selectedSecondaryId]);
+	function addToDraft() {
+		const chosen = allStructures.find((s) => s.id === selectedSecondaryId);
+		if (!chosen) return;
+		draftSecondaries = [...draftSecondaries, chosen];
+		selectedSecondaryId = '';
 	}
 
-	function handleRemoveSecondary(index: number) {
-		saveSecondaries(secondaries.filter((_, i) => i !== index).map((s) => s.id));
+	function removeFromDraft(index: number) {
+		draftSecondaries = draftSecondaries.filter((_, i) => i !== index);
 	}
 
-	function handleMoveSecondary(index: number, direction: -1 | 1) {
+	function moveDraft(index: number, direction: -1 | 1) {
 		const target = index + direction;
-		if (target < 0 || target >= secondaries.length) return;
-		const next = secondaries.map((s) => s.id);
+		if (target < 0 || target >= draftSecondaries.length) return;
+		const next = [...draftSecondaries];
 		[next[index], next[target]] = [next[target], next[index]];
-		saveSecondaries(next);
+		draftSecondaries = next;
 	}
 
 	async function handleSave(e: Event) {
@@ -290,9 +309,9 @@
 	<section class="mt-6 max-w-md">
 		<h2 class="text-xl font-semibold tracking-tight">Secondary scoring structures</h2>
 
-		{#if secondaries.length > 0}
+		{#if draftSecondaries.length > 0}
 			<ul class="mt-4 flex flex-col gap-2">
-				{#each secondaries as secondary, i}
+				{#each draftSecondaries as secondary, i}
 					<li class="flex items-center justify-between gap-2 rounded-lg border p-2 pl-3">
 						<span class="flex items-center gap-2">
 							<span class="text-sm text-muted-foreground">{i + 1}.</span>
@@ -303,8 +322,8 @@
 								type="button"
 								variant="outline"
 								size="sm"
-								onclick={() => handleMoveSecondary(i, -1)}
-								disabled={secondariesSaving || i === 0}
+								onclick={() => moveDraft(i, -1)}
+								disabled={i === 0}
 							>
 								↑
 							</Button>
@@ -312,8 +331,8 @@
 								type="button"
 								variant="outline"
 								size="sm"
-								onclick={() => handleMoveSecondary(i, 1)}
-								disabled={secondariesSaving || i === secondaries.length - 1}
+								onclick={() => moveDraft(i, 1)}
+								disabled={i === draftSecondaries.length - 1}
 							>
 								↓
 							</Button>
@@ -321,8 +340,7 @@
 								type="button"
 								variant="outline"
 								size="sm"
-								onclick={() => handleRemoveSecondary(i)}
-								disabled={secondariesSaving}
+								onclick={() => removeFromDraft(i)}
 							>
 								Remove
 							</Button>
@@ -335,8 +353,8 @@
 		{#if secondaryType === null}
 			<p class="mt-2 text-sm text-muted-foreground">
 				Point-based scoring structures cannot have secondary (tie-breaker) scoring structures
-				{#if secondaries.length > 0}
-					— remove the {secondaries.length} assigned secondaries (or change the counting type)
+				{#if draftSecondaries.length > 0}
+					— remove the {draftSecondaries.length} assigned secondaries (or change the counting type)
 					before saving.
 				{/if}
 			</p>
@@ -344,8 +362,8 @@
 			<p class="mt-2 text-sm text-muted-foreground">
 				Win conditions that require winning by 2 or more without an instant-win threshold cannot
 				be composite
-				{#if secondaries.length > 0}
-					— remove the {secondaries.length} assigned secondaries (or change the win condition)
+				{#if draftSecondaries.length > 0}
+					— remove the {draftSecondaries.length} assigned secondaries (or change the win condition)
 					before saving.
 				{/if}
 			</p>
@@ -355,24 +373,24 @@
 				in tie-breaker order.
 			</p>
 
-			{#if secondaries.length === 0}
+			{#if draftSecondaries.length === 0}
 				<p class="mt-4 text-muted-foreground">No secondary scoring structures assigned yet.</p>
 			{/if}
 
-			{#if secondaries.length !== requiredSecondaryCount}
+			{#if draftSecondaries.length !== requiredSecondaryCount}
 				<p class="mt-2 text-sm text-muted-foreground">
 					This win condition can play at most {requiredSecondaryCount} {unitNoun}s, so a
 					composite structure needs exactly {requiredSecondaryCount} secondary scoring
-					structures ({secondaries.length} currently assigned).
+					structures ({draftSecondaries.length} currently assigned).
 				</p>
-			{:else if secondaries.length > 0}
+			{:else if draftSecondaries.length > 0}
 				<p class="mt-2 text-sm text-muted-foreground">
 					All {requiredSecondaryCount} required secondary scoring structures assigned.
 				</p>
 			{/if}
 
 			{#if eligibleStructures.length > 0}
-				<form onsubmit={handleAddSecondary} class="mt-4 flex items-center gap-2">
+				<div class="mt-4 flex items-center gap-2">
 					<NativeSelect
 						bind:value={selectedSecondaryId}
 						aria-label="Secondary structure to assign"
@@ -385,15 +403,34 @@
 							<NativeSelectOption value={s.id}>{s.name}</NativeSelectOption>
 						{/each}
 					</NativeSelect>
-					<Button type="submit" disabled={secondariesSaving || !selectedSecondaryId}>
+					<Button
+						type="button"
+						onclick={addToDraft}
+						disabled={
+							!selectedSecondaryId || draftSecondaries.length >= requiredSecondaryCount
+						}
+					>
 						Add secondary
 					</Button>
-				</form>
+				</div>
 			{:else}
 				<p class="mt-4 text-sm text-muted-foreground">
 					No {secondaryTypeName}-based scoring structures available to assign.
 				</p>
 			{/if}
+
+			<Button
+				type="button"
+				onclick={saveSecondaries}
+				disabled={secondariesSaving || !canSaveSecondaries}
+				class="mt-4"
+			>
+				{secondariesSaving
+					? 'Saving…'
+					: canSaveSecondaries
+						? 'Save secondaries'
+						: `Add ${requiredSecondaryCount - draftSecondaries.length} more to save`}
+			</Button>
 		{/if}
 
 		{#if secondariesError}

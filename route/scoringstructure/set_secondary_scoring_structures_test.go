@@ -228,9 +228,9 @@ func TestSecondaryScoringStructuresAuthz(t *testing.T) {
 
 	// a sysadmin who is not the owner can set
 	sysadmin := newSysAdminUser(t, db)
-	w = setSecondaries(t, router, primary, []string{gameA}, newToken(t, sysadmin.ID))
+	w = setSecondaries(t, router, primary, []string{gameA, gameA, gameA}, newToken(t, sysadmin.ID))
 	require.Equal(t, http.StatusOK, w.Code, "sysadmin set secondaries: %s", w.Body.String())
-	require.Equal(t, []string{gameA}, getSecondaries(t, router, primary, newToken(t, owner.ID)))
+	require.Equal(t, []string{gameA, gameA, gameA}, getSecondaries(t, router, primary, newToken(t, owner.ID)))
 }
 
 func TestSecondaryScoringStructuresValidation(t *testing.T) {
@@ -251,10 +251,15 @@ func TestSecondaryScoringStructuresValidation(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, w.Code, "wrong counting type: %s", w.Body.String())
 	require.Empty(t, getSecondaries(t, router, primary, newToken(t, owner.ID)))
 
+	// wrong count rejected (a max-3 set primary needs exactly 3 game secondaries)
+	w = setSecondaries(t, router, primary, []string{gameA, gameA}, newToken(t, owner.ID))
+	require.Equal(t, http.StatusBadRequest, w.Code, "wrong count: %s", w.Body.String())
+	require.Empty(t, getSecondaries(t, router, primary, newToken(t, owner.ID)))
+
 	// a valid set still works afterwards
-	w = setSecondaries(t, router, primary, []string{gameA}, newToken(t, owner.ID))
+	w = setSecondaries(t, router, primary, []string{gameA, gameA, gameA}, newToken(t, owner.ID))
 	require.Equal(t, http.StatusOK, w.Code, "valid set: %s", w.Body.String())
-	require.Equal(t, []string{gameA}, getSecondaries(t, router, primary, newToken(t, owner.ID)))
+	require.Equal(t, []string{gameA, gameA, gameA}, getSecondaries(t, router, primary, newToken(t, owner.ID)))
 }
 
 // ---------------------------------------------------------------------------

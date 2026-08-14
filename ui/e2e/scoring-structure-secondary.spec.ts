@@ -36,19 +36,22 @@ async function createScoringStructure(
 	await expect(page).toHaveURL(/\/scoring-structures\/[0-9a-f]+$/);
 }
 
-test('scoring structure secondaries: add, reorder, remove, save', async ({ page }) => {
+test('scoring structure secondaries: add, save, reorder, remove', async ({ page }) => {
 	await login(page);
 
 	const unique = Date.now();
 	const gameA = `Test Game A ${unique}`;
 	const gameB = `Test Game B ${unique}`;
+	const gameC = `Test Game C ${unique}`;
 	const match = `Test Match ${unique}`;
 
-	// Two game-based structures to use as secondaries (a set-based primary
+	// Three game-based structures to use as secondaries (a set-based primary
 	// uses game-based secondaries), and a set-based primary (best of 3 sets ->
-	// plays at most 3 sets -> needs 3 secondaries).
+	// plays at most 3 sets -> needs 3 secondaries). The dropdown excludes
+	// already-assigned structures, so three distinct games are needed.
 	await createScoringStructure(page, gameA, 'Game', '11', '1', '0');
 	await createScoringStructure(page, gameB, 'Game', '11', '1', '0');
+	await createScoringStructure(page, gameC, 'Game', '11', '1', '0');
 	await createScoringStructure(page, match, 'Set', '2', '1', '0');
 
 	// No secondaries assigned yet, with the required-count hint.
@@ -61,29 +64,33 @@ test('scoring structure secondaries: add, reorder, remove, save', async ({ page 
 
 	const secondaryNames = page.locator('.secondary-name');
 
-	// Add three secondaries (the same structure may be used at multiple
-	// positions). Each add replaces the full list via a PUT, so wait for the
-	// save to settle (the count hint updates from the response) before the
-	// next add.
-	const toAssign = [gameA, gameB, gameA];
-	for (let i = 0; i < toAssign.length; i++) {
+	// Build the draft by adding each secondary in turn. Edits accumulate
+	// locally and are only committed once the exact required count is reached.
+	const toAdd = [gameA, gameB, gameC];
+	for (let i = 0; i < toAdd.length; i++) {
 		await page
 			.getByLabel('Secondary structure to assign')
-			.selectOption({ label: toAssign[i] });
+			.selectOption({ label: toAdd[i] });
 		await page.getByRole('button', { name: 'Add secondary' }).click();
-		if (i < toAssign.length - 1) {
+		if (i < toAdd.length - 1) {
 			await expect(page.getByText(`(${i + 1} currently assigned)`)).toBeVisible();
 		}
 	}
 	await expect(secondaryNames.nth(0)).toHaveText(gameA);
 	await expect(secondaryNames.nth(1)).toHaveText(gameB);
-	await expect(secondaryNames.nth(2)).toHaveText(gameA);
+	await expect(secondaryNames.nth(2)).toHaveText(gameC);
+	await expect(
+		page.getByText('All 3 required secondary scoring structures assigned.')
+	).toBeVisible();
+
+	// Commit the draft once complete.
+	await page.getByRole('button', { name: 'Save secondaries' }).click();
 	await expect(
 		page.getByText('All 3 required secondary scoring structures assigned.')
 	).toBeVisible();
 
 	// Reorder: move the first row (gameA) down so gameB becomes the first
-	// tie-breaker. The new order is preserved.
+	// tie-breaker, then commit.
 	await page
 		.locator('li')
 		.filter({ hasText: gameA })
@@ -92,7 +99,8 @@ test('scoring structure secondaries: add, reorder, remove, save', async ({ page 
 		.click();
 	await expect(secondaryNames.nth(0)).toHaveText(gameB);
 	await expect(secondaryNames.nth(1)).toHaveText(gameA);
-	await expect(secondaryNames.nth(2)).toHaveText(gameA);
+	await expect(secondaryNames.nth(2)).toHaveText(gameC);
+	await page.getByRole('button', { name: 'Save secondaries' }).click();
 
 	// Saving the primary succeeds now that the required number of secondaries
 	// is assigned.
@@ -100,12 +108,11 @@ test('scoring structure secondaries: add, reorder, remove, save', async ({ page 
 	await page.getByRole('button', { name: 'Save changes' }).click();
 	await expect(page.getByRole('heading', { name: `${match} Updated` })).toBeVisible();
 
-	// Remove one secondary; the structure is now under-assigned, so saving the
-	// primary fails validation.
+	// Remove one secondary; the draft is now under-assigned, so the save is
+	// disabled until the exact required count is restored.
 	await page
 		.locator('li')
-		.filter({ hasText: gameA })
-		.last()
+		.filter({ hasText: gameC })
 		.getByRole('button', { name: 'Remove' })
 		.click();
 	await expect(
@@ -113,32 +120,29 @@ test('scoring structure secondaries: add, reorder, remove, save', async ({ page 
 			'This win condition can play at most 3 sets, so a composite structure needs exactly 3 secondary scoring structures (2 currently assigned).'
 		)
 	).toBeVisible();
+	await expect(page.getByRole('button', { name: /Add 1 more to save/ })).toBeDisabled();
 
-	await page.getByRole('button', { name: 'Save changes' }).click();
-	await expect(
-		page.getByText('secondary scoring structures length is 2, but we can play 3 max sets')
-	).toBeVisible();
-
-	// Re-add a secondary; saving the primary succeeds again.
-	await page.getByLabel('Secondary structure to assign').selectOption({ label: gameB });
+	// Re-add a secondary and commit; the draft is complete again.
+	await page.getByLabel('Secondary structure to assign').selectOption({ label: gameC });
 	await page.getByRole('button', { name: 'Add secondary' }).click();
 	await expect(
 		page.getByText('All 3 required secondary scoring structures assigned.')
 	).toBeVisible();
+	await page.getByRole('button', { name: 'Save secondaries' }).click();
 
 	await page.getByLabel('Name').fill(`${match} Final`);
 	await page.getByRole('button', { name: 'Save changes' }).click();
 	await expect(page.getByRole('heading', { name: `${match} Final` })).toBeVisible();
 
 	// Clean up. Deleting the primary cascades to its secondary join rows, so
-	// the two game structures are no longer referenced and can be deleted to
+	// the three game structures are no longer referenced and can be deleted to
 	// keep the shared dev db clean. Both deletes confirm via an in-app popover.
 	await page.getByRole('button', { name: 'Delete scoring structure' }).click();
 	await page.getByRole('button', { name: 'Delete', exact: true }).click();
 	await expect(page).toHaveURL('/scoring-structures');
 	await expect(page.getByRole('link', { name: `${match} Final` })).toHaveCount(0);
 
-	for (const name of [gameA, gameB]) {
+	for (const name of [gameA, gameB, gameC]) {
 		await page.goto('/scoring-structures');
 		await page.getByRole('link', { name: name }).click();
 		await expect(page).toHaveURL(/\/scoring-structures\/[0-9a-f]+$/);

@@ -96,6 +96,9 @@ func (c SetSecondaryScoringStructures) Handler(req api.Request[*SetSecondaryScor
 	if err := validateSecondaryCountingTypes(req.Context, req.DatabaseProvider, structure, req.Body.SecondaryScoringStructures); err != nil {
 		return nil, http.StatusBadRequest, err
 	}
+	if err := validateSecondaryCount(structure, req.Body.SecondaryScoringStructures); err != nil {
+		return nil, http.StatusBadRequest, err
+	}
 
 	if err := structure.SetSecondaryScoringStructures(req.Context, req.DatabaseProvider, req.Body.SecondaryScoringStructures); err != nil {
 		return nil, http.StatusBadRequest, err
@@ -122,6 +125,30 @@ func validateSecondaryCountingTypes(ctx context.Context, db database.Provider, s
 		if secondary.WinConditionCountingType != structure.WinConditionCountingType.Secondary() {
 			return fmt.Errorf("cannot use %s-based secondary scoring structure in %s-based win condition", secondary.WinConditionCountingType, structure.WinConditionCountingType)
 		}
+	}
+	return nil
+}
+
+// validateSecondaryCount enforces the composite count rule that
+// ScoringStructure.DynamicallyValid applies when the primary is saved: a
+// composite structure must have exactly as many secondaries as the maximum
+// number of score-counting units playable under its win condition. An empty
+// list (a non-composite structure) is always valid. Rejecting a wrong count
+// here prevents persisting an invalid composite via this endpoint that would
+// only fail later when the primary is saved.
+func validateSecondaryCount(structure *model.ScoringStructure, ids model.ScoringStructureList) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	if structure.WinConditionCountingType == model.Point {
+		return fmt.Errorf("cannot use point-based win condition in a composite scoring structure")
+	}
+	maxUnits, err := structure.MaximumScoreCountingUnitsPlayed(len(ids))
+	if err != nil {
+		return err
+	}
+	if len(ids) != maxUnits {
+		return fmt.Errorf("secondary scoring structures length is %d, but we can play %d max %ss in this structure", len(ids), maxUnits, structure.WinConditionCountingType)
 	}
 	return nil
 }
