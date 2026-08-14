@@ -5,7 +5,7 @@ import { waitForHydration } from './helpers';
 // playwright.config.ts), so POST /api/one_time_password returns the magic-link
 // token in the response body. The seeded jdarthur@gatech.edu user is the system
 // administrator in dev mode (see model.SeedDevData), which is required to
-// exercise the sysadmin-only late-addition write surface.
+// exercise the sysadmin-only co-commissioner write surface.
 async function login(page: Page, email: string) {
 	await page.goto('/login');
 	await page.waitForLoadState('networkidle');
@@ -25,8 +25,8 @@ const API = 'http://127.0.0.1:8080/api';
 // and finalizes it into a season, returning the season id.
 async function createSeason(page: Page, token: string, unique: number): Promise<string> {
 	const people = [
-		{ first: `Cap${unique}`, last: 'LA' },
-		{ first: `Play${unique}`, last: 'LA' }
+		{ first: `Cap${unique}`, last: 'SC' },
+		{ first: `Play${unique}`, last: 'SC' }
 	];
 	const csv = [
 		'First Name, Last Name, Email',
@@ -43,7 +43,7 @@ async function createSeason(page: Page, token: string, unique: number): Promise<
 
 	const facilityRes = await page.request.post(`${API}/facility`, {
 		headers: { 'Content-Type': 'application/json', 'X-INTRACLUB-TOKEN': token },
-		data: { name: `Late Add Facility ${unique}`, address: `${unique} Main St`, courts: 4 }
+		data: { name: `CoComm Facility ${unique}`, address: `${unique} Main St`, courts: 4 }
 	});
 	expect(facilityRes.ok()).toBeTruthy();
 	const facilityId = (await facilityRes.json()).resource.id as string;
@@ -57,7 +57,7 @@ async function createSeason(page: Page, token: string, unique: number): Promise<
 
 	const draftRes = await page.request.post(`${API}/draft`, {
 		headers: { 'Content-Type': 'application/json', 'X-INTRACLUB-TOKEN': token },
-		data: { name: `Late Add Draft ${unique}`, format: format!.id }
+		data: { name: `CoComm Draft ${unique}`, format: format!.id }
 	});
 	expect(draftRes.ok()).toBeTruthy();
 	const draftId = (await draftRes.json()).resource.id as string;
@@ -102,7 +102,7 @@ async function createSeason(page: Page, token: string, unique: number): Promise<
 
 	const seasonRes = await page.request.post(`${API}/draft/${draftId}/create_season`, {
 		headers: { 'Content-Type': 'application/json', 'X-INTRACLUB-TOKEN': token },
-		data: { name: `Late Add Season ${unique}`, facility: facilityId, start_time: '08:30' }
+		data: { name: `CoComm Season ${unique}`, facility: facilityId, start_time: '08:30' }
 	});
 	expect(seasonRes.ok()).toBeTruthy();
 	return (await seasonRes.json()).resource.id as string;
@@ -118,16 +118,16 @@ async function tokenFor(page: Page, email: string): Promise<string> {
 	return jwt;
 }
 
-// lateAdditionUserIds returns the user ids of this season's late additions via
+// commissionerUserIds returns the user ids of this season's co-commissioners via
 // the generic CRUD read surface.
-async function lateAdditionUserIds(page: Page, seasonId: string): Promise<string[]> {
-	const res = await page.request.get(`${API}/season_late_addition`);
+async function commissionerUserIds(page: Page, seasonId: string): Promise<string[]> {
+	const res = await page.request.get(`${API}/season_commissioner`);
 	expect(res.ok()).toBeTruthy();
 	const rows = (await res.json()).resource as { season_id: string; user_id: string }[];
 	return rows.filter((r) => r.season_id === seasonId).map((r) => r.user_id);
 }
 
-test('sysadmin adds and removes late players on a season via the UI', async ({ page }) => {
+test('sysadmin adds and removes co-commissioners on a season via the UI', async ({ page }) => {
 	await login(page, 'jdarthur@gatech.edu');
 	const token = await page.evaluate(() => localStorage.getItem('intraclub_jwt') ?? '');
 	expect(token).toBeTruthy();
@@ -135,59 +135,63 @@ test('sysadmin adds and removes late players on a season via the UI', async ({ p
 	const unique = Date.now();
 	const seasonId = await createSeason(page, token, unique);
 
-	// A user who was not drafted into the season, to be added late.
-	const lateName = `Late${unique}`;
+	// A user who is not yet a commissioner, to be added as a co-commissioner.
+	const coName = `Co${unique}`;
 	const importRes = await page.request.post(`${API}/import_users_from_csv`, {
 		form: {
-			file: `First Name, Last Name, Email\n${lateName}, LA, ${lateName.toLowerCase()}@example.com`
+			file: `First Name, Last Name, Email\n${coName}, SC, ${coName.toLowerCase()}@example.com`
 		}
 	});
 	expect(importRes.ok()).toBeTruthy();
 	const importBody = await importRes.json();
-	const lateUserId = [...importBody.Created, ...importBody.AlreadyExisting].map(
+	const coUserId = [...importBody.Created, ...importBody.AlreadyExisting].map(
 		(u: { id: string }) => u.id
 	)[0];
 
 	await page.goto(`/seasons/${seasonId}`);
 	await waitForHydration(page);
 
-	// The sysadmin sees the Late additions card.
-	await expect(page.getByText('Late additions', { exact: true })).toBeVisible();
-	await expect(page.getByText('No late additions yet.')).toBeVisible();
+	// The sysadmin sees the Co-commissioners card, listing the existing
+	// commissioner (the sysadmin who created the season).
+	await expect(page.getByText('Co-commissioners', { exact: true })).toBeVisible();
+	await expect(page.getByRole('list').filter({ hasText: 'JD Arthur' })).toBeVisible();
 
-	// Add the late player through the UI.
-	await page.getByLabel('Player').selectOption({ label: `${lateName} LA` });
-	await page.getByRole('button', { name: 'Add late player' }).click();
-	await expect(page.getByText(`No late additions yet.`)).toBeHidden();
-	await expect(page.getByRole('list').filter({ hasText: lateName }).getByText(lateName)).toBeVisible();
+	// The new co-commissioner is not yet a commissioner.
+	expect(await commissionerUserIds(page, seasonId)).not.toContain(coUserId);
 
-	// The API reflects the new late addition.
-	expect(await lateAdditionUserIds(page, seasonId)).toContain(lateUserId);
+	// Add the co-commissioner through the UI.
+	await page.getByLabel('User').selectOption({ label: `${coName} SC` });
+	await page.getByRole('button', { name: 'Add co-commissioner' }).click();
+	await expect(page.getByRole('listitem').filter({ hasText: coName })).toBeVisible();
 
-	// The added player no longer appears in the add dropdown.
-	await expect(page.getByLabel('Player')).not.toHaveValue(lateUserId);
+	// The API reflects the new co-commissioner.
+	expect(await commissionerUserIds(page, seasonId)).toContain(coUserId);
 
-	// Remove the late player through the UI.
-	await page.getByRole('list').filter({ hasText: lateName }).getByRole('button', { name: 'Remove' }).click();
-	await expect(page.getByText(`No late additions yet.`)).toBeVisible();
-	expect(await lateAdditionUserIds(page, seasonId)).not.toContain(lateUserId);
+	// The added user no longer appears in the add dropdown.
+	await expect(page.getByLabel('User')).not.toHaveValue(coUserId);
 
-	// The player is selectable again after removal.
-	await page.getByLabel('Player').selectOption({ label: `${lateName} LA` });
-	await expect(page.getByRole('button', { name: 'Add late player' })).toBeEnabled();
+	// Remove the co-commissioner through the UI (leaving the original one).
+	await page.getByRole('listitem').filter({ hasText: coName }).getByRole('button', { name: 'Remove' }).click();
+	await expect(page.getByRole('listitem').filter({ hasText: coName })).toHaveCount(0);
+	await expect(page.getByRole('list').filter({ hasText: 'JD Arthur' })).toBeVisible();
+	expect(await commissionerUserIds(page, seasonId)).not.toContain(coUserId);
 
-	// Clean up the late addition row so the table doesn't accumulate across runs.
-	const rows = (await (await page.request.get(`${API}/season_late_addition`)).json())
+	// The user is selectable again after removal.
+	await page.getByLabel('User').selectOption({ label: `${coName} SC` });
+	await expect(page.getByRole('button', { name: 'Add co-commissioner' })).toBeEnabled();
+
+	// Clean up the co-commissioner rows so the table doesn't accumulate across runs.
+	const rows = (await (await page.request.get(`${API}/season_commissioner`)).json())
 		.resource as { id: string; season_id: string }[];
 	for (const row of rows.filter((r) => r.season_id === seasonId)) {
-		const del = await page.request.delete(`${API}/season_late_addition/${row.id}`, {
+		const del = await page.request.delete(`${API}/season_commissioner/${row.id}`, {
 			headers: { 'X-INTRACLUB-TOKEN': token }
 		});
 		expect(del.ok()).toBeTruthy();
 	}
 });
 
-test('non-sysadmin does not see the late additions card', async ({ page }) => {
+test('non-sysadmin does not see the co-commissioners card', async ({ page }) => {
 	await login(page, 'jdarthur@gatech.edu');
 	const token = await page.evaluate(() => localStorage.getItem('intraclub_jwt') ?? '');
 	expect(token).toBeTruthy();
@@ -202,14 +206,14 @@ test('non-sysadmin does not see the late additions card', async ({ page }) => {
 	await page.goto(`/seasons/${seasonId}`);
 	await waitForHydration(page);
 
-	await expect(page.getByText('Late additions', { exact: true })).not.toBeVisible();
+	await expect(page.getByText('Co-commissioners', { exact: true })).not.toBeVisible();
 
 	// And the non-sysadmin is rejected by the API write surface too.
 	const otherToken = await page.evaluate(() => localStorage.getItem('intraclub_jwt') ?? '');
 	const whoami = await (
 		await page.request.get(`${API}/whoami`, { headers: { 'X-INTRACLUB-TOKEN': otherToken } })
 	).json();
-	const res = await page.request.post(`${API}/season_late_addition`, {
+	const res = await page.request.post(`${API}/season_commissioner`, {
 		headers: { 'Content-Type': 'application/json', 'X-INTRACLUB-TOKEN': otherToken },
 		data: { season_id: seasonId, user_id: whoami.id }
 	});

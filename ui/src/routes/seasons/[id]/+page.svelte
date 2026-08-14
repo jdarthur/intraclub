@@ -53,6 +53,12 @@
 		removeSeasonLateAddition
 	} from '$lib/seasonLateAddition';
 	import type { SeasonLateAddition } from '$lib/seasonLateAddition';
+	import {
+		listSeasonCommissioners,
+		addSeasonCommissioner,
+		removeSeasonCommissioner
+	} from '$lib/seasonCommissioner';
+	import type { SeasonCommissioner } from '$lib/seasonCommissioner';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import {
 		Card,
@@ -114,6 +120,12 @@
 	let savingLateAddition = $state(false);
 	let isSysAdmin = $state(false);
 
+	// co-commissioners state (sysadmin-only writes)
+	let seasonCommissioners = $state<SeasonCommissioner[]>([]);
+	let commissionerUserId = $state('');
+	let commissionerError = $state('');
+	let savingCommissioner = $state(false);
+
 	let loading = $state(true);
 	let loadError = $state('');
 
@@ -149,7 +161,8 @@
 				scheduleData,
 				rosterList,
 				scoringStructureList,
-				lateAdditionList
+				lateAdditionList,
+				commissionerList
 			] = await Promise.all([
 				getSeason(id()),
 				listSeasonTeams(),
@@ -162,7 +175,8 @@
 				getScheduleForSeason(id()),
 				listTeams(),
 				listScoringStructures(),
-				listSeasonLateAdditions()
+				listSeasonLateAdditions(),
+				listSeasonCommissioners()
 			]);
 			season = seasonData;
 			seasonTeams = seasonTeamList.filter((st) => st.season_id === seasonData.id);
@@ -176,6 +190,7 @@
 			rosters = rosterList;
 			scoringStructures = scoringStructureList;
 			lateAdditions = lateAdditionList.filter((l) => l.season_id === seasonData.id);
+			seasonCommissioners = commissionerList.filter((c) => c.season_id === seasonData.id);
 			isSysAdmin = (await getRoles()).includes('System Administrator');
 			selectedScoringStructure =
 				scoringStructureList.find((s) => s.name === 'Tennis standard set')?.id ??
@@ -640,6 +655,65 @@
 			lateAdditionError = e instanceof Error ? e.message : 'Failed to remove late addition';
 		} finally {
 			savingLateAddition = false;
+		}
+	}
+
+	// --- co-commissioners (sysadmin only) --------------------------------
+
+	// Users already serving as commissioners of this season (from the schedule
+	// detail), used to filter the add dropdown and to render the current list.
+	const currentCommissionerIds = $derived(scheduleDetail?.commissioners ?? []);
+
+	// Co-commissioners are typically users who help administer the season
+	// rather than players in it, so the add dropdown excludes anyone already in
+	// the season (drafted roster / late addition) as well as current
+	// commissioners — mirroring the late-addition dropdown.
+	const commissionerOptions = $derived(
+		[...users]
+			.filter((u) => !userInSeason(u.id) && !currentCommissionerIds.includes(u.id))
+			.sort((a, b) => fullName(a).localeCompare(fullName(b)))
+	);
+
+	const commissionerNames = $derived(
+		[...seasonCommissioners].sort((a, b) => userName(a.user_id).localeCompare(userName(b.user_id)))
+	);
+
+	// addSeasonCommissioner creates a SeasonCommissioner for the selected user
+	// and refreshes both the join rows and the schedule detail (so the new
+	// co-commissioner immediately counts as a commissioner of the season).
+	async function handleAddSeasonCommissioner() {
+		const seasonId = season?.id;
+		if (!seasonId || !commissionerUserId) return;
+		savingCommissioner = true;
+		commissionerError = '';
+		try {
+			await addSeasonCommissioner(seasonId, commissionerUserId);
+			commissionerUserId = '';
+			seasonCommissioners = (await listSeasonCommissioners()).filter((c) => c.season_id === seasonId);
+			scheduleDetail = await getScheduleForSeason(seasonId);
+		} catch (e) {
+			commissionerError = e instanceof Error ? e.message : 'Failed to add co-commissioner';
+		} finally {
+			savingCommissioner = false;
+		}
+	}
+
+	// removeSeasonCommissioner deletes the SeasonCommissioner record and
+	// refreshes both the join rows and the schedule detail.
+	async function handleRemoveSeasonCommissioner(scId: string) {
+		const seasonId = season?.id;
+		savingCommissioner = true;
+		commissionerError = '';
+		try {
+			await removeSeasonCommissioner(scId);
+			if (seasonId) {
+				seasonCommissioners = (await listSeasonCommissioners()).filter((c) => c.season_id === seasonId);
+				scheduleDetail = await getScheduleForSeason(seasonId);
+			}
+		} catch (e) {
+			commissionerError = e instanceof Error ? e.message : 'Failed to remove co-commissioner';
+		} finally {
+			savingCommissioner = false;
 		}
 	}
 </script>
@@ -1271,6 +1345,77 @@
 
 	<!-- Standings -->
 	<Standings {standings} {teamName} />
+
+
+	<!-- Co-commissioners (sysadmin only) -->
+	{#if isSysAdmin}
+		<Card class="mt-6">
+			<CardHeader>
+				<CardTitle class="text-base">Co-commissioners</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<p class="mb-4 text-sm text-muted-foreground">
+					Additional users who can help administer this season.
+				</p>
+
+				{#if commissionerError}
+					<p class="mb-4 text-sm font-medium text-destructive">{commissionerError}</p>
+				{/if}
+
+				<form
+					class="flex flex-wrap items-end gap-3"
+					onsubmit={(e) => {
+						e.preventDefault();
+						handleAddSeasonCommissioner();
+					}}
+				>
+					<div class="flex flex-col gap-1">
+						<Label for="co-commissioner-user" class="text-xs">User</Label>
+						<NativeSelect
+							id="co-commissioner-user"
+							value={commissionerUserId}
+							oninput={(e) =>
+								(commissionerUserId = (
+									e.currentTarget as HTMLSelectElement
+								).value)}
+						>
+							<NativeSelectOption value="" disabled>Select a user…</NativeSelectOption>
+							{#each commissionerOptions as u (u.id)}
+								<NativeSelectOption value={u.id}>{fullName(u)}</NativeSelectOption>
+							{/each}
+						</NativeSelect>
+					</div>
+					<Button
+						type="submit"
+						disabled={savingCommissioner || !commissionerUserId}
+					>
+						{savingCommissioner ? 'Saving…' : 'Add co-commissioner'}
+					</Button>
+				</form>
+
+				{#if commissionerNames.length === 0}
+					<p class="mt-4 text-sm text-muted-foreground">No co-commissioners yet.</p>
+				{:else}
+					<ul class="mt-4 space-y-2 text-sm">
+						{#each commissionerNames as sc (sc.id)}
+							<li class="flex items-center justify-between gap-3">
+								<span class="font-medium">{userName(sc.user_id)}</span>
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									disabled={savingCommissioner}
+									onclick={() => handleRemoveSeasonCommissioner(sc.id)}
+								>
+									Remove
+								</Button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</CardContent>
+		</Card>
+	{/if}
 
 
 	<!-- Late additions (sysadmin only) -->
