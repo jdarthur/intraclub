@@ -22,6 +22,7 @@ import (
 	"intraclub/route/proposal"
 	"intraclub/route/ruleset"
 	"intraclub/route/schedule"
+	"intraclub/route/scoringstructure"
 	"intraclub/route/team"
 	"intraclub/route/user"
 	"intraclub/route/week"
@@ -92,6 +93,20 @@ func main() {
 	rg.GET("/score_counting_types", model.GetScoreCountingTypes)
 	scoringStructures := api.NewCrudCommon(model.NewScoringStructure, false, db)
 	scoringStructures.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	// ScoringStructureSecondary records are the join table that links a
+	// (composite) ScoringStructure to its secondary (tie-breaker) scoring
+	// structures, ordered by SecondaryIndex. The raw collection is exposed via
+	// generic CRUD for read/admin access, but the ordered list is managed from
+	// the scoring structure detail page through the get/set routes below, which
+	// enforce the primary structure's edit authorization (owner / sysadmin) and
+	// replace the full ordered list atomically (preserving SecondaryIndex
+	// ordering).
+	scoringStructureSecondaries := api.NewCrudCommon(func() *model.ScoringStructureSecondary { return &model.ScoringStructureSecondary{} }, false, db)
+	scoringStructureSecondaries.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	scoringStructureSecondaryRoutes := api.RouteFamily[*scoringstructure.SetSecondaryScoringStructuresBody]{DatabaseProvider: db}
+	scoringStructureSecondaryRoutes.Handle(rg, scoringstructure.GetSecondaryScoringStructures{}, scoringstructure.SetSecondaryScoringStructures{})
 
 	ratings := api.NewCrudCommon(model.NewRating, false, db)
 	ratings.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
