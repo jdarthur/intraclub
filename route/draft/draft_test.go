@@ -37,6 +37,20 @@ func newStoredUser(t *testing.T, db database.Provider) *model.User {
 	return v
 }
 
+// newSysAdminUser creates a user and assigns them the SystemAdministrator
+// role directly (the draft join models are sysadmin-only on write).
+func newSysAdminUser(t *testing.T, db database.Provider) *model.User {
+	t.Helper()
+	user := newStoredUser(t, db)
+	assignment := &model.UserRoleAssignment{
+		UserId: user.ID,
+		Role:   model.SystemAdministrator,
+	}
+	_, err := database.CreateOne(context.Background(), db, assignment)
+	require.NoError(t, err)
+	return user
+}
+
 func newStoredRating(t *testing.T, db database.Provider) *model.Rating {
 	t.Helper()
 	user := newStoredUser(t, db)
@@ -227,12 +241,20 @@ func TestDraftJoinModelCRUD(t *testing.T) {
 	format := newDefaultFormat(t, db)
 	draftID := createDraftViaHTTP(t, router, commissioner.ID, format.ID, "Join CRUD")
 	player := newStoredUser(t, db)
+	sysadmin := newSysAdminUser(t, db)
 
-	// Create a DraftAvailablePlayer via CRUD.
+	// DraftAvailablePlayer is sysadmin-only on write: a non-sysadmin is forbidden.
 	w := doJSON(t, router, http.MethodPost, "/api/draft_available_player", map[string]any{
 		"draft_id":  draftID,
 		"player_id": player.ID.String(),
 	}, newToken(t, commissioner.ID))
+	require.Equal(t, http.StatusForbidden, w.Code, "non-sysadmin create: %s", w.Body.String())
+
+	// Create a DraftAvailablePlayer via CRUD as a sysadmin.
+	w = doJSON(t, router, http.MethodPost, "/api/draft_available_player", map[string]any{
+		"draft_id":  draftID,
+		"player_id": player.ID.String(),
+	}, newToken(t, sysadmin.ID))
 	require.Equal(t, http.StatusOK, w.Code, "create available player: %s", w.Body.String())
 	var created struct {
 		Resource *model.DraftAvailablePlayer `json:"resource"`
@@ -500,13 +522,22 @@ func TestDraftRatingCutoffCRUD(t *testing.T) {
 	commissioner := newStoredUser(t, db)
 	format := newDefaultFormat(t, db)
 	draftID := createDraftViaHTTP(t, router, commissioner.ID, format.ID, "Cutoff CRUD")
+	sysadmin := newSysAdminUser(t, db)
 
 	rating := newStoredRating(t, db)
+	// DraftRatingCutoff is sysadmin-only on write: a non-sysadmin is forbidden.
 	w := doJSON(t, router, http.MethodPost, "/api/draft_rating_cutoff", map[string]any{
 		"draft_id":     draftID,
 		"rating_id":    rating.ID.String(),
 		"cutoff_index": 2,
 	}, newToken(t, commissioner.ID))
+	require.Equal(t, http.StatusForbidden, w.Code, "non-sysadmin create cutoff: %s", w.Body.String())
+
+	w = doJSON(t, router, http.MethodPost, "/api/draft_rating_cutoff", map[string]any{
+		"draft_id":     draftID,
+		"rating_id":    rating.ID.String(),
+		"cutoff_index": 2,
+	}, newToken(t, sysadmin.ID))
 	require.Equal(t, http.StatusOK, w.Code, "create cutoff: %s", w.Body.String())
 	var created struct {
 		Resource *model.DraftRatingCutoff `json:"resource"`

@@ -35,6 +35,72 @@ func newTestCrudRecord() *testCrudRecord {
 	}
 }
 
+// sysAdminOnlyCrudRecord mirrors the sysadmin-only join models (e.g.
+// ScoringStructureSecondary, RulesetSection): SetOwner is a no-op and
+// EditableBy admits only a system administrator.
+type sysAdminOnlyCrudRecord struct {
+	ID        database.RecordId
+	Value     string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (t *sysAdminOnlyCrudRecord) GetOwner() database.UserId {
+	return database.InvalidUserId
+}
+
+func (t *sysAdminOnlyCrudRecord) SetOwner(userId database.UserId) {
+	// ownership is not user-scoped for this type; it is sysadmin-only
+}
+
+func (t *sysAdminOnlyCrudRecord) Type() string {
+	return "test_sysadmin_crud"
+}
+
+func (t *sysAdminOnlyCrudRecord) GetId() database.RecordId {
+	return t.ID
+}
+
+func (t *sysAdminOnlyCrudRecord) SetId(id database.RecordId) {
+	t.ID = id
+}
+
+func (t *sysAdminOnlyCrudRecord) EditableBy(_ context.Context, db database.Provider) []database.UserId {
+	return []database.UserId{database.SysAdminUserId}
+}
+
+func (t *sysAdminOnlyCrudRecord) AccessibleTo(_ context.Context, db database.Provider) []database.UserId {
+	return database.AccessibleToEveryone
+}
+
+func (t *sysAdminOnlyCrudRecord) StaticallyValid() error {
+	return nil
+}
+
+func (t *sysAdminOnlyCrudRecord) DynamicallyValid(_ context.Context, db database.Provider) error {
+	return nil
+}
+
+func (t *sysAdminOnlyCrudRecord) GetTimeStamps() (created, updated time.Time) {
+	return t.CreatedAt, t.UpdatedAt
+}
+
+func (t *sysAdminOnlyCrudRecord) SetCreateTimestamp(tm time.Time) time.Time {
+	oldValue := t.CreatedAt
+	t.CreatedAt = tm
+	return oldValue
+}
+
+func (t *sysAdminOnlyCrudRecord) SetUpdateTimestamp(tm time.Time) time.Time {
+	oldValue := t.UpdatedAt
+	t.UpdatedAt = tm
+	return oldValue
+}
+
+func (t *sysAdminOnlyCrudRecord) NewRecord() database.CrudRecord {
+	return new(sysAdminOnlyCrudRecord)
+}
+
 func (t *testCrudRecord) Type() string {
 	return "test_crud"
 }
@@ -172,6 +238,74 @@ func TestCrudCommonCreateSuccess(t *testing.T) {
 	}
 	if resource.(*testCrudRecord).ID == database.InvalidRecordId {
 		t.Fatal("ID should be set")
+	}
+}
+
+func TestCrudCommonCreateForbiddenForNonPrivileged(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	cc := NewCrudCommon(func() *sysAdminOnlyCrudRecord { return &sysAdminOnlyCrudRecord{} }, false, db)
+
+	route := genericApiRoute[*sysAdminOnlyCrudRecord]{
+		requestBody:    func() *sysAdminOnlyCrudRecord { return &sysAdminOnlyCrudRecord{} },
+		useRequestBody: true,
+		handle:         cc.createCrudRecord,
+	}
+
+	// A non-privileged (non-sysadmin) user must not be able to create a
+	// sysadmin-only record via the generic create path.
+	nonPrivileged := database.NewRecordId()
+	req := Request[*sysAdminOnlyCrudRecord]{
+		Context:          context.Background(),
+		DatabaseProvider: db,
+		Token:            &AuthToken{UserId: database.UserId(nonPrivileged)},
+		Body:             &sysAdminOnlyCrudRecord{Value: "x"},
+	}
+
+	_, status, err := route.Handler(req)
+	if err == nil {
+		t.Fatal("expected error for non-privileged create")
+	}
+	if status != http.StatusForbidden {
+		t.Fatalf("expected status %d, got %d", http.StatusForbidden, status)
+	}
+}
+
+func TestCrudCommonCreateAllowedForSysAdmin(t *testing.T) {
+	prevSysAdminCheck := database.SysAdminCheck
+	defer func() { database.SysAdminCheck = prevSysAdminCheck }()
+
+	db := database.NewUnitTestDBProvider()
+	cc := NewCrudCommon(func() *sysAdminOnlyCrudRecord { return &sysAdminOnlyCrudRecord{} }, false, db)
+
+	route := genericApiRoute[*sysAdminOnlyCrudRecord]{
+		requestBody:    func() *sysAdminOnlyCrudRecord { return &sysAdminOnlyCrudRecord{} },
+		useRequestBody: true,
+		handle:         cc.createCrudRecord,
+	}
+
+	sysAdminId := database.NewRecordId()
+	database.SysAdminCheck = func(_ context.Context, _ database.Provider, userId database.UserId) (bool, error) {
+		return userId == database.UserId(sysAdminId), nil
+	}
+
+	req := Request[*sysAdminOnlyCrudRecord]{
+		Context:          context.Background(),
+		DatabaseProvider: db,
+		Token:            &AuthToken{UserId: database.UserId(sysAdminId)},
+		Body:             &sysAdminOnlyCrudRecord{Value: "x"},
+	}
+
+	resp, status, err := route.Handler(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, status)
+	}
+
+	result := resp.(gin.H)
+	if resource, ok := result[ResourceKey].(*sysAdminOnlyCrudRecord); !ok || resource == nil {
+		t.Fatal("expected created sysadmin-only record in response")
 	}
 }
 

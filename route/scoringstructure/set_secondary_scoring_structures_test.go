@@ -275,14 +275,22 @@ func TestScoringStructureSecondaryCRUD(t *testing.T) {
 	primary := createScoringStructureViaHTTP(t, router, owner.ID, "CRUD match", model.Set, 2, 1, 0)
 	gameA := createScoringStructureViaHTTP(t, router, owner.ID, "CRUD game", model.Game, 6, 2, 7)
 
-	// generic CRUD create is open to any authenticated user (the record's own
-	// validation runs; EditableBy gates update / delete)
+	// generic CRUD create is sysadmin-only (the record's EditableBy is
+	// sysadmin-only): a non-sysadmin is forbidden
 	w := doJSON(t, router, http.MethodPost, "/api/scoring_structure_secondary", map[string]any{
 		"scoring_structure_id":           primary,
 		"secondary_scoring_structure_id": gameA,
 		"secondary_index":                0,
 	}, newToken(t, owner.ID))
-	require.Equal(t, http.StatusOK, w.Code, "create: %s", w.Body.String())
+	require.Equal(t, http.StatusForbidden, w.Code, "non-sysadmin create: %s", w.Body.String())
+
+	// the sysadmin can create the raw join row
+	w = doJSON(t, router, http.MethodPost, "/api/scoring_structure_secondary", map[string]any{
+		"scoring_structure_id":           primary,
+		"secondary_scoring_structure_id": gameA,
+		"secondary_index":                0,
+	}, newToken(t, sysadmin.ID))
+	require.Equal(t, http.StatusOK, w.Code, "sysadmin create: %s", w.Body.String())
 
 	var created struct {
 		Resource *model.ScoringStructureSecondary `json:"resource"`
