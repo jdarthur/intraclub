@@ -84,3 +84,72 @@ export async function deleteRuleset(id: string): Promise<void> {
 		throw new Error(message);
 	}
 }
+
+// A RuleSection is a single rule block (title + markdown) belonging to a
+// ruleset. Sections are exposed via generic CRUD (see main.go).
+export interface RuleSection {
+	section_id: string;
+	parent: string;
+	title: string;
+	markdown: string;
+	owner: string;
+}
+
+// A RulesetSection is the join-table record that orders a RuleSection within a
+// ruleset. SectionIndex preserves the ordering.
+export interface RulesetSection {
+	id: string;
+	ruleset_id: string;
+	section_id: string;
+	section_index: number;
+}
+
+// RuleAmendmentType values mirror the Go enum in model/rule_amendment.go.
+export const RULE_AMENDMENT_ADD = 0;
+export const RULE_AMENDMENT_REMOVE = 1;
+export const RULE_AMENDMENT_MODIFY = 2;
+export const RULE_AMENDMENT_REORDER = 3;
+
+export interface RuleAmendment {
+	type: number;
+	target_section?: string;
+	new_section?: Partial<RuleSection>;
+	after?: string;
+}
+
+const RULE_SECTION_BASE = '/api/rule_section';
+const RULESET_SECTION_BASE = '/api/ruleset_section';
+
+export async function listRuleSections(): Promise<RuleSection[]> {
+	return unwrap(await authFetch(RULE_SECTION_BASE));
+}
+
+export async function listRulesetSections(): Promise<RulesetSection[]> {
+	return unwrap(await authFetch(RULESET_SECTION_BASE));
+}
+
+// getRulesetSections returns the sections of a ruleset, in order (as enforced
+// by SectionIndex in the RulesetSection join table).
+export async function getRulesetSections(rulesetId: string): Promise<RuleSection[]> {
+	const [sections, relations] = await Promise.all([listRuleSections(), listRulesetSections()]);
+	const ordered = relations
+		.filter((r) => r.ruleset_id === rulesetId)
+		.sort((a, b) => a.section_index - b.section_index);
+	return ordered
+		.map((r) => sections.find((s) => s.section_id === r.section_id))
+		.filter((s): s is RuleSection => !!s);
+}
+
+// amendSections applies a RuleAmendment (add / remove / modify / reorder
+// section) to a ruleset and returns the resulting Ruleset. Add/remove/reorder
+// may produce a new superseding revision; a pure content edit updates the
+// section in place.
+export async function amendSections(id: string, amendment: RuleAmendment): Promise<Ruleset> {
+	return unwrap(
+		await authFetch(`${BASE}/${id}/amend_sections`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(amendment)
+		})
+	);
+}

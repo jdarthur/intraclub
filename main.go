@@ -108,6 +108,21 @@ func main() {
 	amendRuleset := api.RouteFamily[*ruleset.AmendNameBody]{DatabaseProvider: db}
 	amendRuleset.Handle(rg, ruleset.AmendRulesetName{})
 
+	// RuleSections are the individual rule blocks (title + markdown) that make
+	// up a ruleset; RulesetSections are the join-table records that order them
+	// within a ruleset via SectionIndex. Both are exposed via generic CRUD for
+	// read/admin access, but section edits from the UI go through the
+	// amend_sections route below (which applies a RuleAmendment through the
+	// Ruleset.Amend flow, producing new revisions and preserving ordering).
+	ruleSections := api.NewCrudCommon(func() *model.RuleSection { return &model.RuleSection{} }, false, db)
+	ruleSections.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	rulesetSections := api.NewCrudCommon(func() *model.RulesetSection { return &model.RulesetSection{} }, false, db)
+	rulesetSections.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	amendRulesetSections := api.RouteFamily[*model.RuleAmendment]{DatabaseProvider: db}
+	amendRulesetSections.Handle(rg, ruleset.AmendSections{})
+
 	// Commissioner proposals are the "manage club rules" feature: a season
 	// commissioner proposes a rule change / administrative action and the
 	// season's participants (commissioners + team captains) ratify it by
