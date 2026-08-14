@@ -38,6 +38,10 @@ type Week struct {
 	DraftId DraftId   `json:"draft_id"`
 	Date    time.Time `json:"date"`
 	Note    string    `json:"note"`
+	// Closed is set by the season commissioner once every team match in the
+	// week is complete. A closed week is final; standings are computed from
+	// closed (and completed) weeks' team matches.
+	Closed bool `json:"closed"`
 }
 
 func (w *Week) GetOwner() database.UserId {
