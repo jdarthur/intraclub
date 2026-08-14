@@ -11,7 +11,7 @@
 	import type { Rating } from '$lib/rating';
 	import { listFacilities } from '$lib/facility';
 	import type { Facility } from '$lib/facility';
-	import { getCurrentUserId } from '$lib/auth';
+	import { getCurrentUserId, getRoles } from '$lib/auth';
 	import { listWeeksForSeason } from '$lib/week';
 	import type { Week } from '$lib/week';
 	import { listTeams } from '$lib/team';
@@ -47,6 +47,12 @@
 	import type { WeekMatchDetail, StandingsEntry, IndividualMatch } from '$lib/match';
 	import { listScoringStructures } from '$lib/scoringStructure';
 	import type { ScoringStructure } from '$lib/scoringStructure';
+	import {
+		listSeasonLateAdditions,
+		addSeasonLateAddition,
+		removeSeasonLateAddition
+	} from '$lib/seasonLateAddition';
+	import type { SeasonLateAddition } from '$lib/seasonLateAddition';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import {
 		Card,
@@ -101,6 +107,13 @@
 	let savingScore = $state<string | null>(null);
 	let completingMatch = $state<string | null>(null);
 
+	// late additions state (sysadmin-only writes)
+	let lateAdditions = $state<SeasonLateAddition[]>([]);
+	let lateAdditionUserId = $state('');
+	let lateAdditionError = $state('');
+	let savingLateAddition = $state(false);
+	let isSysAdmin = $state(false);
+
 	let loading = $state(true);
 	let loadError = $state('');
 
@@ -135,7 +148,8 @@
 				weekList,
 				scheduleData,
 				rosterList,
-				scoringStructureList
+				scoringStructureList,
+				lateAdditionList
 			] = await Promise.all([
 				getSeason(id()),
 				listSeasonTeams(),
@@ -147,7 +161,8 @@
 				listWeeksForSeason(id()),
 				getScheduleForSeason(id()),
 				listTeams(),
-				listScoringStructures()
+				listScoringStructures(),
+				listSeasonLateAdditions()
 			]);
 			season = seasonData;
 			seasonTeams = seasonTeamList.filter((st) => st.season_id === seasonData.id);
@@ -160,6 +175,8 @@
 			scheduleDetail = scheduleData;
 			rosters = rosterList;
 			scoringStructures = scoringStructureList;
+			lateAdditions = lateAdditionList.filter((l) => l.season_id === seasonData.id);
+			isSysAdmin = (await getRoles()).includes('System Administrator');
 			selectedScoringStructure =
 				scoringStructureList.find((s) => s.name === 'Tennis standard set')?.id ??
 				scoringStructureList[0]?.id ??
@@ -572,6 +589,58 @@
 
 	function matchPlayerLabel(m: IndividualMatch): string {
 		return `${userName(m.player1)} & ${userName(m.player2)}`;
+	}
+
+	// --- late additions (sysadmin only) ------------------------------------
+
+	// Whether a user is already part of the season (on a drafted team or an
+	// existing late addition), used to filter the add dropdown.
+	function userInSeason(userId: string): boolean {
+		if (lateAdditions.some((l) => l.user_id === userId)) return true;
+		return teams.some((t) => t.members.some((m) => m.user_id === userId));
+	}
+
+	const lateAdditionOptions = $derived(
+		[...users].filter((u) => !userInSeason(u.id)).sort((a, b) => fullName(a).localeCompare(fullName(b)))
+	);
+
+	const lateAdditionNames = $derived(
+		[...lateAdditions].sort((a, b) => userName(a.user_id).localeCompare(userName(b.user_id)))
+	);
+
+	// addLateAddition creates a SeasonLateAddition for the selected user and
+	// refreshes the list from the API.
+	async function handleAddLateAddition() {
+		const seasonId = season?.id;
+		if (!seasonId || !lateAdditionUserId) return;
+		savingLateAddition = true;
+		lateAdditionError = '';
+		try {
+			await addSeasonLateAddition(seasonId, lateAdditionUserId);
+			lateAdditionUserId = '';
+			lateAdditions = (await listSeasonLateAdditions()).filter((l) => l.season_id === seasonId);
+		} catch (e) {
+			lateAdditionError = e instanceof Error ? e.message : 'Failed to add late addition';
+		} finally {
+			savingLateAddition = false;
+		}
+	}
+
+	// removeLateAddition deletes the SeasonLateAddition record and refreshes.
+	async function handleRemoveLateAddition(lateId: string) {
+		const seasonId = season?.id;
+		savingLateAddition = true;
+		lateAdditionError = '';
+		try {
+			await removeSeasonLateAddition(lateId);
+			if (seasonId) {
+				lateAdditions = (await listSeasonLateAdditions()).filter((l) => l.season_id === seasonId);
+			}
+		} catch (e) {
+			lateAdditionError = e instanceof Error ? e.message : 'Failed to remove late addition';
+		} finally {
+			savingLateAddition = false;
+		}
 	}
 </script>
 
@@ -1203,6 +1272,76 @@
 	<!-- Standings -->
 	<Standings {standings} {teamName} />
 
+
+	<!-- Late additions (sysadmin only) -->
+	{#if isSysAdmin}
+		<Card class="mt-6">
+			<CardHeader>
+				<CardTitle class="text-base">Late additions</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<p class="mb-4 text-sm text-muted-foreground">
+					Players added to this season after the draft was completed.
+				</p>
+
+				{#if lateAdditionError}
+					<p class="mb-4 text-sm font-medium text-destructive">{lateAdditionError}</p>
+				{/if}
+
+				<form
+					class="flex flex-wrap items-end gap-3"
+					onsubmit={(e) => {
+						e.preventDefault();
+						handleAddLateAddition();
+					}}
+				>
+					<div class="flex flex-col gap-1">
+						<Label for="late-addition-user" class="text-xs">Player</Label>
+						<NativeSelect
+							id="late-addition-user"
+							value={lateAdditionUserId}
+							oninput={(e) =>
+								(lateAdditionUserId = (
+									e.currentTarget as HTMLSelectElement
+								).value)}
+						>
+							<NativeSelectOption value="" disabled>Select a player…</NativeSelectOption>
+							{#each lateAdditionOptions as u (u.id)}
+								<NativeSelectOption value={u.id}>{fullName(u)}</NativeSelectOption>
+							{/each}
+						</NativeSelect>
+					</div>
+					<Button
+						type="submit"
+						disabled={savingLateAddition || !lateAdditionUserId}
+					>
+						{savingLateAddition ? 'Saving…' : 'Add late player'}
+					</Button>
+				</form>
+
+				{#if lateAdditionNames.length === 0}
+					<p class="mt-4 text-sm text-muted-foreground">No late additions yet.</p>
+				{:else}
+					<ul class="mt-4 space-y-2 text-sm">
+						{#each lateAdditionNames as la (la.id)}
+							<li class="flex items-center justify-between gap-3">
+								<span class="font-medium">{userName(la.user_id)}</span>
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									disabled={savingLateAddition}
+									onclick={() => handleRemoveLateAddition(la.id)}
+								>
+									Remove
+								</Button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</CardContent>
+		</Card>
+	{/if}
 
 	{#if teams.length === 0}
 		<p class="mt-6 text-sm text-muted-foreground">No teams have been added to this season yet.</p>

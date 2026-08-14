@@ -9,10 +9,17 @@ import (
 )
 
 func SeedDevData(db database.Provider) {
-	user := seedDevUsers(db)
-	seedDevScoringStructures(db, user.ID)
-	seedDevRatings(db, user.ID)
-	seedDevFormat(db, user.ID)
+	users := seedDevUsers(db)
+	// In dev mode the seeded jdarthur@gatech.edu user is the system
+	// administrator so the dev / e2e flows (which log in as that user) can
+	// exercise sysadmin-only write paths (e.g. season late additions).
+	if err := users[0].AssignRole(getDevContext(), db, SystemAdministrator); err != nil {
+		panic(err)
+	}
+	owner := users[0]
+	seedDevScoringStructures(db, owner.ID)
+	seedDevRatings(db, owner.ID)
+	seedDevFormat(db, owner.ID)
 }
 
 func getDevContext() context.Context {
@@ -21,7 +28,7 @@ func getDevContext() context.Context {
 	return ctx
 }
 
-func seedDevUsers(db database.Provider) *User {
+func seedDevUsers(db database.Provider) []*User {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -42,20 +49,21 @@ func seedDevUsers(db database.Provider) *User {
 		{"Imani", "Silva", "imani.silva@example.com"},
 	}
 
-	var v *User
+	// jdarthur@gatech.edu is the first user (and the dev/e2e login account).
+	created := make([]*User, 0, len(devUsers))
 	for _, u := range devUsers {
 		user := NewUser()
 		user.FirstName = u.FirstName
 		user.LastName = u.LastName
 		user.Email = EmailAddress(u.Email)
 
-		created, err := database.CreateOne(ctx, db, user)
+		createdUser, err := database.CreateOne(ctx, db, user)
 		if err != nil {
 			panic(err)
 		}
-		v = created
+		created = append(created, createdUser)
 	}
-	return v
+	return created
 }
 
 func seedDevScoringStructures(db database.Provider, u database.UserId) {

@@ -54,6 +54,20 @@ export function getCurrentUserId(): string | null {
 	}
 }
 
+// getRoles fetches the authenticated user's role names from
+// GET /api/whoami/roles, e.g. ["System Administrator"]. Returns [] when no
+// token is present.
+export async function getRoles(): Promise<string[]> {
+	const token = getToken();
+	if (!token) return [];
+	const res = await fetch('/api/whoami/roles', {
+		headers: { 'X-INTRACLUB-TOKEN': token }
+	});
+	if (!res.ok) return [];
+	const body = await res.json();
+	return Array.isArray(body?.roles) ? body.roles : [];
+}
+
 let lastToken: string | null = null;
 let expiredHandled = false;
 
