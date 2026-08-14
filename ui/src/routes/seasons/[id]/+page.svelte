@@ -37,6 +37,16 @@
 		markOfficial
 	} from '$lib/lineup';
 	import type { LineupDetail, PairingInput } from '$lib/lineup';
+	import {
+		generateMatches,
+		getWeekMatches,
+		recordScore,
+		completeMatch,
+		getStandings
+	} from '$lib/match';
+	import type { WeekMatchDetail, StandingsEntry, IndividualMatch } from '$lib/match';
+	import { listScoringStructures } from '$lib/scoringStructure';
+	import type { ScoringStructure } from '$lib/scoringStructure';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import {
 		Card,
@@ -51,6 +61,7 @@
 		NativeSelectOption
 	} from '$lib/components/ui/native-select/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 
 	const id = () => page.params.id as string;
 
@@ -77,6 +88,17 @@
 	let editingLineupWeek = $state<string | null>(null);
 	let lineupError = $state('');
 	let savingLineup = $state(false);
+
+	// weekly match scoring state
+	let matchDetails = $state<Record<string, WeekMatchDetail>>({});
+	let standings = $state<StandingsEntry[]>([]);
+	let matchError = $state('');
+	let scoringStructures = $state<ScoringStructure[]>([]);
+	let selectedScoringStructure = $state('');
+	let generatingWeek = $state<string | null>(null);
+	let scoreDrafts = $state<Record<string, { main: string; secondary: string }>>({});
+	let savingScore = $state<string | null>(null);
+	let completingMatch = $state<string | null>(null);
 
 	let loading = $state(true);
 	let loadError = $state('');
@@ -111,7 +133,8 @@
 				facilityList,
 				weekList,
 				scheduleData,
-				rosterList
+				rosterList,
+				scoringStructureList
 			] = await Promise.all([
 				getSeason(id()),
 				listSeasonTeams(),
@@ -122,7 +145,8 @@
 				listFacilities(),
 				listWeeksForSeason(id()),
 				getScheduleForSeason(id()),
-				listTeams()
+				listTeams(),
+				listScoringStructures()
 			]);
 			season = seasonData;
 			seasonTeams = seasonTeamList.filter((st) => st.season_id === seasonData.id);
@@ -134,8 +158,14 @@
 			weeks = weekList;
 			scheduleDetail = scheduleData;
 			rosters = rosterList;
+			scoringStructures = scoringStructureList;
+			selectedScoringStructure =
+				scoringStructureList.find((s) => s.name === 'Tennis standard set')?.id ??
+				scoringStructureList[0]?.id ??
+				'';
 			await loadAvailability();
 			await loadLineups();
+			await loadMatches();
 		} catch (e) {
 			loadError = e instanceof Error ? e.message : 'Failed to load season';
 		} finally {
@@ -450,6 +480,97 @@
 		} catch (e) {
 			scheduleError = e instanceof Error ? e.message : 'Failed to save weekly matchup';
 		}
+	}
+
+	// --- weekly match scoring actions ----------------------------------------
+
+	// loadMatches fetches the week score sheet for every week plus the season
+	// standings. Individual week failures are tolerated so the rest of the page
+	// still renders.
+	async function loadMatches() {
+		const details: Record<string, WeekMatchDetail> = {};
+		for (const week of weeks) {
+			try {
+				details[week.id] = await getWeekMatches(week.id);
+			} catch {
+				// ignore individual failures; the week just stays empty
+			}
+		}
+		matchDetails = details;
+		try {
+			standings = await getStandings(id());
+		} catch {
+			// standings are a nice-to-have; ignore load failures
+		}
+	}
+
+	function setScoreDraft(matchId: string, field: 'main' | 'secondary', value: string) {
+		const current = scoreDrafts[matchId] ?? { main: '', secondary: '' };
+		scoreDrafts[matchId] = { ...current, [field]: value };
+	}
+
+	async function handleGenerateMatches(weekId: string) {
+		if (!selectedScoringStructure) {
+			matchError = 'Choose a scoring structure first.';
+			return;
+		}
+		generatingWeek = weekId;
+		matchError = '';
+		try {
+			matchDetails[weekId] = await generateMatches(weekId, selectedScoringStructure);
+		} catch (e) {
+			matchError = e instanceof Error ? e.message : 'Failed to generate matches';
+		} finally {
+			generatingWeek = null;
+		}
+	}
+
+	async function saveScore(weekId: string, matchId: string) {
+		const draft = scoreDrafts[matchId];
+		const main = parseInt(draft?.main ?? '', 10) || 0;
+		const secondary = parseInt(draft?.secondary ?? '', 10) || 0;
+		savingScore = matchId;
+		matchError = '';
+		try {
+			await recordScore(matchId, main, secondary);
+			delete scoreDrafts[matchId];
+			await loadMatches();
+		} catch (e) {
+			matchError = e instanceof Error ? e.message : 'Failed to save score';
+		} finally {
+			savingScore = null;
+		}
+	}
+
+	async function handleCompleteMatch(weekId: string, matchId: string) {
+		completingMatch = matchId;
+		matchError = '';
+		try {
+			await completeMatch(matchId);
+			delete scoreDrafts[matchId];
+			await loadMatches();
+		} catch (e) {
+			matchError = e instanceof Error ? e.message : 'Failed to complete match';
+		} finally {
+			completingMatch = null;
+		}
+	}
+
+	function matchStatusLabel(status: number): string {
+		switch (status) {
+			case 1:
+				return 'In progress';
+			case 2:
+				return 'Won';
+			case 3:
+				return 'Lost';
+			default:
+				return 'Unstarted';
+		}
+	}
+
+	function matchPlayerLabel(m: IndividualMatch): string {
+		return `${userName(m.player1)} & ${userName(m.player2)}`;
 	}
 </script>
 
@@ -906,6 +1027,205 @@
 					You are not a captain or co-captain on a team in this season, and you are not a
 					commissioner.
 				</p>
+			{/if}
+		</CardContent>
+	</Card>
+
+	<!-- Match scoring -->
+	<Card class="mt-6">
+		<CardHeader>
+			<CardTitle class="text-base">Match scoring</CardTitle>
+		</CardHeader>
+		<CardContent>
+			{#if matchError}
+				<p class="mb-4 text-sm font-medium text-destructive">{matchError}</p>
+			{/if}
+
+			{#if weeks.length === 0}
+				<p class="text-sm text-muted-foreground">
+					No weeks have been added to this season yet.
+				</p>
+			{:else}
+				<p class="mb-4 text-sm text-muted-foreground">
+					The commissioner generates a week's matches from the scheduled matchup and both
+					teams' official lineups, then records scores and completes each individual match.
+				</p>
+				<ul class="flex flex-col gap-4">
+					{#each weeks as week (week.id)}
+						{@const detail = matchDetails[week.id]}
+						<li class="rounded-lg border p-4">
+							<div class="mb-2 flex items-center justify-between">
+								<span class="text-sm font-medium">{weekLabel(week)}</span>
+								{#if detail?.closed}
+									<Badge variant="secondary">Closed</Badge>
+								{/if}
+							</div>
+
+							{#if !detail || detail.team_matches.length === 0}
+								{#if isCommissioner}
+									<div class="flex flex-wrap items-end gap-3">
+										<div class="flex flex-col gap-1">
+											<Label for={`${week.id}-scoring-structure`} class="text-xs">
+												Scoring structure
+											</Label>
+											<NativeSelect
+												id={`${week.id}-scoring-structure`}
+												value={selectedScoringStructure}
+												oninput={(e) =>
+													(selectedScoringStructure = (
+														e.currentTarget as HTMLSelectElement
+													).value)
+												}
+											>
+												{#each scoringStructures as s}
+													<NativeSelectOption value={s.id}>{s.name}</NativeSelectOption>
+												{/each}
+											</NativeSelect>
+										</div>
+										<Button
+											type="button"
+											size="sm"
+											disabled={generatingWeek === week.id || scoringStructures.length === 0}
+											onclick={() => handleGenerateMatches(week.id)}
+										>
+											{generatingWeek === week.id ? 'Generating…' : 'Generate matches'}
+										</Button>
+									</div>
+								{:else}
+									<p class="text-sm text-muted-foreground">
+										No matches generated for this week yet.
+									</p>
+								{/if}
+							{:else}
+								<ul class="flex flex-col gap-3">
+									{#each detail.team_matches as tm (tm.id)}
+										<li class="rounded-lg border p-3">
+											<div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+												<span class="text-sm font-semibold">
+													{teamName(tm.home_team_id)} vs {teamName(tm.away_team_id)}
+												</span>
+												{#if tm.complete}
+													<Badge variant="secondary">
+														{tm.home_wins}-{tm.away_wins} · {teamName(tm.winner_team_id)} win
+													</Badge>
+												{:else}
+													<Badge variant="outline">{tm.home_wins}-{tm.away_wins}</Badge>
+												{/if}
+											</div>
+											<ul class="flex flex-col gap-2">
+												{#each tm.matches as m (m.id)}
+													{@const decided = m.status === 2 || m.status === 3}
+													<li class="flex flex-wrap items-center gap-3 text-sm">
+														<span class="w-44 shrink-0">
+															<span class="font-medium">{teamName(m.team_id)}</span>
+															<span class="block text-xs text-muted-foreground">
+																{matchPlayerLabel(m)}
+															</span>
+														</span>
+														{#if isCommissioner && !decided}
+															<div class="flex flex-wrap items-center gap-2">
+																<Label for={`${m.id}-main`} class="text-xs">Score</Label>
+																<Input
+																	id={`${m.id}-main`}
+																	type="number"
+																	class="w-16"
+																	value={scoreDrafts[m.id]?.main ?? String(m.main_value)}
+																	oninput={(e) =>
+																		setScoreDraft(
+																			m.id,
+																			'main',
+																			(e.currentTarget as HTMLInputElement).value
+																		)
+																	}
+																/>
+																<Label for={`${m.id}-secondary`} class="text-xs">
+																	Secondary
+																</Label>
+																<Input
+																	id={`${m.id}-secondary`}
+																	type="number"
+																	class="w-16"
+																	value={scoreDrafts[m.id]?.secondary ?? String(m.secondary_value)}
+																	oninput={(e) =>
+																		setScoreDraft(
+																			m.id,
+																			'secondary',
+																			(e.currentTarget as HTMLInputElement).value
+																		)
+																	}
+																/>
+																<Button
+																	type="button"
+																	variant="outline"
+																	size="sm"
+																	disabled={savingScore === m.id}
+																	onclick={() => saveScore(week.id, m.id)}
+																>
+																	{savingScore === m.id ? 'Saving…' : 'Save'}
+																</Button>
+																<Button
+																	type="button"
+																	size="sm"
+																	disabled={completingMatch === m.id}
+																	onclick={() => handleCompleteMatch(week.id, m.id)}
+																>
+																	{completingMatch === m.id ? 'Completing…' : 'Complete'}
+																</Button>
+															</div>
+														{:else}
+															<span class="text-muted-foreground">
+																{m.main_value}
+																{m.secondary_value ? `/${m.secondary_value}` : ''} ·{' '}
+																{matchStatusLabel(m.status)}
+															</span>
+														{/if}
+													</li>
+												{/each}
+											</ul>
+										</li>
+									{/each}
+								</ul>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</CardContent>
+	</Card>
+
+	<!-- Standings -->
+	<Card class="mt-6">
+		<CardHeader>
+			<CardTitle class="text-base">Standings</CardTitle>
+		</CardHeader>
+		<CardContent>
+			{#if standings.length === 0}
+				<p class="text-sm text-muted-foreground">
+					No completed matches yet. Standings update as team matches are completed.
+				</p>
+			{:else}
+				<div class="overflow-x-auto">
+					<table class="w-full text-sm">
+						<thead>
+							<tr class="border-b text-left text-muted-foreground">
+								<th class="py-1 pr-4 font-medium">Team</th>
+								<th class="py-1 pr-4 font-medium">Wins</th>
+								<th class="py-1 pr-4 font-medium">Losses</th>
+								<th class="py-1 pr-4 font-medium">Ties</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each standings as entry}
+								<tr class="border-b">
+									<td class="py-1 pr-4 font-medium">{teamName(entry.team_id)}</td>
+									<td class="py-1 pr-4">{entry.wins}</td>
+									<td class="py-1 pr-4">{entry.losses}</td>
+									<td class="py-1 pr-4">{entry.ties}</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
 			{/if}
 		</CardContent>
 	</Card>
