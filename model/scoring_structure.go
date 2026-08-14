@@ -88,9 +88,13 @@ func GetScoreCountingTypes(c *gin.Context) {
 
 type ScoringStructureId database.RecordId
 
-func (id ScoringStructureId) UnmarshalJSON(bytes []byte) error {
-	rid := id.RecordId()
-	return (*database.RecordId)(&rid).UnmarshalJSON(bytes)
+func (id *ScoringStructureId) UnmarshalJSON(bytes []byte) error {
+	var rid database.RecordId
+	if err := rid.UnmarshalJSON(bytes); err != nil {
+		return err
+	}
+	*id = ScoringStructureId(rid)
+	return nil
 }
 
 func (id ScoringStructureId) MarshalJSON() ([]byte, error) {

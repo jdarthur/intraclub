@@ -6,9 +6,16 @@
 		getScoringStructure,
 		getScoreCountingTypes,
 		updateScoringStructure,
-		deleteScoringStructure
+		deleteScoringStructure,
+		getScoringStructureSecondaries,
+		setScoringStructureSecondaries,
+		listScoringStructures,
+		secondaryCountingTypeFor,
+		maximumScoreCountingUnits,
+		ScoreCountingTypes
 	} from '$lib/scoringStructure';
-	import type { ScoringStructure, ScoreCountingType } from '$lib/scoringStructure';
+	import type { ScoringStructure, ScoreCountingType, WinCondition } from '$lib/scoringStructure';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -38,6 +45,45 @@
 	let deleting = $state(false);
 	let deleteOpen = $state(false);
 
+	// Secondary (tie-breaker) scoring structures assigned to this structure,
+	// ordered by SecondaryIndex.
+	let secondaries = $state<ScoringStructure[]>([]);
+	let allStructures = $state<ScoringStructure[]>([]);
+	let selectedSecondaryId = $state('');
+	let secondariesError = $state('');
+	let secondariesSaving = $state(false);
+
+	// The win condition as currently being edited in the form (what a save
+	// would validate against).
+	const formWinCondition = $derived<WinCondition>({
+		win_threshold: parseInt(winThreshold, 10) || 0,
+		must_win_by: parseInt(mustWinBy, 10) || 0,
+		instant_win_threshold: parseInt(instantWinThreshold || '0', 10) || 0
+	});
+
+	// The counting type secondaries must use (null = cannot be composite), and
+	// the number of secondaries this win condition requires (null = cannot be
+	// composite).
+	const secondaryType = $derived(secondaryCountingTypeFor(countingType));
+	const requiredSecondaryCount = $derived(
+		secondaryType === null ? null : maximumScoreCountingUnits(formWinCondition)
+	);
+	const eligibleStructures = $derived(
+		secondaryType === null
+			? []
+			: allStructures.filter((s) => s.win_condition_counting_type === secondaryType)
+	);
+	const secondaryTypeName = $derived(
+		countingTypes.find((t) => t.type === secondaryType)?.name.toLowerCase() ?? ''
+	);
+	const unitNoun = $derived(
+		countingType === ScoreCountingTypes.Set
+			? 'set'
+			: countingType === ScoreCountingTypes.Game
+				? 'game'
+				: ''
+	);
+
 	function countingTypeName(type: number): string {
 		return countingTypes.find((t) => t.type === type)?.name ?? String(type);
 	}
@@ -64,7 +110,54 @@
 			instantWinThreshold = String(s.win_condition.instant_win_threshold);
 		} catch (e) {
 			loadError = e instanceof Error ? e.message : 'Failed to load scoring structure';
+			return;
 		}
+		await loadSecondaries();
+	}
+
+	async function loadSecondaries() {
+		try {
+			secondaries = await getScoringStructureSecondaries(id());
+		} catch (e) {
+			secondariesError = e instanceof Error ? e.message : 'Failed to load secondary scoring structures';
+		}
+		// Refresh the full catalog so the add dropdown reflects available structures.
+		try {
+			allStructures = await listScoringStructures();
+		} catch {
+			// ignore; the add dropdown just stays empty
+		}
+	}
+
+	async function saveSecondaries(secondaryIds: string[]) {
+		secondariesError = '';
+		secondariesSaving = true;
+		try {
+			secondaries = await setScoringStructureSecondaries(id(), secondaryIds);
+			selectedSecondaryId = '';
+		} catch (err) {
+			secondariesError = err instanceof Error ? err.message : 'Failed to update secondary scoring structures';
+		} finally {
+			secondariesSaving = false;
+		}
+	}
+
+	function handleAddSecondary(e: Event) {
+		e.preventDefault();
+		if (!selectedSecondaryId) return;
+		saveSecondaries([...secondaries.map((s) => s.id), selectedSecondaryId]);
+	}
+
+	function handleRemoveSecondary(index: number) {
+		saveSecondaries(secondaries.filter((_, i) => i !== index).map((s) => s.id));
+	}
+
+	function handleMoveSecondary(index: number, direction: -1 | 1) {
+		const target = index + direction;
+		if (target < 0 || target >= secondaries.length) return;
+		const next = secondaries.map((s) => s.id);
+		[next[index], next[target]] = [next[target], next[index]];
+		saveSecondaries(next);
 	}
 
 	async function handleSave(e: Event) {
@@ -193,6 +286,120 @@
 			</form>
 		</CardContent>
 	</Card>
+
+	<section class="mt-6 max-w-md">
+		<h2 class="text-xl font-semibold tracking-tight">Secondary scoring structures</h2>
+
+		{#if secondaries.length > 0}
+			<ul class="mt-4 flex flex-col gap-2">
+				{#each secondaries as secondary, i}
+					<li class="flex items-center justify-between gap-2 rounded-lg border p-2 pl-3">
+						<span class="flex items-center gap-2">
+							<span class="text-sm text-muted-foreground">{i + 1}.</span>
+							<Badge variant="secondary" class="secondary-name">{secondary.name}</Badge>
+						</span>
+						<span class="flex items-center gap-1">
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onclick={() => handleMoveSecondary(i, -1)}
+								disabled={secondariesSaving || i === 0}
+							>
+								↑
+							</Button>
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onclick={() => handleMoveSecondary(i, 1)}
+								disabled={secondariesSaving || i === secondaries.length - 1}
+							>
+								↓
+							</Button>
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								onclick={() => handleRemoveSecondary(i)}
+								disabled={secondariesSaving}
+							>
+								Remove
+							</Button>
+						</span>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+
+		{#if secondaryType === null}
+			<p class="mt-2 text-sm text-muted-foreground">
+				Point-based scoring structures cannot have secondary (tie-breaker) scoring structures
+				{#if secondaries.length > 0}
+					— remove the {secondaries.length} assigned secondaries (or change the counting type)
+					before saving.
+				{/if}
+			</p>
+		{:else if requiredSecondaryCount === null}
+			<p class="mt-2 text-sm text-muted-foreground">
+				Win conditions that require winning by 2 or more without an instant-win threshold cannot
+				be composite
+				{#if secondaries.length > 0}
+					— remove the {secondaries.length} assigned secondaries (or change the win condition)
+					before saving.
+				{/if}
+			</p>
+		{:else}
+			<p class="mt-1 text-sm text-muted-foreground">
+				The {secondaryTypeName}-based structures used to score each {unitNoun} in this structure,
+				in tie-breaker order.
+			</p>
+
+			{#if secondaries.length === 0}
+				<p class="mt-4 text-muted-foreground">No secondary scoring structures assigned yet.</p>
+			{/if}
+
+			{#if secondaries.length !== requiredSecondaryCount}
+				<p class="mt-2 text-sm text-muted-foreground">
+					This win condition can play at most {requiredSecondaryCount} {unitNoun}s, so a
+					composite structure needs exactly {requiredSecondaryCount} secondary scoring
+					structures ({secondaries.length} currently assigned).
+				</p>
+			{:else if secondaries.length > 0}
+				<p class="mt-2 text-sm text-muted-foreground">
+					All {requiredSecondaryCount} required secondary scoring structures assigned.
+				</p>
+			{/if}
+
+			{#if eligibleStructures.length > 0}
+				<form onsubmit={handleAddSecondary} class="mt-4 flex items-center gap-2">
+					<NativeSelect
+						bind:value={selectedSecondaryId}
+						aria-label="Secondary structure to assign"
+						class="flex-1"
+					>
+						<NativeSelectOption value="" disabled
+							>Select a {secondaryTypeName} structure…</NativeSelectOption
+						>
+						{#each eligibleStructures as s}
+							<NativeSelectOption value={s.id}>{s.name}</NativeSelectOption>
+						{/each}
+					</NativeSelect>
+					<Button type="submit" disabled={secondariesSaving || !selectedSecondaryId}>
+						Add secondary
+					</Button>
+				</form>
+			{:else}
+				<p class="mt-4 text-sm text-muted-foreground">
+					No {secondaryTypeName}-based scoring structures available to assign.
+				</p>
+			{/if}
+		{/if}
+
+		{#if secondariesError}
+			<p class="mt-3 text-sm font-medium text-destructive">{secondariesError}</p>
+		{/if}
+	</section>
 
 	<div class="mt-4">
 		<Popover bind:open={deleteOpen}>
