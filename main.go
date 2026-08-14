@@ -24,6 +24,7 @@ import (
 	"intraclub/route/ruleset"
 	"intraclub/route/schedule"
 	"intraclub/route/scoringstructure"
+	"intraclub/route/seasoncommissioner"
 	"intraclub/route/team"
 	"intraclub/route/user"
 	"intraclub/route/week"
@@ -181,6 +182,16 @@ func main() {
 	seasonLateAdditions.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
 	lateAdditions := api.RouteFamily[*lateaddition.AddLateAdditionBody]{DatabaseProvider: db}
 	lateAdditions.Handle(rg, lateaddition.AddLateAddition{}, lateaddition.RemoveLateAddition{})
+
+	// SeasonCommissioners link a Season to its commissioner users
+	// (co-commissioners). The generic surface is read-only (the season page
+	// shows them); writes go exclusively through the custom routes in
+	// route/seasoncommissioner, which enforce the model's sysadmin-only
+	// EditableBy constraint.
+	seasonCommissioners := api.NewCrudCommon(func() *model.SeasonCommissioner { return &model.SeasonCommissioner{} }, false, db)
+	seasonCommissioners.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
+	commissioners := api.RouteFamily[*seasoncommissioner.AddCommissionerBody]{DatabaseProvider: db}
+	commissioners.Handle(rg, seasoncommissioner.AddCommissioner{}, seasoncommissioner.RemoveCommissioner{})
 
 	// Teams are largely immutable after the draft finalizes: they are exposed
 	// only through the constrained read + role-assignment surface in
