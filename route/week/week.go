@@ -1,6 +1,7 @@
 package week
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -142,4 +143,91 @@ func (c ListWeeks) Handler(req api.Request[*WeekQuery]) (any, int, error) {
 		return nil, http.StatusBadRequest, err
 	}
 	return gin.H{api.ResourceKey: weeks}, http.StatusOK, nil
+}
+
+// CloseWeekBody is a placeholder for the CloseWeek route, which carries no body.
+type CloseWeekBody struct{}
+
+// StaticallyValid has no static constraints.
+func (b *CloseWeekBody) StaticallyValid() error { return nil }
+
+// weekHasIncompleteMatch reports whether any team match in the week still has an
+// individual match that has not been decided (won or lost).
+func weekHasIncompleteMatch(ctx context.Context, db database.Provider, weekId model.WeekId) (bool, error) {
+	teamMatches, err := database.GetAllWhere[*model.TeamMatch](ctx, db, func(_ context.Context, tm *model.TeamMatch) bool {
+		return tm.WeekId == weekId
+	})
+	if err != nil {
+		return false, err
+	}
+	if len(teamMatches) == 0 {
+		return true, nil
+	}
+	for _, tm := range teamMatches {
+		rows, err := database.GetAllWhere[*model.TeamMatchIndividualMatch](ctx, db, func(_ context.Context, r *model.TeamMatchIndividualMatch) bool {
+			return r.TeamMatchId == tm.ID
+		})
+		if err != nil {
+			return false, err
+		}
+		for _, row := range rows {
+			im, err := database.GetExistingRecordById(ctx, db, &model.IndividualMatch{}, row.IndividualMatchId.RecordId())
+			if err != nil {
+				return false, err
+			}
+			if im.Status != model.MatchWon && im.Status != model.MatchLost {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+// CloseWeek marks a week closed once every team match in it is complete. Only a
+// season commissioner may close a week; closing is final.
+type CloseWeek struct{}
+
+func (c CloseWeek) Path() (api.HttpMethod, string) {
+	return api.HttpMethodPost, api.AppendPathId(BaseRoute) + "/close"
+}
+
+func (c CloseWeek) RequestBody() (*CloseWeekBody, bool) {
+	return &CloseWeekBody{}, false
+}
+
+func (c CloseWeek) Handler(req api.Request[*CloseWeekBody]) (any, int, error) {
+	if req.Token == nil {
+		return nil, http.StatusUnauthorized, errors.New("token is required")
+	}
+	week, err := database.GetExistingRecordById(req.Context, req.DatabaseProvider, &model.Week{}, req.PathId)
+	if err != nil {
+		return nil, http.StatusBadRequest, err
+	}
+
+	// Only a season commissioner may close the week; the week's EditableBy
+	// resolves the season's commissioners.
+	authorized := false
+	for _, uid := range week.EditableBy(req.Context, req.DatabaseProvider) {
+		if uid == req.Token.UserId {
+			authorized = true
+			break
+		}
+	}
+	if !authorized {
+		return nil, http.StatusForbidden, errors.New("only a season commissioner may close a week")
+	}
+
+	incomplete, err := weekHasIncompleteMatch(req.Context, req.DatabaseProvider, week.ID)
+	if err != nil {
+		return nil, http.StatusBadRequest, err
+	}
+	if incomplete {
+		return nil, http.StatusBadRequest, errors.New("cannot close a week with incomplete matches")
+	}
+
+	week.Closed = true
+	if err := database.UpdateOne(req.Context, req.DatabaseProvider, week); err != nil {
+		return nil, http.StatusBadRequest, err
+	}
+	return gin.H{api.ResourceKey: week}, http.StatusOK, nil
 }

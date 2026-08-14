@@ -17,6 +17,7 @@ import (
 	"intraclub/route/draft"
 	"intraclub/route/format"
 	"intraclub/route/lineup"
+	"intraclub/route/match"
 	"intraclub/route/organization"
 	"intraclub/route/ruleset"
 	"intraclub/route/schedule"
@@ -136,6 +137,26 @@ func main() {
 	schedule.RegisterRoutes(rg, db)
 
 	lineup.RegisterRoutes(rg, db)
+
+	// Match scoring is driven through the custom route/match surface (generate,
+	// score, complete, week score sheet, standings); the underlying records are
+	// also exposed read-only here so the season page can render a score sheet
+	// without the generic write surface (writes are gated by each model's
+	// EditableBy — team matches are sysadmin-only, individual matches are
+	// editable by their match_editor rows).
+	match.RegisterRoutes(rg, db)
+
+	individualMatches := api.NewCrudCommon(model.NewMatch, false, db)
+	individualMatches.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
+
+	teamMatches := api.NewCrudCommon(func() *model.TeamMatch { return &model.TeamMatch{} }, false, db)
+	teamMatches.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
+
+	teamMatchIndividualMatches := api.NewCrudCommon(func() *model.TeamMatchIndividualMatch { return &model.TeamMatchIndividualMatch{} }, false, db)
+	teamMatchIndividualMatches.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
+
+	matchEditors := api.NewCrudCommon(func() *model.MatchEditor { return &model.MatchEditor{} }, false, db)
+	matchEditors.HandleRouteTypes(rg, api.CrudWrapperFunctionGetOne, api.CrudWrapperFunctionGetMany)
 
 	playoffStructures := api.NewCrudCommon(model.NewPlayoffStructure, false, db)
 	playoffStructures.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)

@@ -28,4 +28,7 @@ func RegisterRoutes(e *gin.RouterGroup, db database.Provider) {
 
 	createFamily := api.RouteFamily[*CreateWeekBody]{DatabaseProvider: db}
 	createFamily.Handle(e, CreateWeek{})
+
+	closeFamily := api.RouteFamily[*CloseWeekBody]{DatabaseProvider: db}
+	closeFamily.Handle(e, CloseWeek{})
 }
