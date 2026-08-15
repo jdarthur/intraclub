@@ -20,6 +20,19 @@ func (id CommentId) String() string {
 	return id.RecordId().String()
 }
 
+func (id CommentId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
+func (id *CommentId) UnmarshalJSON(data []byte) error {
+	rid := id.RecordId()
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(data); err != nil {
+		return err
+	}
+	*id = CommentId(rid)
+	return nil
+}
+
 type Comment struct {
 	ID        CommentId       `json:"id"`                           // unique ID for this comment
 	Blurb     BlurbId         `json:"blurb"`                        // ID of the Blurb that this comment is on
@@ -109,12 +122,19 @@ func (c *Comment) StaticallyValid() error {
 		return fmt.Errorf("comment is empty")
 	}
 
-	if c.ReplyTo == c.ID {
-		return errors.New("comment references itself")
-	}
-
-	if c.CreatedAt.IsZero() {
-		return fmt.Errorf("comment created timestamp is zero")
+	// The self-reference and created-timestamp checks only apply once the
+	// comment has been persisted (an ID has been assigned). The generic CRUD
+	// route wrapper pre-validates a fresh request body before
+	// CreateOne/UpdateOne assigns the ID and timestamps, at which point both
+	// ReplyTo and ID are zero; gating on a set ID keeps that pre-check from
+	// spuriously rejecting a brand-new comment.
+	if c.ID != CommentId(database.InvalidRecordId) {
+		if c.ReplyTo == c.ID {
+			return errors.New("comment references itself")
+		}
+		if c.CreatedAt.IsZero() {
+			return fmt.Errorf("comment created timestamp is zero")
+		}
 	}
 
 	return nil
@@ -225,10 +245,33 @@ func (r *CommentReaction) StaticallyValid() error {
 }
 
 func (r *CommentReaction) DynamicallyValid(ctx context.Context, db database.Provider) error {
-	if err := database.ExistsById(ctx, db, &Comment{}, r.CommentId.RecordId()); err != nil {
+	if err := database.ExistsById(ctx, db, &User{}, r.UserId.RecordId()); err != nil {
 		return err
 	}
-	return database.ExistsById(ctx, db, &User{}, r.UserId.RecordId())
+	commentRec, err := database.GetExistingRecordById(ctx, db, &Comment{}, r.CommentId.RecordId())
+	if err != nil {
+		return err
+	}
+	blurb, err := database.GetExistingRecordById(ctx, db, &Blurb{}, commentRec.Blurb.RecordId())
+	if err != nil {
+		return err
+	}
+	season, err := database.GetExistingRecordById(ctx, db, &Season{}, blurb.Season.RecordId())
+	if err != nil {
+		return err
+	}
+
+	// The reacting user must be a participant of the comment's blurb's season.
+	// This mirrors the participant check that the custom /react routes enforce,
+	// so the generic CRUD surface can't be used to bypass it.
+	isParticipant, err := season.IsUserIdASeasonParticipant(ctx, db, r.UserId)
+	if err != nil {
+		return err
+	}
+	if !isParticipant {
+		return fmt.Errorf("user %s is not a participant in season %s", r.UserId, season.ID)
+	}
+	return nil
 }
 
 func (r *CommentReaction) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {

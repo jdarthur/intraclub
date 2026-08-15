@@ -22,7 +22,9 @@ import (
 //
 // Comment.DynamicallyValid requires its owner to be a Season participant, so
 // the comment owner is registered as a Season commissioner (a participant)
-// before the comment is created.
+// before the comment is created. The same participant requirement now applies
+// to blurb owners and to blurb/comment reactors, so those users are registered
+// as commissioners before their records are created.
 
 // createTestPhoto creates a Photo with random contents owned by the given user.
 func createTestPhoto(t *testing.T, p database.Provider, owner *model.User) *model.Photo {
@@ -168,6 +170,9 @@ func TestBlurbRoundTrip(t *testing.T) {
 	p := newSqliteProvider(t)
 	owner := createTestUser(t, p)
 	season := createTestSeason(t, p)
+	// the blurb owner must be a Season participant, so register them as a
+	// commissioner
+	createTestSeasonCommissioner(t, p, season, owner)
 
 	blurb := createTestBlurb(t, p, owner, season)
 
@@ -221,6 +226,9 @@ func TestBlurbPhotoRoundTrip(t *testing.T) {
 	p := newSqliteProvider(t)
 	owner := createTestUser(t, p)
 	season := createTestSeason(t, p)
+	// the blurb owner must be a Season participant, so register them as a
+	// commissioner
+	createTestSeasonCommissioner(t, p, season, owner)
 	blurb := createTestBlurb(t, p, owner, season)
 	photo := createTestPhoto(t, p, owner)
 	photo2 := createTestPhoto(t, p, owner)
@@ -282,8 +290,12 @@ func TestBlurbReactionRoundTrip(t *testing.T) {
 	p := newSqliteProvider(t)
 	owner := createTestUser(t, p)
 	season := createTestSeason(t, p)
-	blurb := createTestBlurb(t, p, owner, season)
 	reactor := createTestUser(t, p)
+	// the blurb owner and the reactor must be Season participants, so register
+	// them as commissioners
+	createTestSeasonCommissioner(t, p, season, owner)
+	createTestSeasonCommissioner(t, p, season, reactor)
+	blurb := createTestBlurb(t, p, owner, season)
 
 	row := &model.BlurbReaction{BlurbId: blurb.ID, UserId: reactor.ID, ReactionType: model.ThumbsUp}
 	created, err := database.CreateOne(ctx, p, row)
@@ -406,6 +418,9 @@ func TestCommentReactionRoundTrip(t *testing.T) {
 	blurb := createTestBlurb(t, p, owner, season)
 	comment := createTestComment(t, p, blurb, owner)
 	reactor := createTestUser(t, p)
+	// the reactor must be a Season participant, so register them as a
+	// commissioner
+	createTestSeasonCommissioner(t, p, season, reactor)
 
 	row := &model.CommentReaction{CommentId: comment.ID, UserId: reactor.ID, ReactionType: model.Heart}
 	created, err := database.CreateOne(ctx, p, row)

@@ -20,12 +20,25 @@ func (id BlurbId) String() string {
 	return id.RecordId().String()
 }
 
+func (id BlurbId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
+func (id *BlurbId) UnmarshalJSON(data []byte) error {
+	rid := id.RecordId()
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(data); err != nil {
+		return err
+	}
+	*id = BlurbId(rid)
+	return nil
+}
+
 type Blurb struct {
-	ID      BlurbId `json:"id"`
-	Title   string
-	Content string
-	Owner   database.UserId
-	Season  SeasonId
+	ID      BlurbId         `json:"id"`
+	Title   string          `json:"title"`
+	Content string          `json:"content"`
+	Owner   database.UserId `json:"owner"`
+	Season  SeasonId        `json:"season"`
 }
 
 func (b *Blurb) GetOwner() database.UserId {
@@ -70,9 +83,19 @@ func (b *Blurb) DynamicallyValid(ctx context.Context, db database.Provider) erro
 		return err
 	}
 
-	err = database.ExistsById(ctx, db, &Season{}, b.Season.RecordId())
+	season, err := database.GetExistingRecordById(ctx, db, &Season{}, b.Season.RecordId())
 	if err != nil {
 		return err
+	}
+
+	// The blurb's owner must be a participant of the season (mirrors the
+	// participant check enforced for comments and reactions).
+	isParticipant, err := season.IsUserIdASeasonParticipant(ctx, db, b.Owner)
+	if err != nil {
+		return err
+	}
+	if !isParticipant {
+		return fmt.Errorf("user %s is not a participant in season %s", b.Owner, b.Season)
 	}
 
 	// each attached photo (via the blurb_photo child table) must exist and be
@@ -343,10 +366,29 @@ func (r *BlurbReaction) StaticallyValid() error {
 }
 
 func (r *BlurbReaction) DynamicallyValid(ctx context.Context, db database.Provider) error {
-	if err := database.ExistsById(ctx, db, &Blurb{}, r.BlurbId.RecordId()); err != nil {
+	if err := database.ExistsById(ctx, db, &User{}, r.UserId.RecordId()); err != nil {
 		return err
 	}
-	return database.ExistsById(ctx, db, &User{}, r.UserId.RecordId())
+	blurb, err := database.GetExistingRecordById(ctx, db, &Blurb{}, r.BlurbId.RecordId())
+	if err != nil {
+		return err
+	}
+	season, err := database.GetExistingRecordById(ctx, db, &Season{}, blurb.Season.RecordId())
+	if err != nil {
+		return err
+	}
+
+	// The reacting user must be a participant of the blurb's season. This
+	// mirrors the participant check that the custom /react routes enforce, so
+	// the generic CRUD surface can't be used to bypass it.
+	isParticipant, err := season.IsUserIdASeasonParticipant(ctx, db, r.UserId)
+	if err != nil {
+		return err
+	}
+	if !isParticipant {
+		return fmt.Errorf("user %s is not a participant in season %s", r.UserId, season.ID)
+	}
+	return nil
 }
 
 func (r *BlurbReaction) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {

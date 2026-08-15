@@ -14,6 +14,8 @@ import (
 	"intraclub/model"
 	"intraclub/route"
 	"intraclub/route/availability"
+	"intraclub/route/blurb"
+	"intraclub/route/comment"
 	"intraclub/route/draft"
 	"intraclub/route/format"
 	"intraclub/route/lateaddition"
@@ -233,6 +235,44 @@ func main() {
 
 	photos := api.NewCrudCommon(model.NewPhoto, false, db)
 	photos.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	// Blurbs are season-scoped posts (news/announcements) that users can
+	// comment on and react to. Generic CRUD covers create / list / read /
+	// update / delete (an owner creates and edits their own blurb); reactions
+	// and photo attachment go through the custom routes in route/blurb, which
+	// enforce season-participation and ownership rules.
+	blurbs := api.NewCrudCommon(model.NewBlurb, false, db)
+	blurbs.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	// Comments attach to a blurb and support replies; reactions attach to
+	// comments. Generic CRUD covers create / list / read / update / delete
+	// (edits are gated by the model's EditableBy: owner / blurb owner /
+	// season commissioners / sysadmin); reactions go through the custom routes
+	// in route/comment.
+	comments := api.NewCrudCommon(model.NewComment, false, db)
+	comments.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	// BlurbPhoto / BlurbReaction / CommentReaction are child-table join rows.
+	// They are exposed via generic CRUD for read/admin access; the interactive
+	// writes go through the custom routes in route/blurb and route/comment
+	// (which enforce ownership, dedup, and season-participation).
+	blurbPhotos := api.NewCrudCommon(func() *model.BlurbPhoto { return &model.BlurbPhoto{} }, false, db)
+	blurbPhotos.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	blurbReactions := api.NewCrudCommon(func() *model.BlurbReaction { return &model.BlurbReaction{} }, false, db)
+	blurbReactions.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	commentReactions := api.NewCrudCommon(func() *model.CommentReaction { return &model.CommentReaction{} }, false, db)
+	commentReactions.HandleRouteTypes(rg, api.CrudWrapperFunctionAll...)
+
+	blurbReactionRoutes := api.RouteFamily[*blurb.ReactionBody]{DatabaseProvider: db}
+	blurbReactionRoutes.Handle(rg, blurb.React{}, blurb.Unreact{})
+
+	blurbPhotoRoutes := api.RouteFamily[*blurb.PhotoBody]{DatabaseProvider: db}
+	blurbPhotoRoutes.Handle(rg, blurb.AddPhoto{}, blurb.RemovePhoto{})
+
+	commentReactionRoutes := api.RouteFamily[*comment.ReactionBody]{DatabaseProvider: db}
+	commentReactionRoutes.Handle(rg, comment.React{}, comment.Unreact{})
 
 	err = r.Run(cfg.addr)
 	if err != nil {

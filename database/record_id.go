@@ -51,6 +51,13 @@ func RecordIdFromString(s string) (RecordId, error) {
 	if s == "" {
 		return InvalidRecordId, nil
 	}
+	// A RecordId is 8 bytes = 16 hex chars. Reject anything that isn't exactly
+	// that length BEFORE decoding; hex.Decode into a fixed 8-byte buffer would
+	// otherwise write past the end of the slice and panic (runtime bounds
+	// check) when handed a longer even-length string.
+	if len(s) != 16 {
+		return InvalidRecordId, fmt.Errorf("invalid record ID %q: must be exactly 16 hex characters", s)
+	}
 	b := make([]byte, 8)
 	n, err := hex.Decode(b, []byte(s))
 	if err != nil {

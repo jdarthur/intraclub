@@ -234,6 +234,34 @@ func TestCommentByNonSeasonParticipant(t *testing.T) {
 	fmt.Println(err)
 }
 
+func TestCommentReactionByNonSeasonParticipant(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	blurb, season := newDefaultBlurb(t, db)
+	owner := getAnyTeamCaptain(t, db, season)
+	comment := newStoredComment(t, db, owner, blurb)
+
+	otherUser := newStoredUser(t, db)
+	row := &CommentReaction{CommentId: comment.ID, UserId: otherUser.ID, ReactionType: ThumbsUp}
+	err := row.DynamicallyValid(context.Background(), db)
+	if err == nil {
+		t.Error("Reaction by non-season participant should produce error")
+	}
+	fmt.Println(err)
+}
+
+func TestCommentReactionBySeasonParticipant(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	blurb, season := newDefaultBlurb(t, db)
+	owner := getAnyTeamCaptain(t, db, season)
+	comment := newStoredComment(t, db, owner, blurb)
+
+	row := &CommentReaction{CommentId: comment.ID, UserId: owner, ReactionType: ThumbsUp}
+	err := row.DynamicallyValid(context.Background(), db)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestCommentPostDeleteCascadesReactions(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	blurb, season := newDefaultBlurb(t, db)
