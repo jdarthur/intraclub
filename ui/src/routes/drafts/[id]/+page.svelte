@@ -729,7 +729,7 @@
 									id={`cutoff-${entry.ratingId}`}
 									type="number"
 									min="1"
-									class="h-8 w-28 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+									class="h-8 w-28 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring"
 									value={entry.value}
 									oninput={(e) => {
 										entry.value = (e.currentTarget as HTMLInputElement).value;
