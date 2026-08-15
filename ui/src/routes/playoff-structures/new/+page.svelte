@@ -43,7 +43,7 @@
 
 <Card class="mt-6 max-w-md">
 	<CardHeader>
-		<CardTitle class="text-base">Playoff structure details</CardTitle>
+		<CardTitle>Playoff structure details</CardTitle>
 	</CardHeader>
 	<CardContent>
 		<form onsubmit={handleSubmit} class="flex flex-col gap-4">

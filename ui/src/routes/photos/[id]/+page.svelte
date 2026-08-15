@@ -143,7 +143,7 @@
 
 	<Card class="mt-6 max-w-md">
 		<CardHeader>
-			<CardTitle class="text-base">Edit photo</CardTitle>
+			<CardTitle>Edit photo</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<form onsubmit={handleSave} class="flex flex-col gap-4">

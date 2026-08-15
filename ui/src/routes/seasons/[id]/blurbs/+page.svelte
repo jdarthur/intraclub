@@ -330,7 +330,7 @@
 	<!-- Create blurb -->
 	<Card class="mt-6">
 		<CardHeader>
-			<CardTitle class="text-base">Post a blurb</CardTitle>
+			<CardTitle>Post a blurb</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<form onsubmit={handleCreateBlurb} class="flex flex-col gap-4">
@@ -364,7 +364,7 @@
 			<Card>
 				<CardHeader>
 					<div class="flex items-center gap-3">
-						<CardTitle class="text-base">{blurb.title}</CardTitle>
+						<CardTitle>{blurb.title}</CardTitle>
 						<div class="ml-auto flex items-center gap-2">
 							<Badge variant="secondary">{userName(blurb.owner)}</Badge>
 							{#if blurb.owner === currentUserId}

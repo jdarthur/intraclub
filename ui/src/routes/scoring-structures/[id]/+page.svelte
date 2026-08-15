@@ -239,7 +239,7 @@
 
 	<Card class="mt-6 max-w-md">
 		<CardHeader>
-			<CardTitle class="text-base">Scoring structure details</CardTitle>
+			<CardTitle>Scoring structure details</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<dl class="flex flex-col gap-3">
@@ -265,7 +265,7 @@
 
 	<Card class="mt-6 max-w-md">
 		<CardHeader>
-			<CardTitle class="text-base">Edit scoring structure</CardTitle>
+			<CardTitle>Edit scoring structure</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<form onsubmit={handleSave} class="flex flex-col gap-4">

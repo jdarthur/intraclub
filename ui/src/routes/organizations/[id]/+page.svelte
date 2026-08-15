@@ -204,7 +204,7 @@
 			{#if isOwner}
 				<Card class="max-w-md">
 					<CardHeader>
-						<CardTitle class="text-base">Organization details</CardTitle>
+						<CardTitle>Organization details</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<form onsubmit={handleSave} class="flex flex-col gap-4">
@@ -241,7 +241,7 @@
 			{:else}
 				<Card class="max-w-md">
 					<CardHeader>
-						<CardTitle class="text-base">Organization</CardTitle>
+						<CardTitle>Organization</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<p class="text-sm text-muted-foreground">
@@ -261,7 +261,7 @@
 				{#if transferCore}
 					<Card class="max-w-2xl">
 						<CardHeader>
-							<CardTitle class="text-base">Members</CardTitle>
+							<CardTitle>Members</CardTitle>
 						</CardHeader>
 						<CardContent>
 							<p class="text-sm text-muted-foreground">
@@ -322,7 +322,7 @@
 			{:else}
 				<Card class="max-w-md">
 					<CardHeader>
-						<CardTitle class="text-base">Members</CardTitle>
+						<CardTitle>Members</CardTitle>
 					</CardHeader>
 					<CardContent>
 						{#if members.length === 0}

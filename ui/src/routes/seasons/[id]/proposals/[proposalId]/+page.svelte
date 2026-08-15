@@ -90,7 +90,7 @@
 
 	<Card class="mt-6">
 		<CardHeader>
-			<CardTitle class="text-base">Proposal</CardTitle>
+			<CardTitle>Proposal</CardTitle>
 		</CardHeader>
 		<CardContent>
 			{@const st = statusLabel()}
@@ -108,7 +108,7 @@
 
 	<Card class="mt-6">
 		<CardHeader>
-			<CardTitle class="text-base">Vote tally</CardTitle>
+			<CardTitle>Vote tally</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<div class="flex items-center gap-6 text-sm">

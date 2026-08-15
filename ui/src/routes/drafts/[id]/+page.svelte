@@ -451,7 +451,7 @@
 	<!-- State summary / readiness -->
 	<Card class="mt-6">
 		<CardHeader>
-			<CardTitle class="text-base">Setup status</CardTitle>
+			<CardTitle>Setup status</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<div class="flex flex-wrap items-center gap-4 text-sm">
@@ -521,7 +521,7 @@
 		<!-- Captains / teams -->
 		<Card>
 			<CardHeader>
-				<CardTitle class="text-base">Captains &amp; teams</CardTitle>
+				<CardTitle>Captains &amp; teams</CardTitle>
 			</CardHeader>
 			<CardContent>
 				{#if captains.length === 0}
@@ -595,7 +595,7 @@
 		<!-- Available players -->
 		<Card>
 			<CardHeader>
-				<CardTitle class="text-base">Available players</CardTitle>
+				<CardTitle>Available players</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<p class="text-sm text-muted-foreground">
@@ -700,7 +700,7 @@
 		<!-- Rating cutoffs -->
 		<Card>
 			<CardHeader>
-				<CardTitle class="text-base">Rating cutoffs</CardTitle>
+				<CardTitle>Rating cutoffs</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<p class="text-sm text-muted-foreground">

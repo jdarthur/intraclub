@@ -99,7 +99,7 @@
 
 	<Card class="mt-6 max-w-md">
 		<CardHeader>
-			<CardTitle class="text-base">Facility details</CardTitle>
+			<CardTitle>Facility details</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<form onsubmit={handleSave} class="flex flex-col gap-4">

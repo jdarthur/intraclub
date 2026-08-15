@@ -109,7 +109,7 @@
 {:else if roster}
 	<Card class="mt-6">
 		<CardHeader>
-			<CardTitle class="text-base">Team</CardTitle>
+			<CardTitle>Team</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<div class="flex flex-wrap items-center gap-4 text-sm">
