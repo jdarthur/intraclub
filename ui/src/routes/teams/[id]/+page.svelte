@@ -149,7 +149,7 @@
 				<p class="mt-3 text-sm font-medium text-destructive">{actionError}</p>
 			{/if}
 			{#if actionMessage}
-				<p class="mt-3 text-sm font-medium text-emerald-600">{actionMessage}</p>
+				<p class="mt-3 text-sm font-medium text-success">{actionMessage}</p>
 			{/if}
 
 			{#if canManage}
