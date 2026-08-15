@@ -20,12 +20,25 @@ func (id BlurbId) String() string {
 	return id.RecordId().String()
 }
 
+func (id BlurbId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
+func (id *BlurbId) UnmarshalJSON(data []byte) error {
+	rid := id.RecordId()
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(data); err != nil {
+		return err
+	}
+	*id = BlurbId(rid)
+	return nil
+}
+
 type Blurb struct {
-	ID      BlurbId `json:"id"`
-	Title   string
-	Content string
-	Owner   database.UserId
-	Season  SeasonId
+	ID      BlurbId         `json:"id"`
+	Title   string          `json:"title"`
+	Content string          `json:"content"`
+	Owner   database.UserId `json:"owner"`
+	Season  SeasonId        `json:"season"`
 }
 
 func (b *Blurb) GetOwner() database.UserId {

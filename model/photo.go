@@ -54,9 +54,13 @@ func (id PhotoId) MarshalJSON() ([]byte, error) {
 	return id.RecordId().MarshalJSON()
 }
 
-func (id PhotoId) UnmarshalJSON(data []byte) error {
+func (id *PhotoId) UnmarshalJSON(data []byte) error {
 	rid := id.RecordId()
-	return (*database.RecordId)(&rid).UnmarshalJSON(data)
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(data); err != nil {
+		return err
+	}
+	*id = PhotoId(rid)
+	return nil
 }
 
 type Photo struct {

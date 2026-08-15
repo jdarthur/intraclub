@@ -20,6 +20,19 @@ func (id CommentId) String() string {
 	return id.RecordId().String()
 }
 
+func (id CommentId) MarshalJSON() ([]byte, error) {
+	return id.RecordId().MarshalJSON()
+}
+
+func (id *CommentId) UnmarshalJSON(data []byte) error {
+	rid := id.RecordId()
+	if err := (*database.RecordId)(&rid).UnmarshalJSON(data); err != nil {
+		return err
+	}
+	*id = CommentId(rid)
+	return nil
+}
+
 type Comment struct {
 	ID        CommentId       `json:"id"`                           // unique ID for this comment
 	Blurb     BlurbId         `json:"blurb"`                        // ID of the Blurb that this comment is on
@@ -109,12 +122,19 @@ func (c *Comment) StaticallyValid() error {
 		return fmt.Errorf("comment is empty")
 	}
 
-	if c.ReplyTo == c.ID {
-		return errors.New("comment references itself")
-	}
-
-	if c.CreatedAt.IsZero() {
-		return fmt.Errorf("comment created timestamp is zero")
+	// The self-reference and created-timestamp checks only apply once the
+	// comment has been persisted (an ID has been assigned). The generic CRUD
+	// route wrapper pre-validates a fresh request body before
+	// CreateOne/UpdateOne assigns the ID and timestamps, at which point both
+	// ReplyTo and ID are zero; gating on a set ID keeps that pre-check from
+	// spuriously rejecting a brand-new comment.
+	if c.ID != CommentId(database.InvalidRecordId) {
+		if c.ReplyTo == c.ID {
+			return errors.New("comment references itself")
+		}
+		if c.CreatedAt.IsZero() {
+			return fmt.Errorf("comment created timestamp is zero")
+		}
 	}
 
 	return nil
