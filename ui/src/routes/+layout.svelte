@@ -32,7 +32,7 @@
 	>Skip to main content</a
 >
 <NavBar />
-<main id="main-content" class="mx-auto w-full max-w-6xl px-6 py-6">
+<main id="main-content" class="mx-auto w-full max-w-6xl px-4 py-6 md:px-6">
 	{@render children()}
 </main>
 <Toaster />

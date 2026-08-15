@@ -1,66 +1,57 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Async } from '$lib/async.svelte';
+	import {
+		AsyncSection,
+		DataTable,
+		EmptyState,
+		PageHeader
+	} from '$lib/components/app/index.js';
+	import type { Column } from '$lib/components/app/data-table.svelte';
 	import { listFormats } from '$lib/format';
 	import type { Format } from '$lib/format';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table/index.js';
+	import ListTreeIcon from '@lucide/svelte/icons/list-tree';
 
-	let formats = $state<Format[]>([]);
-	let loading = $state(true);
-	let error = $state('');
+	const formats = new Async<Format[]>();
+	onMount(() => formats.run(() => listFormats()));
 
-	onMount(async () => {
-		try {
-			formats = await listFormats();
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load formats';
-		} finally {
-			loading = false;
-		}
-	});
+	const columns: Column<Format>[] = [
+		{ key: 'name', header: 'Name', sortable: true, cell: nameCell }
+	];
 </script>
+
+{#snippet nameCell(f: Format)}
+	<a href={`/formats/${f.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+		{f.name}
+	</a>
+{/snippet}
 
 <svelte:head>
 	<title>Intraclub | Formats</title>
 </svelte:head>
 
-<div class="flex items-center justify-between gap-4">
-	<h1 class="text-2xl font-semibold tracking-tight">Formats</h1>
-	<Button href="/formats/new">New format</Button>
-</div>
+<PageHeader title="Formats" description="How a season structures its ratings and play" icon={ListTreeIcon}>
+	{#snippet actions()}
+		<Button href="/formats/new">New format</Button>
+	{/snippet}
+</PageHeader>
 
-{#if loading}
-	<p class="text-muted-foreground">Loading...</p>
-{:else if error}
-	<p class="text-sm font-medium text-destructive">{error}</p>
-{:else if formats.length === 0}
-	<p class="text-muted-foreground">No formats yet.</p>
-{:else}
-	<div class="mt-4 overflow-hidden rounded-lg border">
-		<Table>
-			<TableHeader>
-				<TableRow>
-					<TableHead>Name</TableHead>
-				</TableRow>
-			</TableHeader>
-			<TableBody>
-				{#each formats as format}
-					<TableRow>
-						<TableCell>
-							<a href={`/formats/${format.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
-								{format.name}
-							</a>
-						</TableCell>
-					</TableRow>
-				{/each}
-			</TableBody>
-		</Table>
-	</div>
-{/if}
+<AsyncSection state={formats} isEmpty={(f) => f.length === 0}>
+	{#snippet loading()}
+		<DataTable rows={[]} {columns} getKey={(f) => f.id} loading />
+	{/snippet}
+	{#snippet empty()}
+		<EmptyState title="No formats yet." description="Create a format to define how players are rated and matched." />
+	{/snippet}
+	{#snippet children(fs)}
+		<DataTable
+			rows={fs}
+			{columns}
+			getKey={(f) => f.id}
+			caption="Formats"
+			filter
+			filterLabel="Filter formats"
+		/>
+	{/snippet}
+</AsyncSection>

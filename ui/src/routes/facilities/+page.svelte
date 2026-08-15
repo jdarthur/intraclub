@@ -1,70 +1,59 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Async } from '$lib/async.svelte';
+	import {
+		AsyncSection,
+		DataTable,
+		EmptyState,
+		PageHeader
+	} from '$lib/components/app/index.js';
+	import type { Column } from '$lib/components/app/data-table.svelte';
 	import { listFacilities } from '$lib/facility';
 	import type { Facility } from '$lib/facility';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table/index.js';
+	import Building2Icon from '@lucide/svelte/icons/building-2';
 
-	let facilities = $state<Facility[]>([]);
-	let loading = $state(true);
-	let error = $state('');
+	const facilities = new Async<Facility[]>();
+	onMount(() => facilities.run(() => listFacilities()));
 
-	onMount(async () => {
-		try {
-			facilities = await listFacilities();
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load facilities';
-		} finally {
-			loading = false;
-		}
-	});
+	const columns: Column<Facility>[] = [
+		{ key: 'name', header: 'Name', sortable: true, cell: nameCell },
+		{ key: 'address', header: 'Address', hideBelow: 'sm', value: (f) => f.address },
+		{ key: 'courts', header: 'Courts', align: 'right', value: (f) => f.courts }
+	];
 </script>
+
+{#snippet nameCell(f: Facility)}
+	<a href={`/facilities/${f.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+		{f.name}
+	</a>
+{/snippet}
 
 <svelte:head>
 	<title>Intraclub | Facilities</title>
 </svelte:head>
 
-<div class="flex items-center justify-between gap-4">
-	<h1 class="text-2xl font-semibold tracking-tight">Facilities</h1>
-	<Button href="/facilities/new">New facility</Button>
-</div>
+<PageHeader title="Facilities" description="Courts and venues available to the league" icon={Building2Icon}>
+	{#snippet actions()}
+		<Button href="/facilities/new">New facility</Button>
+	{/snippet}
+</PageHeader>
 
-{#if loading}
-	<p class="text-muted-foreground">Loading...</p>
-{:else if error}
-	<p class="text-sm font-medium text-destructive">{error}</p>
-{:else if facilities.length === 0}
-	<p class="text-muted-foreground">No facilities yet.</p>
-{:else}
-	<div class="mt-4 overflow-hidden rounded-lg border">
-		<Table>
-			<TableHeader>
-				<TableRow>
-					<TableHead>Name</TableHead>
-					<TableHead>Address</TableHead>
-					<TableHead>Courts</TableHead>
-				</TableRow>
-			</TableHeader>
-			<TableBody>
-				{#each facilities as facility}
-					<TableRow>
-						<TableCell>
-							<a href={`/facilities/${facility.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
-								{facility.name}
-							</a>
-						</TableCell>
-						<TableCell>{facility.address}</TableCell>
-						<TableCell>{facility.courts}</TableCell>
-					</TableRow>
-				{/each}
-			</TableBody>
-		</Table>
-	</div>
-{/if}
+<AsyncSection state={facilities} isEmpty={(f) => f.length === 0}>
+	{#snippet loading()}
+		<DataTable rows={[]} {columns} getKey={(f) => f.id} loading />
+	{/snippet}
+	{#snippet empty()}
+		<EmptyState title="No facilities yet." description="Add a venue so seasons have somewhere to play." />
+	{/snippet}
+	{#snippet children(fs)}
+		<DataTable
+			rows={fs}
+			{columns}
+			getKey={(f) => f.id}
+			caption="Facilities"
+			filter
+			filterLabel="Filter facilities"
+		/>
+	{/snippet}
+</AsyncSection>
