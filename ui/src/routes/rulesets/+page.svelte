@@ -1,68 +1,58 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Async } from '$lib/async.svelte';
+	import {
+		AsyncSection,
+		DataTable,
+		EmptyState,
+		PageHeader
+	} from '$lib/components/app/index.js';
+	import type { Column } from '$lib/components/app/data-table.svelte';
 	import { listRulesets } from '$lib/ruleset';
 	import type { Ruleset } from '$lib/ruleset';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table/index.js';
+	import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
 
-	let rulesets = $state<Ruleset[]>([]);
-	let loading = $state(true);
-	let error = $state('');
+	const rulesets = new Async<Ruleset[]>();
+	onMount(() => rulesets.run(() => listRulesets()));
 
-	onMount(async () => {
-		try {
-			rulesets = await listRulesets();
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load rulesets';
-		} finally {
-			loading = false;
-		}
-	});
+	const columns: Column<Ruleset>[] = [
+		{ key: 'name', header: 'Name', sortable: true, cell: nameCell },
+		{ key: 'revision', header: 'Revision', value: (r) => r.revision }
+	];
 </script>
+
+{#snippet nameCell(r: Ruleset)}
+	<a href={`/rulesets/${r.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+		{r.name}
+	</a>
+{/snippet}
 
 <svelte:head>
 	<title>Intraclub | Rulesets</title>
 </svelte:head>
 
-<div class="flex items-center justify-between gap-4">
-	<h1 class="text-2xl font-semibold tracking-tight">Rulesets</h1>
-	<Button href="/rulesets/new">New ruleset</Button>
-</div>
+<PageHeader title="Rulesets" description="The club's house rules, versioned by amendment" icon={ScrollTextIcon}>
+	{#snippet actions()}
+		<Button href="/rulesets/new">New ruleset</Button>
+	{/snippet}
+</PageHeader>
 
-{#if loading}
-	<p class="text-muted-foreground">Loading...</p>
-{:else if error}
-	<p class="text-sm font-medium text-destructive">{error}</p>
-{:else if rulesets.length === 0}
-	<p class="text-muted-foreground">No rulesets yet.</p>
-{:else}
-	<div class="mt-4 overflow-hidden rounded-lg border">
-		<Table>
-			<TableHeader>
-				<TableRow>
-					<TableHead>Name</TableHead>
-					<TableHead>Revision</TableHead>
-				</TableRow>
-			</TableHeader>
-			<TableBody>
-				{#each rulesets as ruleset}
-					<TableRow>
-						<TableCell>
-							<a href={`/rulesets/${ruleset.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
-								{ruleset.name}
-							</a>
-						</TableCell>
-						<TableCell>{ruleset.revision}</TableCell>
-					</TableRow>
-				{/each}
-			</TableBody>
-		</Table>
-	</div>
-{/if}
+<AsyncSection state={rulesets} isEmpty={(r) => r.length === 0}>
+	{#snippet loading()}
+		<DataTable rows={[]} {columns} getKey={(r) => r.id} loading />
+	{/snippet}
+	{#snippet empty()}
+		<EmptyState title="No rulesets yet." description="Create a ruleset to codify the club's rules." />
+	{/snippet}
+	{#snippet children(rs)}
+		<DataTable
+			rows={rs}
+			{columns}
+			getKey={(r) => r.id}
+			caption="Rulesets"
+			filter
+			filterLabel="Filter rulesets"
+		/>
+	{/snippet}
+</AsyncSection>
