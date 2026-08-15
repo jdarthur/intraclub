@@ -1,73 +1,62 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Async } from '$lib/async.svelte';
+	import {
+		AsyncSection,
+		DataTable,
+		EmptyState,
+		PageHeader
+	} from '$lib/components/app/index.js';
+	import type { Column } from '$lib/components/app/data-table.svelte';
 	import { listTeams } from '$lib/team';
 	import type { TeamRoster } from '$lib/team';
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table/index.js';
+	import ShieldIcon from '@lucide/svelte/icons/shield';
 
-	let rosters = $state<TeamRoster[]>([]);
-	let loading = $state(true);
-	let error = $state('');
+	const rosters = new Async<TeamRoster[]>();
+	onMount(() => rosters.run(() => listTeams()));
 
-	onMount(async () => {
-		try {
-			rosters = await listTeams();
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load teams';
-		} finally {
-			loading = false;
+	const columns: Column<TeamRoster>[] = [
+		{ key: 'name', header: 'Team', sortable: true, cell: nameCell },
+		{
+			key: 'members',
+			header: 'Members',
+			align: 'right',
+			value: (r) => r.assignments.length,
+			class: 'text-muted-foreground'
 		}
-	});
+	];
 </script>
+
+{#snippet nameCell(r: TeamRoster)}
+	<a href={`/teams/${r.team.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+		{r.team.name}
+	</a>
+{/snippet}
 
 <svelte:head>
 	<title>Intraclub | Teams</title>
 </svelte:head>
 
-<div class="flex items-center gap-4">
-	<h1 class="text-2xl font-semibold tracking-tight">Teams</h1>
-</div>
+<PageHeader title="Teams" description="Rosters formed by finalized drafts" icon={ShieldIcon} />
 
-{#if loading}
-	<p class="text-muted-foreground">Loading...</p>
-{:else if error}
-	<p class="text-sm font-medium text-destructive">{error}</p>
-{:else if rosters.length === 0}
-	<p class="text-muted-foreground">
-		You aren't on any teams. Teams are created when a draft is finalized and are only visible to their members.
-	</p>
-{:else}
-	<div class="mt-4 overflow-hidden rounded-lg border">
-		<Table>
-			<TableHeader>
-				<TableRow>
-					<TableHead>Team</TableHead>
-					<TableHead>Members</TableHead>
-				</TableRow>
-			</TableHeader>
-			<TableBody>
-				{#each rosters as roster}
-					<TableRow>
-						<TableCell>
-							<a
-								href={`/teams/${roster.team.id}`}
-								class="font-medium text-primary underline-offset-4 hover:underline"
-							>
-								{roster.team.name}
-							</a>
-						</TableCell>
-						<TableCell class="text-muted-foreground">
-							{roster.assignments.length}
-						</TableCell>
-					</TableRow>
-				{/each}
-			</TableBody>
-		</Table>
-	</div>
-{/if}
+<AsyncSection state={rosters} isEmpty={(r) => r.length === 0}>
+	{#snippet loading()}
+		<DataTable rows={[]} {columns} getKey={(r) => r.team.id} loading />
+	{/snippet}
+	{#snippet empty()}
+		<EmptyState
+			title="You aren't on any teams."
+			description="Teams are created when a draft is finalized and are only visible to their members."
+		/>
+	{/snippet}
+	{#snippet children(rs)}
+		<DataTable
+			rows={rs}
+			{columns}
+			getKey={(r) => r.team.id}
+			caption="Teams"
+			filter
+			filterLabel="Filter teams"
+		/>
+	{/snippet}
+</AsyncSection>
