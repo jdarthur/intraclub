@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"intraclub/api"
 	"intraclub/database"
@@ -185,14 +184,12 @@ func (c AddPhoto) Handler(req api.Request[*PhotoBody]) (any, int, error) {
 	return gin.H{api.ResourceKey: created}, http.StatusOK, nil
 }
 
-// photoIdFromPath parses the final :photoId path segment into a model.PhotoId.
+// photoIdFromPath parses the :photoId path parameter into a model.PhotoId.
 func photoIdFromPath[T database.Validatable](req api.Request[T]) (model.PhotoId, error) {
-	path := req.HTTPRequest().URL.Path
-	segments := strings.Split(strings.Trim(path, "/"), "/")
-	if len(segments) == 0 {
+	raw, ok := req.Params.Get("photoId")
+	if !ok || raw == "" {
 		return model.PhotoId(database.InvalidRecordId), errors.New("invalid :photoId path parameter")
 	}
-	raw := segments[len(segments)-1]
 	rid, err := database.RecordIdFromString(raw)
 	if err != nil {
 		return model.PhotoId(database.InvalidRecordId), errors.New("invalid :photoId path parameter")

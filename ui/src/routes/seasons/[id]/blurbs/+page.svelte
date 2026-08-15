@@ -98,8 +98,19 @@
 		})).filter((s) => s.count > 0);
 	}
 
-	const blurbReactionsByBlurb = $derived<Record<string, { user_id: string; reaction_type: number }[]>>({});
-	const commentReactionsByComment = $derived<Record<string, { user_id: string; reaction_type: number }[]>>({});
+	// reaction rows per blurb / comment, populated by load(); $state so the
+	// mutations in load() are reactive (a $derived value must not be mutated)
+	let blurbReactionsByBlurb = $state<Record<string, { user_id: string; reaction_type: number }[]>>({});
+	let commentReactionsByComment = $state<Record<string, { user_id: string; reaction_type: number }[]>>({});
+
+	// whether the current user already reacted with the given named reaction
+	function blurbReactionMine(blurbId: string, name: string): boolean {
+		return reactionSummary(blurbReactionsByBlurb[blurbId] ?? []).find((s) => s.name === name)?.mine ?? false;
+	}
+
+	function commentReactionMine(commentId: string, name: string): boolean {
+		return reactionSummary(commentReactionsByComment[commentId] ?? []).find((s) => s.name === name)?.mine ?? false;
+	}
 
 	function commentsFor(blurbId: string): Comment[] {
 		return comments.filter((c) => c.blurb === blurbId);
@@ -408,7 +419,7 @@
 								size="sm"
 								variant="ghost"
 								title={rt.name}
-								onclick={() => toggleBlurbReaction(blurb.id, rt.name, false)}
+								onclick={() => toggleBlurbReaction(blurb.id, rt.name, blurbReactionMine(blurb.id, rt.name))}
 							>
 								{rt.emoji}
 							</Button>
@@ -448,7 +459,7 @@
 											size="sm"
 											variant="ghost"
 											title={rt.name}
-											onclick={() => toggleCommentReaction(comment.id, rt.name, false)}
+											onclick={() => toggleCommentReaction(comment.id, rt.name, commentReactionMine(comment.id, rt.name))}
 										>
 											{rt.emoji}
 										</Button>
@@ -480,7 +491,7 @@
 																size="sm"
 																variant="ghost"
 																title={rt.name}
-																onclick={() => toggleCommentReaction(reply.id, rt.name, false)}
+																onclick={() => toggleCommentReaction(reply.id, rt.name, commentReactionMine(reply.id, rt.name))}
 															>
 																{rt.emoji}
 															</Button>

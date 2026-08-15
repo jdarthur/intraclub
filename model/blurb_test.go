@@ -75,6 +75,17 @@ func TestBlurbSeasonIdDoesNotExist(t *testing.T) {
 	fmt.Println(b.DynamicallyValid(context.Background(), db))
 }
 
+func TestBlurbByNonSeasonParticipant(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	season, _ := newDefaultSeason(t, db)
+	otherUser := newStoredUser(t, db)
+
+	b := newValidBlurb(otherUser.ID, season.ID)
+	err := b.DynamicallyValid(context.Background(), db)
+	assert.Error(t, err, "expected error on blurb by non-season participant")
+	fmt.Println(err)
+}
+
 func TestBlurbPhotoIdDoesNotExist(t *testing.T) {
 	db := database.NewUnitTestDBProvider()
 	season, commish := newDefaultSeason(t, db)
@@ -120,6 +131,27 @@ func TestUserIdIsNotAMemberOfSeason(t *testing.T) {
 	otherUser := newStoredUser(t, db)
 	assert.Error(t, b.React(context.Background(), db, otherUser.ID, ThumbsUp), "expected error on reaction from user who is not participating in season")
 	fmt.Println(b.React(context.Background(), db, otherUser.ID, ThumbsUp))
+}
+
+func TestBlurbReactionByNonSeasonParticipant(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	season, commish := newDefaultSeason(t, db)
+	b := newStoredBlurb(t, db, commish.ID, season.ID)
+
+	otherUser := newStoredUser(t, db)
+	row := &BlurbReaction{BlurbId: b.ID, UserId: otherUser.ID, ReactionType: ThumbsUp}
+	err := row.DynamicallyValid(context.Background(), db)
+	assert.Error(t, err, "expected error on reaction row from user who is not participating in season")
+	fmt.Println(err)
+}
+
+func TestBlurbReactionBySeasonParticipant(t *testing.T) {
+	db := database.NewUnitTestDBProvider()
+	season, commish := newDefaultSeason(t, db)
+	b := newStoredBlurb(t, db, commish.ID, season.ID)
+
+	row := &BlurbReaction{BlurbId: b.ID, UserId: commish.ID, ReactionType: ThumbsUp}
+	require.NoError(t, row.DynamicallyValid(context.Background(), db))
 }
 
 func TestUserSuccessfulReact(t *testing.T) {

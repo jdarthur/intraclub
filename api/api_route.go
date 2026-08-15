@@ -65,6 +65,11 @@ type Request[T database.Validatable] struct {
 	// used unless the route is manually using the RouteFamily struct
 	DatabaseProvider database.Provider
 
+	// Params are the parsed gin path parameters for the request, e.g.
+	// `photoId` from `/blurb/:id/photos/:photoId`. The standard `:id`
+	// parameter is already parsed into PathId.
+	Params gin.Params
+
 	request *http.Request
 }
 
@@ -188,6 +193,7 @@ func (r *routeWrapper[T]) Handle(c *gin.Context) {
 		Context:          c.Request.Context(),
 		DatabaseProvider: r.Database,
 		request:          c.Request,
+		Params:           c.Params,
 	}
 
 	// parse out the body of the request if this route uses a request body

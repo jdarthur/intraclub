@@ -245,10 +245,33 @@ func (r *CommentReaction) StaticallyValid() error {
 }
 
 func (r *CommentReaction) DynamicallyValid(ctx context.Context, db database.Provider) error {
-	if err := database.ExistsById(ctx, db, &Comment{}, r.CommentId.RecordId()); err != nil {
+	if err := database.ExistsById(ctx, db, &User{}, r.UserId.RecordId()); err != nil {
 		return err
 	}
-	return database.ExistsById(ctx, db, &User{}, r.UserId.RecordId())
+	commentRec, err := database.GetExistingRecordById(ctx, db, &Comment{}, r.CommentId.RecordId())
+	if err != nil {
+		return err
+	}
+	blurb, err := database.GetExistingRecordById(ctx, db, &Blurb{}, commentRec.Blurb.RecordId())
+	if err != nil {
+		return err
+	}
+	season, err := database.GetExistingRecordById(ctx, db, &Season{}, blurb.Season.RecordId())
+	if err != nil {
+		return err
+	}
+
+	// The reacting user must be a participant of the comment's blurb's season.
+	// This mirrors the participant check that the custom /react routes enforce,
+	// so the generic CRUD surface can't be used to bypass it.
+	isParticipant, err := season.IsUserIdASeasonParticipant(ctx, db, r.UserId)
+	if err != nil {
+		return err
+	}
+	if !isParticipant {
+		return fmt.Errorf("user %s is not a participant in season %s", r.UserId, season.ID)
+	}
+	return nil
 }
 
 func (r *CommentReaction) AccessibleTo(ctx context.Context, db database.Provider) []database.UserId {

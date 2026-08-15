@@ -182,9 +182,11 @@ test('blurbs feed: create blurb with photo, comment, reply, react, delete', asyn
 	await expect(page.getByText('Agreed')).toBeVisible();
 
 	// --- Delete the comment ----------------------------------------------------
-	// The comment's Delete button renders after the blurb's header Delete, so
-	// .last() is the comment delete for a single comment.
-	await page.getByRole('button', { name: 'Delete', exact: true }).last().click();
+	// The comment's Delete button is the second Delete in the DOM (after the
+	// blurb header's). It must be targeted positionally: once the reply row
+	// below hydrates it also renders a Delete (the reply is owned by the same
+	// user), so .last() is ambiguous between the comment and the reply.
+	await page.getByRole('button', { name: 'Delete', exact: true }).nth(1).click();
 	await expect(page.getByText('Great news!')).toHaveCount(0);
 
 	// --- Delete the blurb -------------------------------------------------------
