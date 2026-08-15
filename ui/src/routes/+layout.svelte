@@ -1,16 +1,22 @@
 <script lang="ts">
 	import './styles.css';
 	import favicon from '$lib/assets/favicon.svg';
-	import { startSessionMonitor } from '$lib/auth';
+	import { page } from '$app/state';
+	import { startSessionMonitor, getCurrentUserId } from '$lib/auth';
+	import { identity } from '$lib/identity.svelte';
 	import NavBar from '$lib/components/NavBar.svelte';
 
 	let { children } = $props();
 
-	// Start the background JWT-expiry ticker for the whole app. The layout
-	// persists across client-side navigations, so this runs once per page load
-	// and keeps watching until the page is torn down.
+	// Start the background JWT-expiry ticker for the whole app and resolve the
+	// signed-in user's identity. The layout persists across client-side
+	// navigations, so reading `page.url` re-runs this on every navigation —
+	// including the post-login redirect from /auth/callback, which is when the
+	// token (and thus getCurrentUserId) first becomes available.
 	$effect(() => {
+		void page.url;
 		const stop = startSessionMonitor();
+		if (getCurrentUserId()) void identity.load();
 		return () => stop();
 	});
 </script>
