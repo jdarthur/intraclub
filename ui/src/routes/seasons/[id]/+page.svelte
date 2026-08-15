@@ -12,6 +12,7 @@
 	import { listFacilities } from '$lib/facility';
 	import type { Facility } from '$lib/facility';
 	import { getCurrentUserId, getRoles } from '$lib/auth';
+	import { identity } from '$lib/identity.svelte';
 	import { listWeeksForSeason } from '$lib/week';
 	import type { Week } from '$lib/week';
 	import { listTeams } from '$lib/team';
@@ -141,9 +142,15 @@
 		bye: boolean;
 	}
 
-	const isCommissioner = $derived(
-		scheduleDetail !== null && scheduleDetail.commissioners.includes(getCurrentUserId() ?? '')
-	);
+	const isCommissioner = $derived(identity.isCommissionerOf(id()));
+
+	// Write-through cache: keep the shared identity store's commissioner data
+	// in sync with the schedule detail this page already fetches (see
+	// $lib/identity.svelte.ts), so commissioner-ness is never re-derived inline.
+	$effect(() => {
+		const detail = scheduleDetail;
+		if (detail) identity.noteCommissioners(id(), detail.commissioners);
+	});
 
 	async function load() {
 		loading = true;

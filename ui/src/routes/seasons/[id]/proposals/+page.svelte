@@ -11,7 +11,7 @@
 		getProposalDetail
 	} from '$lib/commissionerProposal';
 	import type { CommissionerProposal, ProposalDetail } from '$lib/commissionerProposal';
-	import { getCurrentUserId } from '$lib/auth';
+	import { identity } from '$lib/identity.svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import {
 		Card,
@@ -39,9 +39,15 @@
 	let creating = $state(false);
 	let createError = $state('');
 
-	const isCommissioner = $derived(
-		schedule !== null && schedule.commissioners.includes(getCurrentUserId() ?? '')
-	);
+	const isCommissioner = $derived(identity.isCommissionerOf(id()));
+
+	// Write-through cache: keep the shared identity store's commissioner data
+	// in sync with the schedule detail this page already fetches (see
+	// $lib/identity.svelte.ts), so commissioner-ness is never re-derived inline.
+	$effect(() => {
+		const s = schedule;
+		if (s) identity.noteCommissioners(id(), s.commissioners);
+	});
 
 	async function load() {
 		loading = true;

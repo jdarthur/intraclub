@@ -1,6 +1,7 @@
 import { goto } from '$app/navigation';
 import { writable } from 'svelte/store';
 import { isSessionExpired } from './session';
+import { identity } from './identity.svelte';
 
 export { SESSION_EXPIRED_MESSAGE } from './session';
 
@@ -25,6 +26,8 @@ export function setToken(token: string): void {
 
 export function clearToken(): void {
 	localStorage.removeItem(TOKEN_KEY);
+	// Drop the cached identity so the next login on this browser starts clean.
+	identity.reset();
 }
 
 export function isLoggedIn(): boolean {
