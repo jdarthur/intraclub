@@ -2,6 +2,20 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { Async } from '$lib/async.svelte';
+	import { AsyncSection, PageHeader } from '$lib/components/app/index.js';
+	import { Alert, AlertDescription } from '$lib/components/ui/alert/index.js';
+	import {
+		AlertDialog,
+		AlertDialogAction,
+		AlertDialogCancel,
+		AlertDialogContent,
+		AlertDialogDescription,
+		AlertDialogFooter,
+		AlertDialogHeader,
+		AlertDialogTitle,
+		AlertDialogTrigger
+	} from '$lib/components/ui/alert-dialog/index.js';
 	import { getCurrentUserId } from '$lib/auth';
 	import {
 		getOrganization,
@@ -19,25 +33,18 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import {
-		Popover,
-		PopoverClose,
-		PopoverContent,
-		PopoverHeader,
-		PopoverTitle,
-		PopoverTrigger
-	} from '$lib/components/ui/popover/index.js';
-	import {
 		Tabs,
 		TabsContent,
 		TabsList,
 		TabsTrigger
 	} from '$lib/components/ui/tabs/index.js';
 	import * as TransferList from '$lib/components/ui/transfer-list/index.js';
+	import { toast } from '$lib/toast';
+	import BuildingIcon from '@lucide/svelte/icons/building';
 
 	const id = () => page.params.id as string;
 
-	let organization = $state<Organization | null>(null);
-	let loadError = $state('');
+	const organization = new Async<Organization>();
 	let name = $state('');
 	let error = $state('');
 	let saving = $state(false);
@@ -58,19 +65,12 @@
 	// Which section is shown in the sidebar at a time.
 	let activeTab = $state('details');
 
-	onMount(load);
+	onMount(() => organization.run(load));
 
-	async function load() {
-		loadError = '';
-		try {
-			const org = await getOrganization(id());
-			organization = org;
-			name = org.name;
-			isOwner = getCurrentUserId() === org.user_id;
-		} catch (e) {
-			loadError = e instanceof Error ? e.message : 'Failed to load organization';
-			return;
-		}
+	async function load(): Promise<Organization> {
+		const org = await getOrganization(id());
+		name = org.name;
+		isOwner = getCurrentUserId() === org.user_id;
 
 		try {
 			members = await listMembers(id());
@@ -93,6 +93,7 @@
 					fullName(u).toLowerCase().includes(search.toLowerCase())
 			});
 		}
+		return org;
 	}
 
 	async function handleSave(e: Event) {
@@ -101,8 +102,9 @@
 		saving = true;
 		try {
 			const updated = await updateOrganization(id(), { name: name.trim() });
-			organization = updated;
+			organization.data = updated;
 			name = updated.name;
+			toast.success('Organization saved');
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to update organization';
 		} finally {
@@ -132,6 +134,7 @@
 				await removeMember(id(), member.id);
 			}
 			await load();
+			toast.success('Members saved');
 		} catch (err) {
 			membersError = err instanceof Error ? err.message : 'Failed to save members';
 		} finally {
@@ -145,6 +148,7 @@
 		deleting = true;
 		try {
 			await deleteOrganization(id());
+			toast.success('Organization deleted');
 			await goto('/organizations');
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to delete organization';
@@ -154,189 +158,193 @@
 </script>
 
 <svelte:head>
-	<title>Intraclub | {organization ? organization.name : 'Organization'}</title>
+	<title>Intraclub | {organization.data ? organization.data.name : 'Organization'}</title>
 </svelte:head>
 
-{#if loadError}
-	<h1 class="text-2xl font-semibold tracking-tight">Organization</h1>
-	<p class="text-sm font-medium text-destructive">{loadError}</p>
-	<a href="/organizations" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to organizations</a>
-{:else if !organization}
-	<h1 class="text-2xl font-semibold tracking-tight">Organization</h1>
-	<p class="text-muted-foreground">Loading...</p>
-{:else}
-	<div class="flex items-center gap-4">
-		<h1 class="text-2xl font-semibold tracking-tight">{organization.name}</h1>
-		<div class="ml-auto">
-			<a href="/organizations" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to organizations</a>
-		</div>
-	</div>
+<PageHeader
+	title={organization.data?.name}
+	icon={BuildingIcon}
+	backHref="/organizations"
+	backLabel="Back to organizations"
+/>
 
-	{#if error}
-		<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
-	{/if}
+<AsyncSection state={organization}>
+	{#snippet children(org)}
+		{#if error}
+			<Alert variant="destructive" class="mt-4">
+				<AlertDescription>{error}</AlertDescription>
+			</Alert>
+		{/if}
 
-	<Tabs bind:value={activeTab} orientation="vertical" class="mt-6 flex gap-6">
-		<TabsList class="h-fit w-56 shrink-0 items-stretch">
-			<TabsTrigger
-				value="details"
-				class="group justify-start gap-2.5 px-3 py-2 text-base data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-sm dark:data-[state=active]:bg-input/30"
-			>
-				<span
-					class="size-1.5 shrink-0 rounded-full bg-primary opacity-0 transition-opacity group-data-[state=active]:opacity-100"
-					aria-hidden="true"
-				></span>
-				Details
-			</TabsTrigger>
-			<TabsTrigger
-				value="members"
-				class="group justify-start gap-2.5 px-3 py-2 text-base data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-sm dark:data-[state=active]:bg-input/30"
-			>
-				<span
-					class="size-1.5 shrink-0 rounded-full bg-primary opacity-0 transition-opacity group-data-[state=active]:opacity-100"
-					aria-hidden="true"
-				></span>
-				Members
-			</TabsTrigger>
-		</TabsList>
+		<Tabs bind:value={activeTab} orientation="vertical" class="mt-6 flex gap-6">
+			<TabsList class="h-fit w-56 shrink-0 items-stretch">
+				<TabsTrigger
+					value="details"
+					class="group justify-start gap-2.5 px-3 py-2 text-base data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-sm dark:data-[state=active]:bg-input/30"
+				>
+					<span
+						class="size-1.5 shrink-0 rounded-full bg-primary opacity-0 transition-opacity group-data-[state=active]:opacity-100"
+						aria-hidden="true"
+					></span>
+					Details
+				</TabsTrigger>
+				<TabsTrigger
+					value="members"
+					class="group justify-start gap-2.5 px-3 py-2 text-base data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:font-semibold data-[state=active]:shadow-sm dark:data-[state=active]:bg-input/30"
+				>
+					<span
+						class="size-1.5 shrink-0 rounded-full bg-primary opacity-0 transition-opacity group-data-[state=active]:opacity-100"
+						aria-hidden="true"
+					></span>
+					Members
+				</TabsTrigger>
+			</TabsList>
 
-		<TabsContent value="details" class="flex-1">
-			{#if isOwner}
-				<Card class="max-w-md">
-					<CardHeader>
-						<CardTitle>Organization details</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<form onsubmit={handleSave} class="flex flex-col gap-4">
-							<div class="flex flex-col gap-2">
-								<Label for="name">Name</Label>
-								<Input id="name" type="text" bind:value={name} required />
-							</div>
-							<Button type="submit" disabled={saving} class="w-fit">
-								{saving ? 'Saving...' : 'Save changes'}
-							</Button>
-						</form>
-					</CardContent>
-				</Card>
+			<TabsContent value="details" class="flex-1">
+				{#if isOwner}
+					<Card class="max-w-md">
+						<CardHeader>
+							<CardTitle>Organization details</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<form onsubmit={handleSave} class="flex flex-col gap-4">
+								<div class="flex flex-col gap-2">
+									<Label for="name">Name</Label>
+									<Input id="name" type="text" bind:value={name} required />
+								</div>
+								<Button type="submit" disabled={saving} class="w-fit">
+									{saving ? 'Saving...' : 'Save changes'}
+								</Button>
+							</form>
+						</CardContent>
+					</Card>
 
-				<div class="mt-4">
-					<Popover bind:open={deleteOpen}>
-						<PopoverTrigger disabled={deleting} class={buttonVariants({ variant: 'destructive' })}>
-							{deleting ? 'Deleting...' : 'Delete organization'}
-						</PopoverTrigger>
-						<PopoverContent class="w-80">
-							<PopoverHeader>
-								<PopoverTitle>Delete organization?</PopoverTitle>
+					<div class="mt-4">
+						<AlertDialog bind:open={deleteOpen}>
+							<AlertDialogTrigger
+								disabled={deleting}
+								class={buttonVariants({ variant: 'destructive' })}
+							>
+								{deleting ? 'Deleting...' : 'Delete organization'}
+							</AlertDialogTrigger>
+							<AlertDialogContent>
+								<AlertDialogHeader>
+									<AlertDialogTitle>Delete organization?</AlertDialogTitle>
+									<AlertDialogDescription>
+										This permanently removes this organization and cannot be undone.
+									</AlertDialogDescription>
+								</AlertDialogHeader>
+								<AlertDialogFooter>
+									<AlertDialogCancel>Cancel</AlertDialogCancel>
+									<AlertDialogAction variant="destructive" onclick={handleDelete}>
+										Delete
+									</AlertDialogAction>
+								</AlertDialogFooter>
+							</AlertDialogContent>
+						</AlertDialog>
+					</div>
+				{:else}
+					<Card class="max-w-md">
+						<CardHeader>
+							<CardTitle>Organization</CardTitle>
+						</CardHeader>
+						<CardContent>
+							<p class="text-sm text-muted-foreground">
+								Only the owner can edit this organization's details.
+							</p>
+						</CardContent>
+					</Card>
+				{/if}
+			</TabsContent>
+
+			<TabsContent value="members" class="flex-1">
+				{#if membersError}
+					<Alert variant="destructive">
+						<AlertDescription>{membersError}</AlertDescription>
+					</Alert>
+				{/if}
+
+				{#if isOwner}
+					{#if transferCore}
+						<Card class="max-w-2xl">
+							<CardHeader>
+								<CardTitle>Members</CardTitle>
+							</CardHeader>
+							<CardContent>
 								<p class="text-sm text-muted-foreground">
-									This permanently removes this organization and cannot be undone.
+									Move users into the roster to make them members of this organization.
+									Changes apply when you save.
 								</p>
-							</PopoverHeader>
-							<div class="flex justify-end gap-2">
-								<PopoverClose class={buttonVariants({ variant: 'outline', size: 'sm' })}>Cancel</PopoverClose>
-								<Button variant="destructive" size="sm" onclick={handleDelete}>Delete</Button>
-							</div>
-						</PopoverContent>
-					</Popover>
-				</div>
-			{:else}
-				<Card class="max-w-md">
-					<CardHeader>
-						<CardTitle>Organization</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<p class="text-sm text-muted-foreground">
-							Only the owner can edit this organization's details.
-						</p>
-					</CardContent>
-				</Card>
-			{/if}
-		</TabsContent>
-
-		<TabsContent value="members" class="flex-1">
-			{#if membersError}
-				<p class="text-sm font-medium text-destructive">{membersError}</p>
-			{/if}
-
-			{#if isOwner}
-				{#if transferCore}
-					<Card class="max-w-2xl">
+								<div class="mt-4">
+									<TransferList.Root direction="horizontal">
+										<TransferList.Container>
+											<TransferList.Title title="All users" />
+											<TransferList.Toolbar
+												variant="source"
+												core={transferCore}
+												inputPlaceholder="Search users..."
+											/>
+											<TransferList.Body>
+												{#each transferCore.filteredSource as row (row.id)}
+													<TransferList.Item side="source" {row} core={transferCore}>
+														{fullName(row)}
+													</TransferList.Item>
+												{/each}
+											</TransferList.Body>
+										</TransferList.Container>
+										<TransferList.Container>
+											<TransferList.Title title="Members" />
+											<TransferList.Toolbar
+												variant="target"
+												core={transferCore}
+												inputPlaceholder="Search members..."
+											/>
+											<TransferList.Body>
+												{#each transferCore.filteredTarget as row (row.id)}
+													<TransferList.Item side="target" {row} core={transferCore}>
+														{fullName(row)}
+													</TransferList.Item>
+												{/each}
+											</TransferList.Body>
+										</TransferList.Container>
+									</TransferList.Root>
+									<div class="mt-4 flex items-center gap-3">
+										<Button
+											type="button"
+											onclick={handleSaveMembers}
+											disabled={savingMembers}
+										>
+											{savingMembers ? 'Saving...' : 'Save members'}
+										</Button>
+										<span class="text-sm text-muted-foreground">
+											{transferCore.target.length} member{transferCore.target.length === 1 ? '' : 's'}
+										</span>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+					{:else}
+						<p class="text-sm text-muted-foreground">Loading members...</p>
+					{/if}
+				{:else}
+					<Card class="max-w-md">
 						<CardHeader>
 							<CardTitle>Members</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<p class="text-sm text-muted-foreground">
-								Move users into the roster to make them members of this organization.
-								Changes apply when you save.
-							</p>
-							<div class="mt-4">
-								<TransferList.Root direction="horizontal">
-									<TransferList.Container>
-										<TransferList.Title title="All users" />
-										<TransferList.Toolbar
-											variant="source"
-											core={transferCore}
-											inputPlaceholder="Search users..."
-										/>
-										<TransferList.Body>
-											{#each transferCore.filteredSource as row (row.id)}
-												<TransferList.Item side="source" {row} core={transferCore}>
-													{fullName(row)}
-												</TransferList.Item>
-											{/each}
-										</TransferList.Body>
-									</TransferList.Container>
-									<TransferList.Container>
-										<TransferList.Title title="Members" />
-										<TransferList.Toolbar
-											variant="target"
-											core={transferCore}
-											inputPlaceholder="Search members..."
-										/>
-										<TransferList.Body>
-											{#each transferCore.filteredTarget as row (row.id)}
-												<TransferList.Item side="target" {row} core={transferCore}>
-													{fullName(row)}
-												</TransferList.Item>
-											{/each}
-										</TransferList.Body>
-									</TransferList.Container>
-								</TransferList.Root>
-								<div class="mt-4 flex items-center gap-3">
-									<Button
-										type="button"
-										onclick={handleSaveMembers}
-										disabled={savingMembers}
-									>
-										{savingMembers ? 'Saving...' : 'Save members'}
-									</Button>
-									<span class="text-sm text-muted-foreground">
-										{transferCore.target.length} member{transferCore.target.length === 1 ? '' : 's'}
-									</span>
-								</div>
-							</div>
+							{#if members.length === 0}
+								<p class="text-sm text-muted-foreground">No members yet.</p>
+							{:else}
+								<ul class="flex flex-col gap-2">
+									{#each members as member}
+										<li class="text-sm">{fullName(member)} ({member.email})</li>
+									{/each}
+								</ul>
+							{/if}
 						</CardContent>
 					</Card>
-				{:else}
-					<p class="text-sm text-muted-foreground">Loading members...</p>
 				{/if}
-			{:else}
-				<Card class="max-w-md">
-					<CardHeader>
-						<CardTitle>Members</CardTitle>
-					</CardHeader>
-					<CardContent>
-						{#if members.length === 0}
-							<p class="text-sm text-muted-foreground">No members yet.</p>
-						{:else}
-							<ul class="flex flex-col gap-2">
-								{#each members as member}
-									<li class="text-sm">{fullName(member)} ({member.email})</li>
-								{/each}
-							</ul>
-						{/if}
-					</CardContent>
-				</Card>
-			{/if}
-		</TabsContent>
-	</Tabs>
-{/if}
+			</TabsContent>
+		</Tabs>
+	{/snippet}
+</AsyncSection>

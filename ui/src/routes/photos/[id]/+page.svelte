@@ -2,6 +2,20 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { Async } from '$lib/async.svelte';
+	import { AsyncSection, PageHeader } from '$lib/components/app/index.js';
+	import { Alert, AlertDescription } from '$lib/components/ui/alert/index.js';
+	import {
+		AlertDialog,
+		AlertDialogAction,
+		AlertDialogCancel,
+		AlertDialogContent,
+		AlertDialogDescription,
+		AlertDialogFooter,
+		AlertDialogHeader,
+		AlertDialogTitle,
+		AlertDialogTrigger
+	} from '$lib/components/ui/alert-dialog/index.js';
 	import {
 		getPhoto,
 		updatePhoto,
@@ -17,19 +31,12 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { NativeSelect, NativeSelectOption } from '$lib/components/ui/native-select/index.js';
-	import {
-		Popover,
-		PopoverClose,
-		PopoverContent,
-		PopoverHeader,
-		PopoverTitle,
-		PopoverTrigger
-	} from '$lib/components/ui/popover/index.js';
+	import { toast } from '$lib/toast';
+	import ImageIcon from '@lucide/svelte/icons/image';
 
 	const id = () => page.params.id as string;
 
-	let photo = $state<Photo | null>(null);
-	let loadError = $state('');
+	const photo = new Async<Photo>();
 	let altText = $state('');
 	let fileType = $state<PhotoType>(0);
 	let contents = $state('');
@@ -38,19 +45,14 @@
 	let deleting = $state(false);
 	let deleteOpen = $state(false);
 
-	onMount(load);
+	onMount(() => photo.run(load));
 
-	async function load() {
-		loadError = '';
-		try {
-			const p = await getPhoto(id());
-			photo = p;
-			altText = p.alt_text;
-			fileType = p.file_type;
-			contents = p.contents;
-		} catch (e) {
-			loadError = e instanceof Error ? e.message : 'Failed to load photo';
-		}
+	async function load(): Promise<Photo> {
+		const p = await getPhoto(id());
+		altText = p.alt_text;
+		fileType = p.file_type;
+		contents = p.contents;
+		return p;
 	}
 
 	function onFileChange(e: Event) {
@@ -82,10 +84,11 @@
 				contents,
 				file_type: fileType
 			});
-			photo = updated;
+			photo.data = updated;
 			altText = updated.alt_text;
 			fileType = updated.file_type;
 			contents = updated.contents;
+			toast.success('Photo saved');
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to update photo';
 		} finally {
@@ -99,6 +102,7 @@
 		deleting = true;
 		try {
 			await deletePhoto(id());
+			toast.success('Photo deleted');
 			await goto('/photos');
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to delete photo';
@@ -111,91 +115,90 @@
 	<title>Intraclub | Photo</title>
 </svelte:head>
 
-{#if loadError}
-	<h1 class="text-2xl font-semibold tracking-tight">Photo</h1>
-	<p class="text-sm font-medium text-destructive">{loadError}</p>
-	<a href="/photos" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to photos</a>
-{:else if !photo}
-	<h1 class="text-2xl font-semibold tracking-tight">Photo</h1>
-	<p class="text-muted-foreground">Loading...</p>
-{:else}
-	<div class="flex items-center gap-4">
-		<h1 class="text-2xl font-semibold tracking-tight">Photo</h1>
-		<a href="/photos" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to photos</a>
-	</div>
+<PageHeader title="Photo" icon={ImageIcon} backHref="/photos" backLabel="Back to photos" />
 
-	<img class="detail" src={dataUrlFor(photo)} alt={photo.alt_text || 'Photo'} />
+<AsyncSection state={photo}>
+	{#snippet children(p)}
+		<img class="detail" src={dataUrlFor(p)} alt={p.alt_text || 'Photo'} />
 
-	<dl class="meta">
-		<div>
-			<dt>Alt text</dt>
-			<dd>{photo.alt_text || '(none)'}</dd>
+		<dl class="meta">
+			<div>
+				<dt>Alt text</dt>
+				<dd>{p.alt_text || '(none)'}</dd>
+			</div>
+			<div>
+				<dt>File type</dt>
+				<dd>{photoTypeLabels[p.file_type] ?? 'unknown'}</dd>
+			</div>
+			<div>
+				<dt>Owner</dt>
+				<dd>{p.owner}</dd>
+			</div>
+		</dl>
+
+		<Card class="mt-6 max-w-md">
+			<CardHeader>
+				<CardTitle>Edit photo</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<form onsubmit={handleSave} class="flex flex-col gap-4">
+					<div class="flex flex-col gap-2">
+						<Label for="altText">Alt text</Label>
+						<Input id="altText" type="text" bind:value={altText} />
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="file">File</Label>
+						<Input id="file" type="file" accept="image/*" onchange={onFileChange} />
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="fileType">File type</Label>
+						<NativeSelect id="fileType" bind:value={fileType} class="w-full">
+							<NativeSelectOption value={0}>png</NativeSelectOption>
+							<NativeSelectOption value={1}>jpg</NativeSelectOption>
+							<NativeSelectOption value={2}>jpeg</NativeSelectOption>
+							<NativeSelectOption value={3}>gif</NativeSelectOption>
+							<NativeSelectOption value={4}>webp</NativeSelectOption>
+						</NativeSelect>
+					</div>
+					<Button type="submit" disabled={saving} class="w-fit">
+						{saving ? 'Saving...' : 'Save changes'}
+					</Button>
+				</form>
+			</CardContent>
+		</Card>
+
+		{#if error}
+			<Alert variant="destructive" class="mt-4 max-w-md">
+				<AlertDescription>{error}</AlertDescription>
+			</Alert>
+		{/if}
+
+		<div class="mt-4">
+			<AlertDialog bind:open={deleteOpen}>
+				<AlertDialogTrigger
+					disabled={deleting}
+					class={buttonVariants({ variant: 'destructive' })}
+				>
+					{deleting ? 'Deleting...' : 'Delete photo'}
+				</AlertDialogTrigger>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete photo?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This permanently removes this photo and cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction variant="destructive" onclick={handleDelete}>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
-		<div>
-			<dt>File type</dt>
-			<dd>{photoTypeLabels[photo.file_type] ?? 'unknown'}</dd>
-		</div>
-		<div>
-			<dt>Owner</dt>
-			<dd>{photo.owner}</dd>
-		</div>
-	</dl>
-
-	<Card class="mt-6 max-w-md">
-		<CardHeader>
-			<CardTitle>Edit photo</CardTitle>
-		</CardHeader>
-		<CardContent>
-			<form onsubmit={handleSave} class="flex flex-col gap-4">
-				<div class="flex flex-col gap-2">
-					<Label for="altText">Alt text</Label>
-					<Input id="altText" type="text" bind:value={altText} />
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="file">File</Label>
-					<Input id="file" type="file" accept="image/*" onchange={onFileChange} />
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="fileType">File type</Label>
-					<NativeSelect id="fileType" bind:value={fileType} class="w-full">
-						<NativeSelectOption value={0}>png</NativeSelectOption>
-						<NativeSelectOption value={1}>jpg</NativeSelectOption>
-						<NativeSelectOption value={2}>jpeg</NativeSelectOption>
-						<NativeSelectOption value={3}>gif</NativeSelectOption>
-						<NativeSelectOption value={4}>webp</NativeSelectOption>
-					</NativeSelect>
-				</div>
-				<Button type="submit" disabled={saving} class="w-fit">
-					{saving ? 'Saving...' : 'Save changes'}
-				</Button>
-			</form>
-		</CardContent>
-	</Card>
-
-	<div class="mt-4">
-		<Popover bind:open={deleteOpen}>
-			<PopoverTrigger disabled={deleting} class={buttonVariants({ variant: 'destructive' })}>
-				{deleting ? 'Deleting...' : 'Delete photo'}
-			</PopoverTrigger>
-			<PopoverContent class="w-80">
-				<PopoverHeader>
-					<PopoverTitle>Delete photo?</PopoverTitle>
-					<p class="text-sm text-muted-foreground">
-						This permanently removes this photo and cannot be undone.
-					</p>
-				</PopoverHeader>
-				<div class="flex justify-end gap-2">
-					<PopoverClose class={buttonVariants({ variant: 'outline', size: 'sm' })}>Cancel</PopoverClose>
-					<Button variant="destructive" size="sm" onclick={handleDelete}>Delete</Button>
-				</div>
-			</PopoverContent>
-		</Popover>
-	</div>
-
-	{#if error}
-		<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
-	{/if}
-{/if}
+	{/snippet}
+</AsyncSection>
 
 <style>
 	.detail {
