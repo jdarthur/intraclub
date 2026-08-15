@@ -5,6 +5,7 @@
 	import { startSessionMonitor, getCurrentUserId } from '$lib/auth';
 	import { identity } from '$lib/identity.svelte';
 	import NavBar from '$lib/components/NavBar.svelte';
+	import { Toaster } from '$lib/components/ui/sonner/index.js';
 
 	let { children } = $props();
 
@@ -25,7 +26,13 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
+<a
+	href="#main-content"
+	class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-foreground focus:shadow-lg"
+	>Skip to main content</a
+>
 <NavBar />
-<main class="mx-auto w-full max-w-6xl px-6 py-6">
+<main id="main-content" class="mx-auto w-full max-w-6xl px-6 py-6">
 	{@render children()}
 </main>
+<Toaster />

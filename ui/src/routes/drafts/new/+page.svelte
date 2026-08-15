@@ -86,7 +86,7 @@
 {:else}
 	<Card class="mt-6 max-w-md">
 		<CardHeader>
-			<CardTitle class="text-base">Draft details</CardTitle>
+			<CardTitle>Draft details</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<form onsubmit={handleSubmit} class="flex flex-col gap-4">

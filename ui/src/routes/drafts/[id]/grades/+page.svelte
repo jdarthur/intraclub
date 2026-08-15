@@ -236,7 +236,7 @@
 		<!-- Grade assignment -->
 		<Card>
 			<CardHeader>
-				<CardTitle class="text-base">Assign grades</CardTitle>
+				<CardTitle>Assign grades</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<p class="text-sm text-muted-foreground">
@@ -308,7 +308,7 @@
 		<!-- Aggregate ranking -->
 		<Card>
 			<CardHeader>
-				<CardTitle class="text-base">Ranking</CardTitle>
+				<CardTitle>Ranking</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<p class="text-sm text-muted-foreground">

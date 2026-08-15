@@ -259,7 +259,7 @@
 
 	<Card class="mt-6 max-w-md">
 		<CardHeader>
-			<CardTitle class="text-base">Edit</CardTitle>
+			<CardTitle>Edit</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<p class="hint text-sm text-muted-foreground">
@@ -279,7 +279,7 @@
 
 	<Card class="mt-6">
 		<CardHeader>
-			<CardTitle class="text-base">Sections</CardTitle>
+			<CardTitle>Sections</CardTitle>
 		</CardHeader>
 		<CardContent class="flex flex-col gap-4">
 			{#if sections.length === 0}

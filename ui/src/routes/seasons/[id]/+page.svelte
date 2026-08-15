@@ -756,7 +756,7 @@
 {:else if season}
 	<Card class="mt-6">
 		<CardHeader>
-			<CardTitle class="text-base">Season details</CardTitle>
+			<CardTitle>Season details</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<div class="flex flex-wrap items-center gap-4 text-sm">
@@ -771,7 +771,7 @@
 	<!-- Schedule -->
 	<Card class="mt-6">
 		<CardHeader>
-			<CardTitle class="text-base">Season schedule</CardTitle>
+			<CardTitle>Season schedule</CardTitle>
 		</CardHeader>
 		<CardContent>
 			{#if scheduleError}
@@ -922,7 +922,7 @@
 	<!-- Player availability -->
 	<Card class="mt-6">
 		<CardHeader>
-			<CardTitle class="text-base">Player availability</CardTitle>
+			<CardTitle>Player availability</CardTitle>
 		</CardHeader>
 		<CardContent>
 			{#if availabilityError}
@@ -1016,7 +1016,7 @@
 	<!-- Weekly lineups -->
 	<Card class="mt-6">
 		<CardHeader>
-			<CardTitle class="text-base">Weekly lineups</CardTitle>
+			<CardTitle>Weekly lineups</CardTitle>
 		</CardHeader>
 		<CardContent>
 			{#if lineupError}
@@ -1194,7 +1194,7 @@
 	<!-- Match scoring -->
 	<Card class="mt-6">
 		<CardHeader>
-			<CardTitle class="text-base">Match scoring</CardTitle>
+			<CardTitle>Match scoring</CardTitle>
 		</CardHeader>
 		<CardContent>
 			{#if matchError}
@@ -1361,7 +1361,7 @@
 	{#if isSysAdmin}
 		<Card class="mt-6">
 			<CardHeader>
-				<CardTitle class="text-base">Co-commissioners</CardTitle>
+				<CardTitle>Co-commissioners</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<p class="mb-4 text-sm text-muted-foreground">
@@ -1432,7 +1432,7 @@
 	{#if isSysAdmin}
 		<Card class="mt-6">
 			<CardHeader>
-				<CardTitle class="text-base">Late additions</CardTitle>
+				<CardTitle>Late additions</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<p class="mb-4 text-sm text-muted-foreground">
@@ -1505,7 +1505,7 @@
 			{#each teams as team}
 				<Card>
 					<CardHeader>
-						<CardTitle class="text-base">
+						<CardTitle>
 							<a
 								href={`/teams/${team.teamId}`}
 								class="text-primary underline-offset-4 hover:underline"

@@ -41,7 +41,7 @@
 
 	<Card class="mt-6 max-w-md">
 		<CardHeader>
-			<CardTitle class="text-base">User details</CardTitle>
+			<CardTitle>User details</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<dl class="grid gap-4 text-sm">

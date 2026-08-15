@@ -36,7 +36,7 @@ test('playoff structure CRUD: create, view, update, delete', async ({ page }) =>
 
 	// View: lands on the detail page with the submitted values reflected
 	await expect(page).toHaveURL(/\/playoff-structures\/[0-9a-f]+$/);
-	await expect(page.getByRole('heading', { name: 'Playoff Structure' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Playoff Structure', exact: true })).toBeVisible();
 	await expect(page.getByLabel('Byes')).toHaveValue('0');
 	await expect(page.getByLabel('Number of teams')).toHaveValue('8');
 

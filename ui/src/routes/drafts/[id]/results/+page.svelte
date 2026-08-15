@@ -104,7 +104,7 @@
 	<!-- Completion state & created Season -->
 	<Card class="mt-6">
 		<CardHeader>
-			<CardTitle class="text-base">Draft status</CardTitle>
+			<CardTitle>Draft status</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<div class="flex flex-wrap items-center gap-4 text-sm">
@@ -137,7 +137,7 @@
 			{#each teams as team}
 				<Card>
 					<CardHeader>
-						<CardTitle class="text-base">Team {team.draft_order + 1}</CardTitle>
+						<CardTitle>Team {team.draft_order + 1}</CardTitle>
 						<p class="text-xs text-muted-foreground">Captain: {userName(team.captain_id)}</p>
 					</CardHeader>
 					<CardContent>

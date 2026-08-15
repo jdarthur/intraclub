@@ -36,7 +36,7 @@
 
 <Card class="mt-6 max-w-xl">
 	<CardHeader>
-		<CardTitle class="text-base">CSV import</CardTitle>
+		<CardTitle>CSV import</CardTitle>
 	</CardHeader>
 	<CardContent>
 		<form onsubmit={handleSubmit} class="flex flex-col gap-4">

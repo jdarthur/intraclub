@@ -50,7 +50,7 @@ test('photo CRUD: upload, view, update, delete', async ({ page }) => {
 
 	// View: lands on the detail page with the image and alt text reflected
 	await expect(page).toHaveURL(/\/photos\/[0-9a-f]+$/);
-	await expect(page.getByRole('heading', { name: 'Photo' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Photo', exact: true })).toBeVisible();
 	await expect(page.locator('img.detail')).toHaveAttribute('src', /^data:image\/png;base64,/);
 	await expect(page.getByText(altText)).toBeVisible();
 
@@ -75,7 +75,7 @@ test('photo CRUD: upload, view, update, delete', async ({ page }) => {
 
 	// Delete (confirm via the popover)
 	await row.click();
-	await expect(page.getByRole('heading', { name: 'Photo' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Photo', exact: true })).toBeVisible();
 	await confirmDelete(page);
 	await expect(page).toHaveURL('/photos');
 	await expect(page.getByRole('link', { name: `${altText} Updated` })).toHaveCount(0);

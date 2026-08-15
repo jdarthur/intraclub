@@ -290,7 +290,7 @@
 	<!-- Status -->
 	<Card class="mt-6">
 		<CardHeader>
-			<CardTitle class="text-base">Draft status</CardTitle>
+			<CardTitle>Draft status</CardTitle>
 		</CardHeader>
 		<CardContent>
 			<div class="flex flex-wrap items-center gap-4 text-sm">
@@ -332,7 +332,7 @@
 	{#if isCompleted}
 		<Card class="mt-6">
 			<CardHeader>
-				<CardTitle class="text-base">Finalize draft</CardTitle>
+				<CardTitle>Finalize draft</CardTitle>
 			</CardHeader>
 			<CardContent>
 				{#if !showFinalize}
@@ -415,7 +415,7 @@
 		<!-- Draft board grid -->
 		<Card>
 			<CardHeader>
-				<CardTitle class="text-base">Draft board</CardTitle>
+				<CardTitle>Draft board</CardTitle>
 			</CardHeader>
 			<CardContent>
 				{#if numTeams === 0}
@@ -470,7 +470,7 @@
 		<!-- Pick area -->
 		<Card>
 			<CardHeader>
-				<CardTitle class="text-base">Make a pick</CardTitle>
+				<CardTitle>Make a pick</CardTitle>
 			</CardHeader>
 			<CardContent>
 				{#if availablePlayers.length === 0}

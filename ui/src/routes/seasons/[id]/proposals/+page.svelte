@@ -132,7 +132,7 @@
 	{#if showCreate}
 		<Card class="mt-6">
 			<CardHeader>
-				<CardTitle class="text-base">New proposal</CardTitle>
+				<CardTitle>New proposal</CardTitle>
 			</CardHeader>
 			<CardContent>
 				{#if createError}
