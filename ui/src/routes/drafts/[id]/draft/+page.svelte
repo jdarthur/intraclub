@@ -312,7 +312,7 @@
 				{/if}
 			</div>
 			{#if canPick}
-				<p class="mt-3 text-sm text-emerald-600">
+				<p class="mt-3 text-sm text-success">
 					You're on the clock — select a player below.
 				</p>
 			{:else if !isCompleted && onClockCaptain}

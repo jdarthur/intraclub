@@ -112,7 +112,7 @@
 		</CardHeader>
 		<CardContent>
 			<div class="flex items-center gap-6 text-sm">
-				<span class="font-medium text-emerald-600">{detail.votes_for} for</span>
+				<span class="font-medium text-success">{detail.votes_for} for</span>
 				<span class="font-medium text-destructive">{detail.votes_against} against</span>
 				<span class="text-muted-foreground">{detail.voters.length} eligible voters</span>
 			</div>
