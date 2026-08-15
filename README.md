@@ -87,6 +87,24 @@ make standard
 The `--dev-token` flag enables development token mode (loopback-only, bypasses
 auth gating) and seeds sample data. The API listens on `http://127.0.0.1:8080`.
 
+### Simulating a slow connection
+
+Local testing on `127.0.0.1` makes every database call appear instantaneous.
+`--slow-mode` injects artificial latency into every API request to simulate a
+slow / high-RTT (edge-to-cloud) connection, which is useful for surfacing UX
+issues (missing skeletons/loading spinners), finding query chains that should
+be composite endpoints, and shaking out timing assumptions in the e2e suite:
+
+```sh
+./main --dev-token --slow-mode                       # +500ms per request (default)
+./main --dev-token --slow-mode --slow-mode-latency 2s
+INTRACLUB_SLOW_MODE=1 INTRACLUB_SLOW_MODE_LATENCY=1s ./main --dev-token
+```
+
+The `--slow-mode` flag / `INTRACLUB_SLOW_MODE` env var enable the delay, and
+`--slow-mode-latency` / `INTRACLUB_SLOW_MODE_LATENCY` set the per-request delay
+(default 500ms). Flags take precedence over environment variables.
+
 ### Database: SQLite (default)
 
 The server defaults to the **SQLite** provider, which stores everything in a
