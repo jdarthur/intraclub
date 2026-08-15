@@ -26,7 +26,7 @@
 	// Shared look for every nav item (Settings trigger + top-level links): same
 	// height, size and weight so nothing reads smaller or lighter than the rest.
 	const navItemClass =
-		'flex h-9 items-center rounded-md px-3 text-base font-semibold text-primary-foreground transition-colors hover:bg-foreground/10';
+		'flex h-9 items-center rounded-md px-3 text-base font-medium text-primary-foreground transition-colors hover:bg-foreground/10';
 	const navItemActiveClass = 'bg-foreground/15';
 
 	function isActive(href: string) {
@@ -98,14 +98,14 @@
 			{#if loggedIn}
 				<Button
 					variant="ghost"
-					class="h-9 rounded-md px-3 text-base font-semibold hover:bg-foreground/15 hover:text-primary-foreground"
+					class="h-9 rounded-md px-3 text-base font-medium hover:bg-foreground/15 hover:text-primary-foreground"
 					onclick={logout}
 					>Log out</Button
 				>
 			{:else}
 				<a
 					href="/login"
-					class="flex h-9 items-center rounded-md px-3 text-base font-semibold text-primary-foreground transition-colors hover:bg-foreground/10"
+					class="flex h-9 items-center rounded-md px-3 text-base font-medium text-primary-foreground transition-colors hover:bg-foreground/10"
 					>Log in</a
 				>
 			{/if}
