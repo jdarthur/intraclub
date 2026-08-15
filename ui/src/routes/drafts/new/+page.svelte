@@ -5,6 +5,9 @@
 	import { listFormats } from '$lib/format';
 	import type { Format } from '$lib/format';
 	import { goto } from '$app/navigation';
+	import { Async } from '$lib/async.svelte';
+	import { AsyncSection, PageHeader } from '$lib/components/app/index.js';
+	import { Alert, AlertDescription } from '$lib/components/ui/alert/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -13,40 +16,38 @@
 		NativeSelect,
 		NativeSelectOption
 	} from '$lib/components/ui/native-select/index.js';
+	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
+	import { toast } from '$lib/toast';
+	import ListOrderedIcon from '@lucide/svelte/icons/list-ordered';
 
-	let formats = $state<Format[]>([]);
-	let patterns = $state<DraftOrderPattern[]>([]);
-	let loadError = $state('');
-	let loading = $state(true);
+	type DraftOptions = { formats: Format[]; patterns: DraftOrderPattern[] };
 
+	const options = new Async<DraftOptions>();
 	let name = $state('');
 	let format = $state('');
 	let pattern = $state('');
 	let error = $state('');
 	let submitting = $state(false);
+	let attempted = $state(false);
 
 	// The backend defaults a new draft's pattern to Snake; only send the
 	// explicit pattern set when the user picks something else.
 	const DEFAULT_PATTERN = 'Snake';
 
-	onMount(async () => {
-		try {
+	onMount(() =>
+		options.run(async () => {
 			const [formatList, patternList] = await Promise.all([
 				listFormats(),
 				listDraftOrderPatterns()
 			]);
-			formats = formatList;
-			patterns = patternList;
 			pattern = DEFAULT_PATTERN;
-		} catch (e) {
-			loadError = e instanceof Error ? e.message : 'Failed to load draft options';
-		} finally {
-			loading = false;
-		}
-	});
+			return { formats: formatList, patterns: patternList };
+		})
+	);
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
+		attempted = true;
 		error = '';
 		submitting = true;
 		try {
@@ -61,6 +62,7 @@
 					// pattern selection failed; proceed to the draft anyway
 				}
 			}
+			toast.success('Draft created');
 			await goto(`/drafts/${created.id}`);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to create draft';
@@ -74,51 +76,62 @@
 	<title>Intraclub | New draft</title>
 </svelte:head>
 
-<div class="flex items-center gap-4">
-	<h1 class="text-2xl font-semibold tracking-tight">New draft</h1>
-	<a href="/drafts" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to drafts</a>
-</div>
+<PageHeader title="New draft" icon={ListOrderedIcon} backHref="/drafts" backLabel="Back to drafts" />
 
-{#if loading}
-	<p class="mt-4 text-muted-foreground">Loading...</p>
-{:else if loadError}
-	<p class="mt-4 text-sm font-medium text-destructive">{loadError}</p>
-{:else}
-	<Card class="mt-6 max-w-md">
-		<CardHeader>
-			<CardTitle>Draft details</CardTitle>
-		</CardHeader>
-		<CardContent>
-			<form onsubmit={handleSubmit} class="flex flex-col gap-4">
-				<div class="flex flex-col gap-2">
-					<Label for="name">Name</Label>
-					<Input id="name" type="text" bind:value={name} required />
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="format">Format</Label>
-					<NativeSelect id="format" bind:value={format} required class="w-full">
-						<NativeSelectOption value="" disabled>Select a format…</NativeSelectOption>
-						{#each formats as f}
-							<NativeSelectOption value={f.id}>{f.name}</NativeSelectOption>
-						{/each}
-					</NativeSelect>
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="pattern">Draft order pattern</Label>
-					<NativeSelect id="pattern" bind:value={pattern} class="w-full">
-						{#each patterns as p}
-							<NativeSelectOption value={p.name}>{p.name}</NativeSelectOption>
-						{/each}
-					</NativeSelect>
-				</div>
-				<Button type="submit" disabled={submitting} class="w-fit">
-					{submitting ? 'Creating...' : 'Create draft'}
-				</Button>
-			</form>
-		</CardContent>
-	</Card>
-{/if}
-
-{#if error}
-	<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
-{/if}
+<AsyncSection state={options}>
+	{#snippet loading()}
+		<Skeleton class="mt-6 h-64 w-full max-w-md" />
+	{/snippet}
+	{#snippet children(opts)}
+		<Card class="mt-6 max-w-md">
+			<CardHeader>
+				<CardTitle>Draft details</CardTitle>
+			</CardHeader>
+			<CardContent>
+				{#if error}
+					<Alert variant="destructive" class="mb-4">
+						<AlertDescription>{error}</AlertDescription>
+					</Alert>
+				{/if}
+				<form onsubmit={handleSubmit} class="flex flex-col gap-4">
+					<div class="flex flex-col gap-2">
+						<Label for="name">Name</Label>
+						<Input
+							id="name"
+							type="text"
+							bind:value={name}
+							required
+							aria-invalid={attempted && !name.trim()}
+						/>
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="format">Format</Label>
+						<NativeSelect
+							id="format"
+							bind:value={format}
+							required
+							class="w-full"
+							aria-invalid={attempted && !format}
+						>
+							<NativeSelectOption value="" disabled>Select a format…</NativeSelectOption>
+							{#each opts.formats as f}
+								<NativeSelectOption value={f.id}>{f.name}</NativeSelectOption>
+							{/each}
+						</NativeSelect>
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="pattern">Draft order pattern</Label>
+						<NativeSelect id="pattern" bind:value={pattern} class="w-full">
+							{#each opts.patterns as p}
+								<NativeSelectOption value={p.name}>{p.name}</NativeSelectOption>
+							{/each}
+						</NativeSelect>
+					</div>
+					<Button type="submit" disabled={submitting} class="w-fit">
+						{submitting ? 'Creating...' : 'Create draft'}
+					</Button>
+				</form>
+			</CardContent>
+		</Card>
+	{/snippet}
+</AsyncSection>
