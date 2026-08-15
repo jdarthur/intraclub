@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"time"
 
 	"intraclub/api"
@@ -59,6 +60,15 @@ func main() {
 	}
 
 	r := gin.Default()
+
+	// slow mode injects artificial latency into every request to simulate a
+	// slow / high-RTT connection between the client and the API (see
+	// resolveSlowMode / resolveSlowModeLatency for flag + env configuration).
+	if cfg.slowMode {
+		log.Printf("slow mode enabled: injecting %s of artificial latency into every API request", cfg.slowModeLatency)
+		r.Use(slowModeMiddleware(cfg.slowModeLatency))
+	}
+
 	rg := r.Group("/api")
 
 	// noAuth for self-register and verify-email
@@ -283,9 +293,11 @@ func main() {
 // serverConfig holds the settings parsed from command-line flags and
 // environment variables that configure the running server.
 type serverConfig struct {
-	addr   string
-	dbKind database.ProviderKind
-	dbPath string
+	addr            string
+	dbKind          database.ProviderKind
+	dbPath          string
+	slowMode        bool
+	slowModeLatency time.Duration
 }
 
 // providerConfig converts the server's parsed database settings into the
@@ -304,6 +316,8 @@ func parseFlags() serverConfig {
 	defaultDBKind := database.ProviderSqlite
 	dbKind := flag.String("db", string(defaultDBKind), "Database provider (memory | sqlite)")
 	dbPath := flag.String("db-path", "", "Path to the SQLite database file; falls back to INTRACLUB_DB_PATH env")
+	slowMode := flag.Bool("slow-mode", false, "Inject artificial latency into every API request to simulate a slow / high-RTT connection; falls back to INTRACLUB_SLOW_MODE env")
+	slowModeLatency := flag.Duration("slow-mode-latency", defaultSlowModeLatency, "Per-request artificial latency to inject when slow mode is enabled; falls back to INTRACLUB_SLOW_MODE_LATENCY env")
 	flag.Parse()
 
 	jwtLifetime, err := resolveJwtLifetime(*jwtLifetimeFlag)
@@ -311,6 +325,15 @@ func parseFlags() serverConfig {
 		log.Fatalf("invalid JWT lifetime: %v", err)
 	}
 	api.JwtLifetime = jwtLifetime
+
+	slowModeEnabled, err := resolveSlowMode(flagWasSet("slow-mode"), *slowMode)
+	if err != nil {
+		log.Fatalf("invalid slow mode setting: %v", err)
+	}
+	latency, err := resolveSlowModeLatency(flagWasSet("slow-mode-latency"), *slowModeLatency)
+	if err != nil {
+		log.Fatalf("invalid slow mode latency: %v", err)
+	}
 
 	if useDevTokenMode != nil && *useDevTokenMode == true {
 		model.UseDevTokenMode = true
@@ -323,9 +346,11 @@ func parseFlags() serverConfig {
 
 	// resolve the database path from the flag or the environment variable
 	return serverConfig{
-		addr:   *addr,
-		dbKind: database.ProviderKind(*dbKind),
-		dbPath: resolveDBPath(*dbPath),
+		addr:            *addr,
+		dbKind:          database.ProviderKind(*dbKind),
+		dbPath:          resolveDBPath(*dbPath),
+		slowMode:        slowModeEnabled,
+		slowModeLatency: latency,
 	}
 }
 
@@ -357,6 +382,75 @@ func resolveJwtLifetime(flagVal string) (time.Duration, error) {
 		return 0, fmt.Errorf("JWT lifetime must be positive, got %q", raw)
 	}
 	return d, nil
+}
+
+// defaultSlowModeLatency is the per-request artificial latency injected when
+// slow mode is enabled and no latency is configured via flag or env var.
+const defaultSlowModeLatency = 500 * time.Millisecond
+
+// flagWasSet reports whether the named flag was explicitly provided on the
+// command line (as opposed to being left at its default value). It must be
+// called after flag.Parse.
+func flagWasSet(name string) bool {
+	set := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			set = true
+		}
+	})
+	return set
+}
+
+// resolveSlowMode returns whether artificial latency should be injected into
+// API requests, preferring the explicit --slow-mode flag and falling back to
+// the INTRACLUB_SLOW_MODE env var, then the default (disabled).
+func resolveSlowMode(flagSet, flagVal bool) (bool, error) {
+	if flagSet {
+		return flagVal, nil
+	}
+	raw := os.Getenv("INTRACLUB_SLOW_MODE")
+	if raw == "" {
+		return false, nil
+	}
+	v, err := strconv.ParseBool(raw)
+	if err != nil {
+		return false, fmt.Errorf("invalid INTRACLUB_SLOW_MODE %q: %w", raw, err)
+	}
+	return v, nil
+}
+
+// resolveSlowModeLatency returns the per-request artificial latency, preferring
+// the explicit --slow-mode-latency flag and falling back to the
+// INTRACLUB_SLOW_MODE_LATENCY env var, then the default.
+func resolveSlowModeLatency(flagSet bool, flagVal time.Duration) (time.Duration, error) {
+	if flagSet {
+		return flagVal, nil
+	}
+	raw := os.Getenv("INTRACLUB_SLOW_MODE_LATENCY")
+	if raw == "" {
+		return defaultSlowModeLatency, nil
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, fmt.Errorf("invalid INTRACLUB_SLOW_MODE_LATENCY %q: %w", raw, err)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("slow mode latency must be positive, got %q", raw)
+	}
+	return d, nil
+}
+
+// slowModeMiddleware injects artificial latency into every request to simulate
+// a slow / high-RTT connection between the client and the API. It sleeps before
+// the handler chain runs, so the added delay is reflected in each request's
+// total latency.
+func slowModeMiddleware(delay time.Duration) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if delay > 0 {
+			time.Sleep(delay)
+		}
+		c.Next()
+	}
 }
 
 // isLoopbackAddress reports whether addr's host is a loopback interface

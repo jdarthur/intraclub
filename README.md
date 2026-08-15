@@ -87,6 +87,40 @@ make standard
 The `--dev-token` flag enables development token mode (loopback-only, bypasses
 auth gating) and seeds sample data. The API listens on `http://127.0.0.1:8080`.
 
+### Command-line flags
+
+All server options are configurable via command-line flags; where noted, a flag
+falls back to an environment variable when it is not passed. Flags take
+precedence over environment variables.
+
+| Flag | Default | Env var | Description |
+| --- | --- | --- | --- |
+| `--addr` | `127.0.0.1:8080` | — | Address to listen on, e.g. `127.0.0.1:8080` |
+| `--dev-token` | `false` | — | Development token mode: loopback-only, bypasses auth gating, seeds sample data |
+| `--db` | `sqlite` | — | Database provider: `memory` or `sqlite` |
+| `--db-path` | *(empty)* | `INTRACLUB_DB_PATH` | Path to the SQLite database file |
+| `--jwt-lifetime` | `2h` | `INTRACLUB_JWT_LIFETIME` | JWT token lifetime (e.g. `2h`, `90m`, `5s`) |
+| `--slow-mode` | `false` | `INTRACLUB_SLOW_MODE` | Inject artificial latency into every API request to simulate a slow / high-RTT connection |
+| `--slow-mode-latency` | `500ms` | `INTRACLUB_SLOW_MODE_LATENCY` | Per-request artificial latency to inject when slow mode is enabled |
+
+### Simulating a slow connection
+
+Local testing on `127.0.0.1` makes every database call appear instantaneous.
+`--slow-mode` injects artificial latency into every API request to simulate a
+slow / high-RTT (edge-to-cloud) connection, which is useful for surfacing UX
+issues (missing skeletons/loading spinners), finding query chains that should
+be composite endpoints, and shaking out timing assumptions in the e2e suite:
+
+```sh
+./main --dev-token --slow-mode                       # +500ms per request (default)
+./main --dev-token --slow-mode --slow-mode-latency 2s
+INTRACLUB_SLOW_MODE=1 INTRACLUB_SLOW_MODE_LATENCY=1s ./main --dev-token
+```
+
+The `--slow-mode` flag / `INTRACLUB_SLOW_MODE` env var enable the delay, and
+`--slow-mode-latency` / `INTRACLUB_SLOW_MODE_LATENCY` set the per-request delay
+(default 500ms). Flags take precedence over environment variables.
+
 ### Database: SQLite (default)
 
 The server defaults to the **SQLite** provider, which stores everything in a
