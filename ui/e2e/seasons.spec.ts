@@ -121,10 +121,14 @@ test('seasons list renders created seasons and links to the detail page', async 
 	expect(seasonRes.ok()).toBeTruthy();
 	const season = (await seasonRes.json()).resource as { id: string };
 
-	// The nav exposes Seasons as a top-level link (promoted out of Settings).
+	// The nav exposes Seasons as a dropdown (Seasons + New Draft) in the
+	// primary bar.
 	await page.goto('/');
 	await waitForHydration(page);
+	await expect(page.getByRole('button', { name: 'Seasons' })).toBeVisible();
+	await page.getByRole('button', { name: 'Seasons' }).click();
 	await expect(page.getByRole('link', { name: 'Seasons' })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'New Draft' })).toBeVisible();
 
 	// The /seasons list shows the new season and links to its detail page.
 	await page.goto('/seasons');
