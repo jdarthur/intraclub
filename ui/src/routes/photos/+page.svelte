@@ -29,7 +29,11 @@
 
 {#snippet thumbCell(p: Photo)}
 	<a href={`/photos/${p.id}`}>
-		<img class="thumb-img" src={dataUrlFor(p)} alt={p.alt_text || 'Photo thumbnail'} />
+		<img
+			class="block size-12 rounded object-cover"
+			src={dataUrlFor(p)}
+			alt={p.alt_text || 'Photo thumbnail'}
+		/>
 	</a>
 {/snippet}
 
@@ -70,13 +74,3 @@
 		/>
 	{/snippet}
 </AsyncSection>
-
-<style>
-	.thumb-img {
-		display: block;
-		width: 48px;
-		height: 48px;
-		object-fit: cover;
-		border-radius: 4px;
-	}
-</style>

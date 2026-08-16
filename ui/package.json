@@ -24,7 +24,6 @@
 		"@types/node": "^25.9.1",
 		"bits-ui": "^2.18.1",
 		"clsx": "^2.1.1",
-		"mode-watcher": "^1.1.0",
 		"svelte": "^5.55.2",
 		"svelte-check": "^4.4.6",
 		"svelte-sonner": "^1.2.1",
@@ -37,6 +36,7 @@
 	},
 	"dependencies": {
 		"@tailwindcss/vite": "^4.3.3",
+		"mode-watcher": "^1.1.0",
 		"tailwindcss": "^4.3.3"
 	}
 }

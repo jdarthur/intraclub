@@ -119,20 +119,24 @@
 
 <AsyncSection state={photo}>
 	{#snippet children(p)}
-		<img class="detail" src={dataUrlFor(p)} alt={p.alt_text || 'Photo'} />
+		<img
+			class="detail mt-2 block max-h-60 max-w-[360px] rounded-md border border-border"
+			src={dataUrlFor(p)}
+			alt={p.alt_text || 'Photo'}
+		/>
 
-		<dl class="meta">
+		<dl class="my-4 flex gap-6">
 			<div>
-				<dt>Alt text</dt>
-				<dd>{p.alt_text || '(none)'}</dd>
+				<dt class="text-sm text-muted-foreground">Alt text</dt>
+				<dd class="m-0">{p.alt_text || '(none)'}</dd>
 			</div>
 			<div>
-				<dt>File type</dt>
-				<dd>{photoTypeLabels[p.file_type] ?? 'unknown'}</dd>
+				<dt class="text-sm text-muted-foreground">File type</dt>
+				<dd class="m-0">{photoTypeLabels[p.file_type] ?? 'unknown'}</dd>
 			</div>
 			<div>
-				<dt>Owner</dt>
-				<dd>{p.owner}</dd>
+				<dt class="text-sm text-muted-foreground">Owner</dt>
+				<dd class="m-0">{p.owner}</dd>
 			</div>
 		</dl>
 
@@ -199,25 +203,3 @@
 		</div>
 	{/snippet}
 </AsyncSection>
-
-<style>
-	.detail {
-		max-width: 360px;
-		max-height: 240px;
-		border: 1px solid #ccc;
-		border-radius: 6px;
-		margin-top: 0.5rem;
-	}
-	.meta {
-		display: flex;
-		gap: 1.5rem;
-		margin: 1rem 0;
-	}
-	.meta dt {
-		font-size: 0.85rem;
-		color: #666;
-	}
-	.meta dd {
-		margin: 0;
-	}
-</style>

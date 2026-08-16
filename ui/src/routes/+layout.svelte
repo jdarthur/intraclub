@@ -6,6 +6,7 @@
 	import { identity } from '$lib/identity.svelte';
 	import NavBar from '$lib/components/NavBar.svelte';
 	import { Toaster } from '$lib/components/ui/sonner/index.js';
+	import { ModeWatcher } from 'mode-watcher';
 
 	let { children } = $props();
 
@@ -36,3 +37,4 @@
 	{@render children()}
 </main>
 <Toaster />
+<ModeWatcher />
