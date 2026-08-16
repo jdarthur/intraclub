@@ -47,8 +47,9 @@ test('mobile: sheet menu opens, closes, and navigates', async ({ page }) => {
 	await page.getByRole('button', { name: 'Open menu' }).click();
 	const dialog = page.getByRole('dialog');
 	await expect(dialog).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Teams' })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Seasons' })).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Drafts' })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'New Draft' })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Organizations' })).toBeVisible();
 	await expect(page.getByRole('navigation')).toHaveCount(1);
 
@@ -58,10 +59,10 @@ test('mobile: sheet menu opens, closes, and navigates', async ({ page }) => {
 
 	// Re-open and navigate: clicking a link closes the sheet and routes.
 	await page.getByRole('button', { name: 'Open menu' }).click();
-	await page.getByRole('link', { name: 'Drafts' }).click();
-	await page.waitForURL('/drafts');
+	await page.getByRole('link', { name: 'Seasons' }).click();
+	await page.waitForURL('/seasons');
 	await waitForHydration(page);
-	await expect(page.getByRole('link', { name: 'Drafts' })).toHaveCount(0);
+	await expect(page.getByRole('link', { name: 'Seasons' })).toHaveCount(0);
 	await expectNoHorizontalScroll(page);
 });
 

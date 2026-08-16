@@ -6,7 +6,8 @@ test('homepage renders a landing page with nav and login form', async ({ page })
 	// Nav-bar is always shown.
 	await expect(page.getByRole('navigation')).toBeVisible();
 	await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
-	await expect(page.getByRole('link', { name: 'Drafts' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Seasons' })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Teams' })).toBeVisible();
 
 	// Not logged in, so the login form is displayed on the root route.
 	await expect(page.getByRole('heading', { name: 'IntraClub' })).toBeVisible();

@@ -25,6 +25,7 @@
 	import MonitorIcon from '@lucide/svelte/icons/monitor';
 	import logo from '$lib/assets/favicon.svg';
 
+	// League-config pages live in the Settings dropdown.
 	const settingsLinks = [
 		{ href: '/organizations', label: 'Organizations' },
 		{ href: '/facilities', label: 'Facilities' },
@@ -35,18 +36,20 @@
 		{ href: '/playoff-structures', label: 'Playoff Structures' }
 	];
 
-	// Top-level destinations, shown as links in the desktop nav and in the
-	// mobile sheet. Seasons lives here (not in Settings) because it is the
-	// app's primary object.
-	const topLevelLinks = [
-		{ href: '/seasons', label: 'Seasons' },
-		{ href: '/drafts', label: 'Drafts' },
-		{ href: '/teams', label: 'Teams' },
-		{ href: '/photos', label: 'Photos' },
-		{ href: '/users', label: 'Users' }
+	// Users and Photos are also under Settings, separated from the config pages
+	// by a divider so the account/asset group reads as its own tab.
+	const accountLinks = [
+		{ href: '/users', label: 'Users' },
+		{ href: '/photos', label: 'Photos' }
 	];
 
-	// Shared look for every nav item (Settings trigger + top-level links): same
+	// Seasons is a dropdown: the season dashboard plus the draft-creation flow.
+	const seasonsLinks = [
+		{ href: '/seasons', label: 'Seasons' },
+		{ href: '/drafts/new', label: 'New Draft' }
+	];
+
+	// Shared look for every nav item (dropdown triggers + top-level links): same
 	// height, size and weight so nothing reads smaller or lighter than the rest.
 	const navItemClass =
 		'flex h-9 items-center rounded-md px-3 text-base font-medium text-primary-foreground transition-colors hover:bg-foreground/10';
@@ -66,7 +69,10 @@
 		return p === href || p.startsWith(href + '/');
 	}
 
-	const settingsActive = $derived(settingsLinks.some((link) => isActive(link.href)));
+	const settingsActive = $derived(
+		[...settingsLinks, ...accountLinks].some((link) => isActive(link.href))
+	);
+	const seasonsActive = $derived(seasonsLinks.some((link) => isActive(link.href)));
 
 	// Reads of `identity` state and the `sessionExpired` store are reactive, so
 	// this flips to true once the layout resolves the signed-in user (also after
@@ -113,6 +119,26 @@
 						<SheetTitle>Menu</SheetTitle>
 					</SheetHeader>
 					<div class="flex flex-col gap-0.5 overflow-y-auto p-3">
+						<a
+							href="/teams"
+							onclick={closeMobile}
+							class={`${mobileNavItemClass} ${isActive('/teams') ? mobileNavItemActiveClass : ''}`}
+							aria-current={isActive('/teams') ? 'page' : undefined}
+							>Teams</a
+						>
+						<p
+							class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+							>Seasons</p
+						>
+						{#each seasonsLinks as link}
+							<a
+								href={link.href}
+								onclick={closeMobile}
+								class={`${mobileNavItemClass} ${isActive(link.href) ? mobileNavItemActiveClass : ''}`}
+								aria-current={isActive(link.href) ? 'page' : undefined}
+								>{link.label}</a
+							>
+						{/each}
 						<p
 							class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
 							>Settings</p
@@ -127,7 +153,7 @@
 							>
 						{/each}
 						<div class="my-2 border-t"></div>
-						{#each topLevelLinks as link}
+						{#each accountLinks as link}
 							<a
 								href={link.href}
 								onclick={closeMobile}
@@ -154,11 +180,34 @@
 				</SheetContent>
 			</Sheet>
 			<div class="hidden items-center gap-1 md:flex">
+				<a
+					href="/teams"
+					class={`${navItemClass} ${isActive('/teams') ? navItemActiveClass : ''}`}
+					aria-current={isActive('/teams') ? 'page' : undefined}
+					>Teams</a
+				>
 				<Popover>
 					<PopoverTrigger
-						class={`${navItemClass} ${settingsActive ? navItemActiveClass : ''} aria-expanded:bg-foreground/15 aria-expanded:text-primary-foreground`}
+						class={`${navItemClass} gap-2 ${seasonsActive ? navItemActiveClass : ''} aria-expanded:bg-foreground/15 aria-expanded:text-primary-foreground`}
+						aria-current={seasonsActive ? 'true' : undefined}
+						>Seasons<ChevronDownIcon class="size-4 shrink-0 opacity-70" aria-hidden /></PopoverTrigger
+					>
+					<PopoverContent class="flex flex-col gap-0.5 p-1.5" align="start">
+						{#each seasonsLinks as link}
+							<a
+								href={link.href}
+								class="rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground {isActive(link.href) ? 'bg-muted font-semibold text-foreground' : ''}"
+								aria-current={isActive(link.href) ? 'page' : undefined}
+								>{link.label}</a
+							>
+						{/each}
+					</PopoverContent>
+				</Popover>
+				<Popover>
+					<PopoverTrigger
+						class={`${navItemClass} gap-2 ${settingsActive ? navItemActiveClass : ''} aria-expanded:bg-foreground/15 aria-expanded:text-primary-foreground`}
 						aria-current={settingsActive ? 'true' : undefined}
-						>Settings</PopoverTrigger
+						>Settings<ChevronDownIcon class="size-4 shrink-0 opacity-70" aria-hidden /></PopoverTrigger
 					>
 					<PopoverContent class="flex flex-col gap-0.5 p-1.5" align="start">
 						{#each settingsLinks as link}
@@ -169,16 +218,17 @@
 								>{link.label}</a
 							>
 						{/each}
+						<div class="my-1 border-t"></div>
+						{#each accountLinks as link}
+							<a
+								href={link.href}
+								class="rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground {isActive(link.href) ? 'bg-muted font-semibold text-foreground' : ''}"
+								aria-current={isActive(link.href) ? 'page' : undefined}
+								>{link.label}</a
+							>
+						{/each}
 					</PopoverContent>
 				</Popover>
-				{#each topLevelLinks as link}
-					<a
-						href={link.href}
-						class={`${navItemClass} ${isActive(link.href) ? navItemActiveClass : ''}`}
-						aria-current={isActive(link.href) ? 'page' : undefined}
-						>{link.label}</a
-					>
-				{/each}
 			</div>
 		</nav>
 		<div class="ml-auto flex items-center gap-2">
