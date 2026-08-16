@@ -2,38 +2,46 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
+	import Loader2Icon from '@lucide/svelte/icons/loader-2';
 
 	let email = $state('');
 	let message = $state('');
 	let error = $state('');
 	let devLink = $state('');
+	let submitting = $state(false);
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
+		if (submitting) return;
+		submitting = true;
 		message = '';
 		error = '';
 		devLink = '';
 
-		const res = await fetch('/api/one_time_password', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ email })
-		});
+		try {
+			const res = await fetch('/api/one_time_password', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ email })
+			});
 
-		if (!res.ok) {
+			if (!res.ok) {
+				const body = await res.json();
+				error = body.error ?? 'Failed to send login link';
+				return;
+			}
+
 			const body = await res.json();
-			error = body.error ?? 'Failed to send login link';
-			return;
-		}
-
-		const body = await res.json();
-		if (body?.token) {
-			// DEV MODE ONLY: the API returned the magic-link token in the response
-			// instead of emailing it. Render it as a clickable link.
-			devLink = `/auth/callback?token=${encodeURIComponent(body.token)}`;
-			message = 'DEV MODE ONLY — no email was sent. Use the magic link below to log in.';
-		} else {
-			message = 'Check your email for the login link.';
+			if (body?.token) {
+				// DEV MODE ONLY: the API returned the magic-link token in the response
+				// instead of emailing it. Render it as a clickable link.
+				devLink = `/auth/callback?token=${encodeURIComponent(body.token)}`;
+				message = 'DEV MODE ONLY — no email was sent. Use the magic link below to log in.';
+			} else {
+				message = 'Check your email for the login link.';
+			}
+		} finally {
+			submitting = false;
 		}
 	}
 </script>
@@ -43,7 +51,14 @@
 		<Label for="email">Email</Label>
 		<Input id="email" type="email" bind:value={email} required />
 	</div>
-	<Button type="submit" class="w-fit">Send login link</Button>
+	<Button type="submit" disabled={submitting} class="w-fit">
+		{#if submitting}
+			<Loader2Icon class="size-4 animate-spin" aria-hidden />
+			Sending…
+		{:else}
+			Send login link
+		{/if}
+	</Button>
 </form>
 
 {#if message}
