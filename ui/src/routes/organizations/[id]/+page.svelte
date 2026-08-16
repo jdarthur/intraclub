@@ -176,8 +176,8 @@
 			</Alert>
 		{/if}
 
-		<Tabs bind:value={activeTab} orientation="vertical" class="mt-6 flex gap-6">
-			<TabsList class="h-fit w-56 shrink-0 items-stretch">
+		<Tabs bind:value={activeTab} orientation="vertical" class="mt-6 flex flex-col gap-6 md:flex-row">
+			<TabsList class="h-fit w-full items-stretch md:w-56 md:shrink-0">
 				<TabsTrigger
 					value="details"
 					class="group justify-start gap-2.5 px-3 py-2 text-base"

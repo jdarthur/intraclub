@@ -729,9 +729,9 @@
 	<title>Intraclub | {season ? season.name : 'Season'}</title>
 </svelte:head>
 
-<div class="flex items-center gap-4">
+<div class="flex flex-wrap items-center gap-x-4 gap-y-2">
 	<h1 class="text-2xl font-semibold tracking-tight">{season?.name ?? 'Season'}</h1>
-	<div class="ml-auto flex items-center gap-3">
+	<div class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-2">
 		{#if season}
 							<a
 								href={`/seasons/${season.id}/proposals`}
