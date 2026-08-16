@@ -17,7 +17,9 @@ test('expired JWT proactively redirects to login with a re-login message', async
 	await page.reload();
 
 	// The token is present, so the landing page treats the user as logged in.
-	await expect(page.getByRole('heading', { name: 'Welcome to IntraClub' })).toBeVisible();
+	// The dashboard renders a neutral signed-in state (no `sub` claim) whose
+	// heading still matches the shared logged-in greeting.
+	await expect(page.getByRole('heading', { name: /^Welcome back/ })).toBeVisible();
 
 	// Once `exp` elapses the countdown clears the session and shows the message.
 	await expect(page.getByText('Your session expired. Please log in again.')).toBeVisible({
