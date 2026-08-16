@@ -81,9 +81,9 @@
 	<title>Intraclub | {draft ? `${draft.name} — Results` : 'Draft results'}</title>
 </svelte:head>
 
-<div class="flex items-center gap-4">
+<div class="flex flex-wrap items-center gap-x-4 gap-y-2">
 	<h1 class="text-2xl font-semibold tracking-tight">{draft?.name ?? 'Draft results'}</h1>
-	<div class="ml-auto flex items-center gap-3">
+	<div class="ml-auto flex flex-wrap items-center gap-x-3 gap-y-2">
 		<a href={`/drafts/${id()}`} class="text-sm text-muted-foreground hover:text-foreground">
 			&larr; Draft setup
 		</a>

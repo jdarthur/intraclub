@@ -205,7 +205,7 @@
 	<title>Intraclub | {draft ? `${draft.name} — Grades` : 'Pre-draft grades'}</title>
 </svelte:head>
 
-<div class="flex items-center gap-4">
+<div class="flex flex-wrap items-center gap-x-4 gap-y-2">
 	<h1 class="text-2xl font-semibold tracking-tight">{draft?.name ?? 'Pre-draft grades'}</h1>
 	<a href={`/drafts/${id()}`} class="text-sm text-muted-foreground hover:text-foreground">
 		&larr; Draft setup

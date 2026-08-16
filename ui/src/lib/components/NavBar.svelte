@@ -17,14 +17,15 @@
 		DropdownMenuTrigger
 	} from '$lib/components/ui/dropdown-menu/index.js';
 	import { mode, setMode, userPrefersMode } from 'mode-watcher';
+	import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '$lib/components/ui/sheet/index.js';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import MenuIcon from '@lucide/svelte/icons/menu';
 	import SunIcon from '@lucide/svelte/icons/sun';
 	import MoonIcon from '@lucide/svelte/icons/moon';
 	import MonitorIcon from '@lucide/svelte/icons/monitor';
 	import logo from '$lib/assets/favicon.svg';
 
 	const settingsLinks = [
-		{ href: '/seasons', label: 'Seasons' },
 		{ href: '/organizations', label: 'Organizations' },
 		{ href: '/facilities', label: 'Facilities' },
 		{ href: '/formats', label: 'Formats' },
@@ -34,11 +35,31 @@
 		{ href: '/playoff-structures', label: 'Playoff Structures' }
 	];
 
+	// Top-level destinations, shown as links in the desktop nav and in the
+	// mobile sheet. Seasons lives here (not in Settings) because it is the
+	// app's primary object.
+	const topLevelLinks = [
+		{ href: '/seasons', label: 'Seasons' },
+		{ href: '/drafts', label: 'Drafts' },
+		{ href: '/teams', label: 'Teams' },
+		{ href: '/photos', label: 'Photos' },
+		{ href: '/users', label: 'Users' }
+	];
+
 	// Shared look for every nav item (Settings trigger + top-level links): same
 	// height, size and weight so nothing reads smaller or lighter than the rest.
 	const navItemClass =
 		'flex h-9 items-center rounded-md px-3 text-base font-medium text-primary-foreground transition-colors hover:bg-foreground/10';
 	const navItemActiveClass = 'bg-foreground/15';
+
+	// Mobile sheet links sit on the popover surface instead of the primary bar.
+	const mobileNavItemClass =
+		'flex h-9 items-center rounded-md px-3 text-base font-medium transition-colors hover:bg-muted';
+	const mobileNavItemActiveClass = 'bg-muted text-foreground';
+
+	// Sheet state: bind:open keeps the trigger and content in sync so links can
+	// close the sheet (bits-ui unmounts the content while closed).
+	let mobileOpen = $state(false);
 
 	function isActive(href: string) {
 		const p = page.url.pathname;
@@ -58,61 +79,107 @@
 	);
 
 	function logout() {
+		mobileOpen = false;
 		clearToken();
 		goto('/');
+	}
+
+	function closeMobile() {
+		mobileOpen = false;
 	}
 </script>
 
 <header
 	class="sticky top-0 z-40 w-full border-b border-primary-foreground/20 bg-primary text-primary-foreground"
 >
-	<div class="mx-auto flex h-14 max-w-6xl items-center gap-6 px-6">
+	<div class="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 md:gap-6 md:px-6">
 		<a href="/" class="flex items-center gap-2 text-base font-semibold tracking-tight">
 			<img src={logo} alt="" class="size-6" />
 			IntraClub
 		</a>
+		<!-- Exactly one <nav>: it always carries the mobile sheet trigger and the
+		     desktop links. The sheet's links live inside SheetContent (unmounted
+		     while closed), so at most one set of nav links is in the a11y tree. -->
 		<nav class="flex items-center gap-1">
-			<Popover>
-				<PopoverTrigger
-					class={`${navItemClass} ${settingsActive ? navItemActiveClass : ''} aria-expanded:bg-foreground/15 aria-expanded:text-primary-foreground`}
-					aria-current={settingsActive ? 'true' : undefined}
-					>Settings</PopoverTrigger
+			<Sheet bind:open={mobileOpen}>
+				<SheetTrigger
+					class="flex size-9 items-center justify-center rounded-md text-primary-foreground transition-colors hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:hidden"
+					aria-label="Open menu"
 				>
-				<PopoverContent class="flex flex-col gap-0.5 p-1.5" align="start">
-					{#each settingsLinks as link}
-						<a
-							href={link.href}
-							class="rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground {isActive(link.href) ? 'bg-muted font-semibold text-foreground' : ''}"
-							aria-current={isActive(link.href) ? 'page' : undefined}
-							>{link.label}</a
+					<MenuIcon class="size-5" aria-hidden />
+				</SheetTrigger>
+				<SheetContent side="left" class="w-80">
+					<SheetHeader class="border-b px-4 pb-3">
+						<SheetTitle>Menu</SheetTitle>
+					</SheetHeader>
+					<div class="flex flex-col gap-0.5 overflow-y-auto p-3">
+						<p
+							class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+							>Settings</p
 						>
-					{/each}
-				</PopoverContent>
-			</Popover>
-			<a
-				href="/drafts"
-				class={`${navItemClass} ${isActive('/drafts') ? navItemActiveClass : ''}`}
-				aria-current={isActive('/drafts') ? 'page' : undefined}
-				>Drafts</a
-			>
-			<a
-				href="/teams"
-				class={`${navItemClass} ${isActive('/teams') ? navItemActiveClass : ''}`}
-				aria-current={isActive('/teams') ? 'page' : undefined}
-				>Teams</a
-			>
-			<a
-				href="/photos"
-				class={`${navItemClass} ${isActive('/photos') ? navItemActiveClass : ''}`}
-				aria-current={isActive('/photos') ? 'page' : undefined}
-				>Photos</a
-			>
-			<a
-				href="/users"
-				class={`${navItemClass} ${isActive('/users') ? navItemActiveClass : ''}`}
-				aria-current={isActive('/users') ? 'page' : undefined}
-				>Users</a
-			>
+						{#each settingsLinks as link}
+							<a
+								href={link.href}
+								onclick={closeMobile}
+								class={`${mobileNavItemClass} ${isActive(link.href) ? mobileNavItemActiveClass : ''}`}
+								aria-current={isActive(link.href) ? 'page' : undefined}
+								>{link.label}</a
+							>
+						{/each}
+						<div class="my-2 border-t"></div>
+						{#each topLevelLinks as link}
+							<a
+								href={link.href}
+								onclick={closeMobile}
+								class={`${mobileNavItemClass} ${isActive(link.href) ? mobileNavItemActiveClass : ''}`}
+								aria-current={isActive(link.href) ? 'page' : undefined}
+								>{link.label}</a
+							>
+						{/each}
+					</div>
+					<div class="mt-auto border-t p-3">
+						{#if showAccount}
+							<Button variant="ghost" class="w-full justify-start text-base" onclick={logout}>
+								Log out
+							</Button>
+						{:else}
+							<a
+								href="/login"
+								onclick={closeMobile}
+								class="flex h-9 items-center rounded-md px-3 text-base font-medium transition-colors hover:bg-muted"
+								>Log in</a
+							>
+						{/if}
+					</div>
+				</SheetContent>
+			</Sheet>
+			<div class="hidden items-center gap-1 md:flex">
+				<Popover>
+					<PopoverTrigger
+						class={`${navItemClass} ${settingsActive ? navItemActiveClass : ''} aria-expanded:bg-foreground/15 aria-expanded:text-primary-foreground`}
+						aria-current={settingsActive ? 'true' : undefined}
+						>Settings</PopoverTrigger
+					>
+					<PopoverContent class="flex flex-col gap-0.5 p-1.5" align="start">
+						{#each settingsLinks as link}
+							<a
+								href={link.href}
+								class="rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground {isActive(link.href) ? 'bg-muted font-semibold text-foreground' : ''}"
+								aria-current={isActive(link.href) ? 'page' : undefined}
+								>{link.label}</a
+							>
+						{/each}
+					</PopoverContent>
+				</Popover>
+				{#each topLevelLinks as link}
+					<a
+						href={link.href}
+						class={`${navItemClass} ${isActive(link.href) ? navItemActiveClass : ''}`}
+						aria-current={isActive(link.href) ? 'page' : undefined}
+						>{link.label}</a
+					>
+				{/each}
+			</div>
 		</nav>
 		<div class="ml-auto flex items-center gap-2">
 			<!-- Theme picker: Light / Dark / System. Defaults to the OS preference
@@ -160,7 +227,7 @@
 								class="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground/15 text-xs font-semibold"
 								>{identity.initials}</span
 							>
-							<span class="max-w-40 truncate">{identity.displayName}</span>
+							<span class="max-sm:hidden max-w-40 truncate">{identity.displayName}</span>
 						{:else}
 							<span class="text-sm text-primary-foreground/80">Account</span>
 						{/if}

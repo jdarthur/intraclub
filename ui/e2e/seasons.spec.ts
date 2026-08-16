@@ -121,10 +121,9 @@ test('seasons list renders created seasons and links to the detail page', async 
 	expect(seasonRes.ok()).toBeTruthy();
 	const season = (await seasonRes.json()).resource as { id: string };
 
-	// The Settings nav exposes Seasons.
+	// The nav exposes Seasons as a top-level link (promoted out of Settings).
 	await page.goto('/');
 	await waitForHydration(page);
-	await page.getByRole('button', { name: 'Settings' }).click();
 	await expect(page.getByRole('link', { name: 'Seasons' })).toBeVisible();
 
 	// The /seasons list shows the new season and links to its detail page.
