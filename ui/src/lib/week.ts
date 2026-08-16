@@ -12,6 +12,27 @@ export interface Week {
 	draft_id: string;
 	date: string;
 	note: string;
+	/**
+	 * Closed is set by the season commissioner once every team match in the
+	 * week is complete. A closed week is final; standings are computed from
+	 * closed (and completed) weeks' team matches.
+	 */
+	closed: boolean;
+}
+
+/**
+ * The current week: the first week (by date) that has not been closed.
+ * Null if all weeks are closed.
+ *
+ * `GET /api/week?season_id=` returns weeks sorted by date, but the list is
+ * sorted defensively here so the helper keeps working if that guarantee ever
+ * changes.
+ */
+export function currentWeek(weeks: Week[]): Week | null {
+	const byDate = [...weeks].sort(
+		(a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+	);
+	return byDate.find((w) => !w.closed) ?? null;
 }
 
 async function unwrap(res: Response): Promise<any> {
