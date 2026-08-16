@@ -81,6 +81,42 @@ Or open the interactive Playwright UI:
 npm run test:e2e:ui
 ```
 
+### Visual regression baselines
+
+`e2e/visual.spec.ts` and `e2e/mobile.spec.ts` assert `toHaveScreenshot()` on a
+small, high-signal set of pages — the signed-out hero, the signed-in empty
+dashboard, the facilities list (seeded row), the new-facility form, the
+organization detail tabs, and the mobile nav sheet / list / landing page — each
+in light **and** dark, with the theme driven by Playwright's `colorScheme`
+emulation rather than the theme toggle.
+
+Baseline PNGs are **committed** next to their spec in
+`e2e/visual.spec.ts-snapshots/` and `e2e/mobile.spec.ts-snapshots/`. They are
+**platform-specific**: they are only valid for the CI browser build (Linux +
+bundled Chromium), so regenerate them on the same platform CI runs on:
+
+```sh
+# Regenerate all baselines (writes missing/changed PNGs, starts both servers):
+npm run test:e2e -- --update-snapshots
+```
+
+To regenerate just one project (e.g. after touching only mobile styles):
+
+```sh
+npm run test:e2e -- --project="Mobile Chrome" --update-snapshots
+npm run test:e2e -- --project=visual-baselines --update-snapshots
+```
+
+Notes:
+
+- The `visual-baselines` project runs **first** (the `chromium` project depends
+  on it), against the DB freshly wiped by `make e2e` — that is what makes the
+  signed-in dashboard baseline the genuine empty state. Don't reorder it.
+- Report (`playwright-report/`) and result (`test-results/`) artefacts are
+  gitignored; the baseline directories are deliberately committed.
+- When you intentionally restyle a covered page, update its baselines in the
+  same PR — never "fix" a failing visual test by deleting baselines.
+
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
 
 ---
