@@ -1,99 +1,99 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Async } from '$lib/async.svelte';
+	import {
+		AsyncSection,
+		DataTable,
+		EmptyState,
+		PageHeader
+	} from '$lib/components/app/index.js';
+	import type { Column } from '$lib/components/app/data-table.svelte';
 	import { listSeasons } from '$lib/season';
 	import type { Season } from '$lib/season';
 	import { listFacilities } from '$lib/facility';
 	import { listDrafts } from '$lib/draft';
 	import { listPlayoffStructures } from '$lib/playoffStructure';
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table/index.js';
+	import CalendarIcon from '@lucide/svelte/icons/calendar';
 
-	let seasons = $state<Season[]>([]);
 	let facilities = $state<Record<string, string>>({});
 	let drafts = $state<Record<string, string>>({});
 	let playoffs = $state<Record<string, string>>({});
-	let loading = $state(true);
-	let error = $state('');
 
-	function playoffLabel(p: { byes: number; number_of_teams: number }): string {
-		if (p.number_of_teams === 0 && p.byes === 0) return '';
-		return `${p.number_of_teams} teams${p.byes > 0 ? ` / ${p.byes} bye${p.byes > 1 ? 's' : ''}` : ''}`;
-	}
-
-	onMount(async () => {
-		try {
+	const seasons = new Async<Season[]>();
+	onMount(() =>
+		seasons.run(async () => {
 			const [seasonList, facilityList, draftList, playoffList] = await Promise.all([
 				listSeasons(),
 				listFacilities(),
 				listDrafts(),
 				listPlayoffStructures()
 			]);
-			seasons = seasonList;
 			facilities = Object.fromEntries(facilityList.map((f) => [f.id, f.name]));
 			drafts = Object.fromEntries(draftList.map((d) => [d.id, d.name]));
-			playoffs = Object.fromEntries(
-				playoffList.map((p) => [p.id, playoffLabel(p)])
-			);
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load seasons';
-		} finally {
-			loading = false;
+			playoffs = Object.fromEntries(playoffList.map((p) => [p.id, playoffLabel(p)]));
+			return seasonList;
+		})
+	);
+
+	function playoffLabel(p: { byes: number; number_of_teams: number }): string {
+		if (p.number_of_teams === 0 && p.byes === 0) return '';
+		return `${p.number_of_teams} teams${p.byes > 0 ? ` / ${p.byes} bye${p.byes > 1 ? 's' : ''}` : ''}`;
+	}
+
+	const columns: Column<Season>[] = [
+		{ key: 'name', header: 'Name', sortable: true, cell: nameCell },
+		{
+			key: 'facility',
+			header: 'Facility',
+			hideBelow: 'sm',
+			value: (s) => facilities[s.facility] ?? s.facility
+		},
+		{ key: 'start_time', header: 'Start time', hideBelow: 'sm', value: (s) => s.start_time },
+		{
+			key: 'draft',
+			header: 'Draft',
+			hideBelow: 'md',
+			value: (s) => drafts[s.draft_id] ?? s.draft_id
+		},
+		{
+			key: 'playoff',
+			header: 'Playoff structure',
+			hideBelow: 'md',
+			value: (s) => playoffs[s.playoff_structure] ?? s.playoff_structure
 		}
-	});
+	];
 </script>
+
+{#snippet nameCell(s: Season)}
+	<a href={`/seasons/${s.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+		{s.name}
+	</a>
+{/snippet}
 
 <svelte:head>
 	<title>Intraclub | Seasons</title>
 </svelte:head>
 
-<div class="flex items-center justify-between gap-4">
-	<h1 class="text-2xl font-semibold tracking-tight">Seasons</h1>
-</div>
+<PageHeader title="Seasons" description="Weekly head-to-head play, draft to playoffs" icon={CalendarIcon} />
 
-{#if loading}
-	<p class="text-muted-foreground">Loading...</p>
-{:else if error}
-	<p class="text-sm font-medium text-destructive">{error}</p>
-{:else if seasons.length === 0}
-	<p class="text-muted-foreground">No seasons yet. Complete a draft to create one.</p>
-{:else}
-	<div class="mt-4 overflow-hidden rounded-lg border">
-		<Table>
-			<TableHeader>
-				<TableRow>
-					<TableHead>Name</TableHead>
-					<TableHead>Facility</TableHead>
-					<TableHead>Start time</TableHead>
-					<TableHead>Draft</TableHead>
-					<TableHead>Playoff structure</TableHead>
-				</TableRow>
-			</TableHeader>
-			<TableBody>
-				{#each seasons as season}
-					<TableRow>
-						<TableCell>
-							<a
-								href={`/seasons/${season.id}`}
-								class="font-medium text-primary underline-offset-4 hover:underline"
-							>
-								{season.name}
-							</a>
-						</TableCell>
-						<TableCell>{facilities[season.facility] ?? season.facility}</TableCell>
-						<TableCell>{season.start_time}</TableCell>
-						<TableCell>{drafts[season.draft_id] ?? season.draft_id}</TableCell>
-						<TableCell>
-							{playoffs[season.playoff_structure] ?? season.playoff_structure}
-						</TableCell>
-					</TableRow>
-				{/each}
-			</TableBody>
-		</Table>
-	</div>
-{/if}
+<AsyncSection state={seasons} isEmpty={(s) => s.length === 0}>
+	{#snippet loading()}
+		<DataTable rows={[]} {columns} getKey={(s) => s.id} loading />
+	{/snippet}
+	{#snippet empty()}
+		<EmptyState
+			title="No seasons yet."
+			description="Complete a draft to create one."
+		/>
+	{/snippet}
+	{#snippet children(ss)}
+		<DataTable
+			rows={ss}
+			{columns}
+			getKey={(s) => s.id}
+			caption="Seasons"
+			filter
+			filterLabel="Filter seasons"
+		/>
+	{/snippet}
+</AsyncSection>

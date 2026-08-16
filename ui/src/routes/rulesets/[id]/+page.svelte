@@ -1,6 +1,20 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { Async } from '$lib/async.svelte';
+	import { AsyncSection, PageHeader } from '$lib/components/app/index.js';
+	import { Alert, AlertDescription } from '$lib/components/ui/alert/index.js';
+	import {
+		AlertDialog,
+		AlertDialogAction,
+		AlertDialogCancel,
+		AlertDialogContent,
+		AlertDialogDescription,
+		AlertDialogFooter,
+		AlertDialogHeader,
+		AlertDialogTitle,
+		AlertDialogTrigger
+	} from '$lib/components/ui/alert-dialog/index.js';
 	import {
 		getRuleset,
 		amendRulesetName,
@@ -19,21 +33,14 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Textarea } from '$lib/components/ui/textarea/index.js';
-	import {
-		Popover,
-		PopoverClose,
-		PopoverContent,
-		PopoverHeader,
-		PopoverTitle,
-		PopoverTrigger
-	} from '$lib/components/ui/popover/index.js';
+	import { toast } from '$lib/toast';
+	import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
 
 	// Derived from the route param so the page re-loads when navigating between
 	// ruleset revisions (same [id] route, different id).
 	const currentId = $derived(page.params.id as string);
 
-	let ruleset = $state<Ruleset | null>(null);
-	let loadError = $state('');
+	const ruleset = new Async<Ruleset>();
 	let name = $state('');
 	let error = $state('');
 	let saving = $state(false);
@@ -51,20 +58,15 @@
 	let editMarkdown = $state('');
 
 	$effect(() => {
-		load(currentId);
+		ruleset.run(() => load(currentId));
 	});
 
-	async function load(idToLoad: string) {
-		loadError = '';
-		ruleset = null;
-		try {
-			const r = await getRuleset(idToLoad);
-			ruleset = r;
-			name = r.name;
-			await loadSections(idToLoad);
-		} catch (e) {
-			loadError = e instanceof Error ? e.message : 'Failed to load ruleset';
-		}
+	async function load(idToLoad: string): Promise<Ruleset> {
+		ruleset.data = undefined;
+		const r = await getRuleset(idToLoad);
+		name = r.name;
+		await loadSections(idToLoad);
+		return r;
 	}
 
 	async function loadSections(idToLoad: string) {
@@ -95,6 +97,7 @@
 		saving = true;
 		try {
 			const amended = await amendRulesetName(currentId, name.trim());
+			toast.success('Ruleset saved');
 			await goto(`/rulesets/${amended.id}`);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to update ruleset';
@@ -109,6 +112,7 @@
 		deleting = true;
 		try {
 			await deleteRuleset(currentId);
+			toast.success('Ruleset deleted');
 			await goto('/rulesets');
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to delete ruleset';
@@ -220,203 +224,214 @@
 </script>
 
 <svelte:head>
-	<title>Intraclub | {ruleset ? ruleset.name : 'Ruleset'}</title>
+	<title>Intraclub | {ruleset.data ? ruleset.data.name : 'Ruleset'}</title>
 </svelte:head>
 
-{#if loadError}
-	<h1 class="text-2xl font-semibold tracking-tight">Ruleset</h1>
-	<p class="text-sm font-medium text-destructive">{loadError}</p>
-	<a href="/rulesets" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to rulesets</a>
-{:else if !ruleset}
-	<h1 class="text-2xl font-semibold tracking-tight">Ruleset</h1>
-	<p class="text-muted-foreground">Loading...</p>
-{:else}
-	<div class="flex items-center gap-4">
-		<h1 class="text-2xl font-semibold tracking-tight">{ruleset.name}</h1>
-		<a href="/rulesets" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to rulesets</a>
-	</div>
+<PageHeader
+	title={ruleset.data?.name}
+	icon={ScrollTextIcon}
+	backHref="/rulesets"
+	backLabel="Back to rulesets"
+/>
 
-	<dl class="meta">
-		<div>
-			<dt>Revision</dt>
-			<dd>{ruleset.revision}</dd>
-		</div>
-		<div>
-			<dt>Date</dt>
-			<dd>{new Date(ruleset.date).toLocaleString()}</dd>
-		</div>
-		<div>
-			<dt>Superseded by</dt>
-			<dd>
-				{#if ruleset.superseded_by}
-					<a href={`/rulesets/${ruleset.superseded_by}`}>{ruleset.superseded_by}</a>
+<AsyncSection state={ruleset}>
+	{#snippet children(r)}
+		<dl class="meta">
+			<div>
+				<dt>Revision</dt>
+				<dd>{r.revision}</dd>
+			</div>
+			<div>
+				<dt>Date</dt>
+				<dd>{new Date(r.date).toLocaleString()}</dd>
+			</div>
+			<div>
+				<dt>Superseded by</dt>
+				<dd>
+					{#if r.superseded_by}
+						<a href={`/rulesets/${r.superseded_by}`}>{r.superseded_by}</a>
+					{:else}
+						— (current revision)
+					{/if}
+				</dd>
+			</div>
+		</dl>
+
+		<Card class="mt-6 max-w-md">
+			<CardHeader>
+				<CardTitle>Edit</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<p class="hint text-sm text-muted-foreground">
+					Saving edits amends this ruleset and creates a new revision.
+				</p>
+				<form onsubmit={handleSave} class="flex flex-col gap-4">
+					<div class="flex flex-col gap-2">
+						<Label for="name">Name</Label>
+						<Input id="name" type="text" bind:value={name} required />
+					</div>
+					<Button type="submit" disabled={saving} class="w-fit">
+						{saving ? 'Saving...' : 'Save changes'}
+					</Button>
+				</form>
+			</CardContent>
+		</Card>
+
+		<Card class="mt-6">
+			<CardHeader>
+				<CardTitle>Sections</CardTitle>
+			</CardHeader>
+			<CardContent class="flex flex-col gap-4">
+				{#if sections.length === 0}
+					<p class="text-sm text-muted-foreground">This ruleset has no sections yet.</p>
 				{:else}
-					— (current revision)
-				{/if}
-			</dd>
-		</div>
-	</dl>
-
-	<Card class="mt-6 max-w-md">
-		<CardHeader>
-			<CardTitle>Edit</CardTitle>
-		</CardHeader>
-		<CardContent>
-			<p class="hint text-sm text-muted-foreground">
-				Saving edits amends this ruleset and creates a new revision.
-			</p>
-			<form onsubmit={handleSave} class="flex flex-col gap-4">
-				<div class="flex flex-col gap-2">
-					<Label for="name">Name</Label>
-					<Input id="name" type="text" bind:value={name} required />
-				</div>
-				<Button type="submit" disabled={saving} class="w-fit">
-					{saving ? 'Saving...' : 'Save changes'}
-				</Button>
-			</form>
-		</CardContent>
-	</Card>
-
-	<Card class="mt-6">
-		<CardHeader>
-			<CardTitle>Sections</CardTitle>
-		</CardHeader>
-		<CardContent class="flex flex-col gap-4">
-			{#if sections.length === 0}
-				<p class="text-sm text-muted-foreground">This ruleset has no sections yet.</p>
-			{:else}
-				<ol class="flex flex-col gap-3">
-					{#each sections as section, i (section.section_id)}
-						<li class="section-card">
-							<div class="flex items-center justify-between gap-2">
-								<span class="font-medium">
-									{i + 1}. {section.title || '(untitled)'}
-								</span>
-								<div class="flex items-center gap-1">
-									<Button
-										variant="outline"
-										size="sm"
-										disabled={sectionSaving || i === 0}
-										onclick={() => moveUp(section)}
-									>
-										&uarr;
-									</Button>
-									<Button
-										variant="outline"
-										size="sm"
-										disabled={sectionSaving || i === sections.length - 1}
-										onclick={() => moveDown(section)}
-									>
-										&darr;
-									</Button>
-									<Button variant="outline" size="sm" onclick={() => startEdit(section)}>
-										Edit
-									</Button>
-									<Button
-										variant="destructive"
-										size="sm"
-										disabled={sectionSaving}
-										onclick={() => handleRemove(section)}
-									>
-										Remove
-									</Button>
+					<ol class="flex flex-col gap-3">
+						{#each sections as section, i (section.section_id)}
+							<li class="section-card">
+								<div class="flex items-center justify-between gap-2">
+									<span class="font-medium">
+										{i + 1}. {section.title || '(untitled)'}
+									</span>
+									<div class="flex items-center gap-1">
+										<Button
+											variant="outline"
+											size="sm"
+											disabled={sectionSaving || i === 0}
+											onclick={() => moveUp(section)}
+										>
+											&uarr;
+										</Button>
+										<Button
+											variant="outline"
+											size="sm"
+											disabled={sectionSaving || i === sections.length - 1}
+											onclick={() => moveDown(section)}
+										>
+											&darr;
+										</Button>
+										<Button variant="outline" size="sm" onclick={() => startEdit(section)}>
+											Edit
+										</Button>
+										<Button
+											variant="destructive"
+											size="sm"
+											disabled={sectionSaving}
+											onclick={() => handleRemove(section)}
+										>
+											Remove
+										</Button>
+									</div>
 								</div>
-							</div>
 
-							{#if editingId === section.section_id}
-								<form
-									onsubmit={(e) => {
-										e.preventDefault();
-										handleEditSave();
-									}}
-									class="mt-3 flex flex-col gap-3"
-								>
-									<div class="flex flex-col gap-2">
-										<Label for={`edit-title-${section.section_id}`}>Title</Label>
-										<Input
-											id={`edit-title-${section.section_id}`}
-											type="text"
-											bind:value={editTitle}
-										/>
-									</div>
-									<div class="flex flex-col gap-2">
-										<Label for={`edit-markdown-${section.section_id}`}>Contents</Label>
-										<Textarea
-											id={`edit-markdown-${section.section_id}`}
-											bind:value={editMarkdown}
-											rows={4}
-										/>
-									</div>
-									<div class="flex gap-2">
-										<Button type="submit" size="sm" disabled={sectionSaving}>
-											Save section
-										</Button>
-										<Button variant="outline" size="sm" type="button" onclick={cancelEdit}>
-											Cancel
-										</Button>
-									</div>
-								</form>
-							{:else}
-								{#if section.markdown}
-									<p class="section-contents">{section.markdown}</p>
+								{#if editingId === section.section_id}
+									<form
+										onsubmit={(e) => {
+											e.preventDefault();
+											handleEditSave();
+										}}
+										class="mt-3 flex flex-col gap-3"
+									>
+										<div class="flex flex-col gap-2">
+											<Label for={`edit-title-${section.section_id}`}>Title</Label>
+											<Input
+												id={`edit-title-${section.section_id}`}
+												type="text"
+												bind:value={editTitle}
+											/>
+										</div>
+										<div class="flex flex-col gap-2">
+											<Label for={`edit-markdown-${section.section_id}`}>Contents</Label>
+											<Textarea
+												id={`edit-markdown-${section.section_id}`}
+												bind:value={editMarkdown}
+												rows={4}
+											/>
+										</div>
+										<div class="flex gap-2">
+											<Button type="submit" size="sm" disabled={sectionSaving}>
+												Save section
+											</Button>
+											<Button variant="outline" size="sm" type="button" onclick={cancelEdit}>
+												Cancel
+											</Button>
+										</div>
+									</form>
+								{:else}
+									{#if section.markdown}
+										<p class="section-contents">{section.markdown}</p>
+									{/if}
 								{/if}
-							{/if}
-						</li>
-					{/each}
-				</ol>
-			{/if}
+							</li>
+						{/each}
+					</ol>
+				{/if}
 
-			<form onsubmit={handleAdd} class="flex flex-col gap-3 border-t pt-4">
-				<p class="text-sm font-medium">Add a section</p>
-				<div class="flex flex-col gap-2">
-					<Label for="add-title">Title</Label>
-					<Input id="add-title" type="text" bind:value={addTitle} placeholder="e.g. Eligibility" />
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="add-markdown">Contents</Label>
-					<Textarea
-						id="add-markdown"
-						bind:value={addMarkdown}
-						rows={4}
-						placeholder="Rule text"
-						required
-					/>
-				</div>
-				<Button type="submit" class="w-fit" disabled={sectionSaving}>
-					{sectionSaving ? 'Saving...' : 'Add section'}
-				</Button>
-			</form>
+				<form onsubmit={handleAdd} class="flex flex-col gap-3 border-t pt-4">
+					<p class="text-sm font-medium">Add a section</p>
+					<div class="flex flex-col gap-2">
+						<Label for="add-title">Title</Label>
+						<Input
+							id="add-title"
+							type="text"
+							bind:value={addTitle}
+							placeholder="e.g. Eligibility"
+						/>
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="add-markdown">Contents</Label>
+						<Textarea
+							id="add-markdown"
+							bind:value={addMarkdown}
+							rows={4}
+							placeholder="Rule text"
+							required
+						/>
+					</div>
+					<Button type="submit" class="w-fit" disabled={sectionSaving}>
+						{sectionSaving ? 'Saving...' : 'Add section'}
+					</Button>
+				</form>
 
-			{#if sectionError}
-				<p class="text-sm font-medium text-destructive">{sectionError}</p>
-			{/if}
-		</CardContent>
-	</Card>
+				{#if sectionError}
+					<Alert variant="destructive">
+						<AlertDescription>{sectionError}</AlertDescription>
+					</Alert>
+				{/if}
+			</CardContent>
+		</Card>
 
-	<div class="mt-4">
-		<Popover bind:open={deleteOpen}>
-			<PopoverTrigger disabled={deleting} class={buttonVariants({ variant: 'destructive' })}>
-				{deleting ? 'Deleting...' : 'Delete ruleset'}
-			</PopoverTrigger>
-			<PopoverContent class="w-80">
-				<PopoverHeader>
-					<PopoverTitle>Delete ruleset?</PopoverTitle>
-					<p class="text-sm text-muted-foreground">
-						This permanently removes this ruleset and cannot be undone.
-					</p>
-				</PopoverHeader>
-				<div class="flex justify-end gap-2">
-					<PopoverClose class={buttonVariants({ variant: 'outline', size: 'sm' })}>Cancel</PopoverClose>
-					<Button variant="destructive" size="sm" onclick={handleDelete}>Delete</Button>
-				</div>
-			</PopoverContent>
-		</Popover>
-	</div>
+		{#if error}
+			<Alert variant="destructive" class="mt-4 max-w-md">
+				<AlertDescription>{error}</AlertDescription>
+			</Alert>
+		{/if}
 
-	{#if error}
-		<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
-	{/if}
-{/if}
+		<div class="mt-4">
+			<AlertDialog bind:open={deleteOpen}>
+				<AlertDialogTrigger
+					disabled={deleting}
+					class={buttonVariants({ variant: 'destructive' })}
+				>
+					{deleting ? 'Deleting...' : 'Delete ruleset'}
+				</AlertDialogTrigger>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete ruleset?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This permanently removes this ruleset and cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction variant="destructive" onclick={handleDelete}>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</div>
+	{/snippet}
+</AsyncSection>
 
 <style>
 	.meta {

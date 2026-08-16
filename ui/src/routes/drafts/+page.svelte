@@ -1,25 +1,37 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { Async } from '$lib/async.svelte';
+	import {
+		AsyncSection,
+		DataTable,
+		EmptyState,
+		PageHeader,
+		StatusBadge
+	} from '$lib/components/app/index.js';
+	import type { Column } from '$lib/components/app/data-table.svelte';
 	import { listDrafts } from '$lib/draft';
 	import type { Draft } from '$lib/draft';
 	import { listFormats } from '$lib/format';
 	import { listUsers, fullName } from '$lib/user';
-	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import {
-		Table,
-		TableBody,
-		TableCell,
-		TableHead,
-		TableHeader,
-		TableRow
-	} from '$lib/components/ui/table/index.js';
+	import ListOrderedIcon from '@lucide/svelte/icons/list-ordered';
 
-	let drafts = $state<Draft[]>([]);
 	let formats = $state<Record<string, string>>({});
 	let users = $state<Record<string, string>>({});
-	let loading = $state(true);
-	let error = $state('');
+
+	const drafts = new Async<Draft[]>();
+	onMount(() =>
+		drafts.run(async () => {
+			const [draftList, formatList, userList] = await Promise.all([
+				listDrafts(),
+				listFormats(),
+				listUsers()
+			]);
+			formats = Object.fromEntries(formatList.map((f) => [f.id, f.name]));
+			users = Object.fromEntries(userList.map((u) => [u.id, fullName(u)]));
+			return draftList;
+		})
+	);
 
 	// The zero Go time marshals to this literal; treat it as "not set".
 	const ZERO_TIME = '0001-01-01T00:00:00Z';
@@ -28,71 +40,62 @@
 		return !!draft.completed_at && draft.completed_at !== ZERO_TIME;
 	}
 
-	onMount(async () => {
-		try {
-			const [draftList, formatList, userList] = await Promise.all([
-				listDrafts(),
-				listFormats(),
-				listUsers()
-			]);
-			drafts = draftList;
-			formats = Object.fromEntries(formatList.map((f) => [f.id, f.name]));
-			users = Object.fromEntries(userList.map((u) => [u.id, fullName(u)]));
-		} catch (e) {
-			error = e instanceof Error ? e.message : 'Failed to load drafts';
-		} finally {
-			loading = false;
-		}
-	});
+	const columns: Column<Draft>[] = [
+		{ key: 'name', header: 'Name', sortable: true, cell: nameCell },
+		{
+			key: 'owner',
+			header: 'Owner',
+			hideBelow: 'sm',
+			value: (d) => users[d.owner] ?? d.owner
+		},
+		{
+			key: 'format',
+			header: 'Format',
+			hideBelow: 'md',
+			value: (d) => formats[d.format] ?? d.format
+		},
+		{ key: 'status', header: 'Status', cell: statusCell }
+	];
 </script>
+
+{#snippet nameCell(d: Draft)}
+	<a href={`/drafts/${d.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+		{d.name}
+	</a>
+{/snippet}
+
+{#snippet statusCell(d: Draft)}
+	<StatusBadge
+		status={isCompleted(d) ? 'complete' : 'open'}
+		label={isCompleted(d) ? 'Completed' : 'In progress'}
+	/>
+{/snippet}
 
 <svelte:head>
 	<title>Intraclub | Drafts</title>
 </svelte:head>
 
-<div class="flex items-center justify-between gap-4">
-	<h1 class="text-2xl font-semibold tracking-tight">Drafts</h1>
-	<Button href="/drafts/new">New draft</Button>
-</div>
+<PageHeader title="Drafts" description="Player drafts that build teams for a season" icon={ListOrderedIcon}>
+	{#snippet actions()}
+		<Button href="/drafts/new">New draft</Button>
+	{/snippet}
+</PageHeader>
 
-{#if loading}
-	<p class="text-muted-foreground">Loading...</p>
-{:else if error}
-	<p class="text-sm font-medium text-destructive">{error}</p>
-{:else if drafts.length === 0}
-	<p class="text-muted-foreground">No drafts yet.</p>
-{:else}
-	<div class="mt-4 overflow-hidden rounded-lg border">
-		<Table>
-			<TableHeader>
-				<TableRow>
-					<TableHead>Name</TableHead>
-					<TableHead>Owner</TableHead>
-					<TableHead>Format</TableHead>
-					<TableHead>Status</TableHead>
-				</TableRow>
-			</TableHeader>
-			<TableBody>
-				{#each drafts as draft}
-					<TableRow>
-						<TableCell>
-							<a
-								href={`/drafts/${draft.id}`}
-								class="font-medium text-primary underline-offset-4 hover:underline"
-							>
-								{draft.name}
-							</a>
-						</TableCell>
-						<TableCell>{users[draft.owner] ?? draft.owner}</TableCell>
-						<TableCell>{formats[draft.format] ?? draft.format}</TableCell>
-						<TableCell>
-							<Badge variant={isCompleted(draft) ? 'secondary' : 'default'}>
-								{isCompleted(draft) ? 'Completed' : 'In progress'}
-							</Badge>
-						</TableCell>
-					</TableRow>
-				{/each}
-			</TableBody>
-		</Table>
-	</div>
-{/if}
+<AsyncSection state={drafts} isEmpty={(d) => d.length === 0}>
+	{#snippet loading()}
+		<DataTable rows={[]} {columns} getKey={(d) => d.id} loading />
+	{/snippet}
+	{#snippet empty()}
+		<EmptyState title="No drafts yet." description="Create a draft to split players into teams." />
+	{/snippet}
+	{#snippet children(ds)}
+		<DataTable
+			rows={ds}
+			{columns}
+			getKey={(d) => d.id}
+			caption="Drafts"
+			filter
+			filterLabel="Filter drafts"
+		/>
+	{/snippet}
+</AsyncSection>

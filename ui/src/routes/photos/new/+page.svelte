@@ -2,17 +2,22 @@
 	import { createPhoto, photoTypeFromExtension, photoTypeLabels } from '$lib/photo';
 	import { goto } from '$app/navigation';
 	import type { PhotoType } from '$lib/photo';
+	import { PageHeader } from '$lib/components/app/index.js';
+	import { Alert, AlertDescription } from '$lib/components/ui/alert/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { NativeSelect, NativeSelectOption } from '$lib/components/ui/native-select/index.js';
+	import { toast } from '$lib/toast';
+	import ImageIcon from '@lucide/svelte/icons/image';
 
 	let altText = $state('');
 	let contents = $state('');
 	let fileType = $state<PhotoType>(0);
 	let error = $state('');
 	let submitting = $state(false);
+	let attempted = $state(false);
 
 	function onFileChange(e: Event) {
 		const input = e.target as HTMLInputElement;
@@ -35,6 +40,7 @@
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
+		attempted = true;
 		error = '';
 		if (!contents) {
 			error = 'Please choose an image file to upload.';
@@ -43,6 +49,7 @@
 		submitting = true;
 		try {
 			const created = await createPhoto({ alt_text: altText, contents, file_type: fileType });
+			toast.success('Photo created');
 			await goto(`/photos/${created.id}`);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to create photo';
@@ -56,20 +63,29 @@
 	<title>Intraclub | New photo</title>
 </svelte:head>
 
-<div class="flex items-center gap-4">
-	<h1 class="text-2xl font-semibold tracking-tight">New photo</h1>
-	<a href="/photos" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to photos</a>
-</div>
+<PageHeader title="New photo" icon={ImageIcon} backHref="/photos" backLabel="Back to photos" />
 
 <Card class="mt-6 max-w-md">
 	<CardHeader>
 		<CardTitle>Upload a photo</CardTitle>
 	</CardHeader>
 	<CardContent>
+		{#if error}
+			<Alert variant="destructive" class="mb-4">
+				<AlertDescription>{error}</AlertDescription>
+			</Alert>
+		{/if}
 		<form onsubmit={handleSubmit} class="flex flex-col gap-4">
 			<div class="flex flex-col gap-2">
 				<Label for="file">File</Label>
-				<Input id="file" type="file" accept="image/*" onchange={onFileChange} required />
+				<Input
+					id="file"
+					type="file"
+					accept="image/*"
+					onchange={onFileChange}
+					required
+					aria-invalid={attempted && !contents}
+				/>
 			</div>
 			<div class="flex flex-col gap-2">
 				<Label for="altText">Alt text</Label>
@@ -91,7 +107,3 @@
 		</form>
 	</CardContent>
 </Card>
-
-{#if error}
-	<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
-{/if}

@@ -2,25 +2,32 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { getFacility, updateFacility, deleteFacility } from '$lib/facility';
-	import type { Facility } from '$lib/facility';
+	import { Async } from '$lib/async.svelte';
+	import { AsyncSection, PageHeader } from '$lib/components/app/index.js';
+	import { Alert, AlertDescription } from '$lib/components/ui/alert/index.js';
+	import {
+		AlertDialog,
+		AlertDialogAction,
+		AlertDialogCancel,
+		AlertDialogContent,
+		AlertDialogDescription,
+		AlertDialogFooter,
+		AlertDialogHeader,
+		AlertDialogTitle,
+		AlertDialogTrigger
+	} from '$lib/components/ui/alert-dialog/index.js';
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import {
-		Popover,
-		PopoverClose,
-		PopoverContent,
-		PopoverHeader,
-		PopoverTitle,
-		PopoverTrigger
-	} from '$lib/components/ui/popover/index.js';
+	import { toast } from '$lib/toast';
+	import { getFacility, updateFacility, deleteFacility } from '$lib/facility';
+	import type { Facility } from '$lib/facility';
+	import Building2Icon from '@lucide/svelte/icons/building-2';
 
 	const id = () => page.params.id as string;
 
-	let facility = $state<Facility | null>(null);
-	let loadError = $state('');
+	const facility = new Async<Facility>();
 	let name = $state('');
 	let address = $state('');
 	let courts = $state(1);
@@ -30,20 +37,15 @@
 	let deleting = $state(false);
 	let deleteOpen = $state(false);
 
-	onMount(load);
+	onMount(() => facility.run(load));
 
-	async function load() {
-		loadError = '';
-		try {
-			const f = await getFacility(id());
-			facility = f;
-			name = f.name;
-			address = f.address;
-			courts = f.courts;
-			layoutPhoto = f.layout_photo;
-		} catch (e) {
-			loadError = e instanceof Error ? e.message : 'Failed to load facility';
-		}
+	async function load(): Promise<Facility> {
+		const f = await getFacility(id());
+		name = f.name;
+		address = f.address;
+		courts = f.courts;
+		layoutPhoto = f.layout_photo;
+		return f;
 	}
 
 	async function handleSave(e: Event) {
@@ -57,7 +59,8 @@
 				courts,
 				layout_photo: layoutPhoto.trim()
 			});
-			facility = updated;
+			facility.data = updated;
+			toast.success('Facility saved');
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to update facility';
 		} finally {
@@ -71,6 +74,7 @@
 		deleting = true;
 		try {
 			await deleteFacility(id());
+			toast.success('Facility deleted');
 			await goto('/facilities');
 		} catch (err) {
 			// e.g. the facility is assigned to a Season and PreDelete blocks it
@@ -81,72 +85,81 @@
 </script>
 
 <svelte:head>
-	<title>Intraclub | {facility ? facility.name : 'Facility'}</title>
+	<title>Intraclub | {facility.data ? facility.data.name : 'Facility'}</title>
 </svelte:head>
 
-{#if loadError}
-	<h1 class="text-2xl font-semibold tracking-tight">Facility</h1>
-	<p class="text-sm font-medium text-destructive">{loadError}</p>
-	<a href="/facilities" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to facilities</a>
-{:else if !facility}
-	<h1 class="text-2xl font-semibold tracking-tight">Facility</h1>
-	<p class="text-muted-foreground">Loading...</p>
-{:else}
-	<div class="flex items-center gap-4">
-		<h1 class="text-2xl font-semibold tracking-tight">{facility.name}</h1>
-		<a href="/facilities" class="text-sm text-muted-foreground hover:text-foreground">&larr; Back to facilities</a>
-	</div>
+<PageHeader
+	title={facility.data?.name}
+	icon={Building2Icon}
+	backHref="/facilities"
+	backLabel="Back to facilities"
+/>
 
-	<Card class="mt-6 max-w-md">
-		<CardHeader>
-			<CardTitle>Facility details</CardTitle>
-		</CardHeader>
-		<CardContent>
-			<form onsubmit={handleSave} class="flex flex-col gap-4">
-				<div class="flex flex-col gap-2">
-					<Label for="name">Name</Label>
-					<Input id="name" type="text" bind:value={name} required />
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="address">Address</Label>
-					<Input id="address" type="text" bind:value={address} required />
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="courts">Number of courts</Label>
-					<Input id="courts" type="number" bind:value={courts} min="1" required />
-				</div>
-				<div class="flex flex-col gap-2">
-					<Label for="layoutPhoto">Layout photo ID (optional)</Label>
-					<Input id="layoutPhoto" type="text" bind:value={layoutPhoto} placeholder="16-char hex ID" />
-				</div>
-				<Button type="submit" disabled={saving} class="w-fit">
-					{saving ? 'Saving...' : 'Save changes'}
-				</Button>
-			</form>
-		</CardContent>
-	</Card>
+<AsyncSection state={facility}>
+	{#snippet children(f)}
+		<Card class="mt-6 max-w-md">
+			<CardHeader>
+				<CardTitle>Facility details</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<form onsubmit={handleSave} class="flex flex-col gap-4">
+					<div class="flex flex-col gap-2">
+						<Label for="name">Name</Label>
+						<Input id="name" type="text" bind:value={name} required />
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="address">Address</Label>
+						<Input id="address" type="text" bind:value={address} required />
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="courts">Number of courts</Label>
+						<Input id="courts" type="number" bind:value={courts} min="1" required />
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="layoutPhoto">Layout photo ID (optional)</Label>
+						<Input
+							id="layoutPhoto"
+							type="text"
+							bind:value={layoutPhoto}
+							placeholder="16-char hex ID"
+						/>
+					</div>
+					<Button type="submit" disabled={saving} class="w-fit">
+						{saving ? 'Saving...' : 'Save changes'}
+					</Button>
+				</form>
+			</CardContent>
+		</Card>
 
-	<div class="mt-4">
-		<Popover bind:open={deleteOpen}>
-			<PopoverTrigger disabled={deleting} class={buttonVariants({ variant: 'destructive' })}>
-				{deleting ? 'Deleting...' : 'Delete facility'}
-			</PopoverTrigger>
-			<PopoverContent class="w-80">
-				<PopoverHeader>
-					<PopoverTitle>Delete facility?</PopoverTitle>
-					<p class="text-sm text-muted-foreground">
-						This permanently removes this facility and cannot be undone.
-					</p>
-				</PopoverHeader>
-				<div class="flex justify-end gap-2">
-					<PopoverClose class={buttonVariants({ variant: 'outline', size: 'sm' })}>Cancel</PopoverClose>
-					<Button variant="destructive" size="sm" onclick={handleDelete}>Delete</Button>
-				</div>
-			</PopoverContent>
-		</Popover>
-	</div>
+		{#if error}
+			<Alert variant="destructive" class="mt-4 max-w-md">
+				<AlertDescription>{error}</AlertDescription>
+			</Alert>
+		{/if}
 
-	{#if error}
-		<p class="mt-4 text-sm font-medium text-destructive">{error}</p>
-	{/if}
-{/if}
+		<div class="mt-4">
+			<AlertDialog bind:open={deleteOpen}>
+				<AlertDialogTrigger
+					disabled={deleting}
+					class={buttonVariants({ variant: 'destructive' })}
+				>
+					{deleting ? 'Deleting...' : 'Delete facility'}
+				</AlertDialogTrigger>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Delete facility?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This permanently removes this facility and cannot be undone.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction variant="destructive" onclick={handleDelete}>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+		</div>
+	{/snippet}
+</AsyncSection>
