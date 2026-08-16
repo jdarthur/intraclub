@@ -9,7 +9,18 @@
 		PopoverContent,
 		PopoverTrigger
 	} from '$lib/components/ui/popover/index.js';
+	import {
+		DropdownMenu,
+		DropdownMenuContent,
+		DropdownMenuRadioGroup,
+		DropdownMenuRadioItem,
+		DropdownMenuTrigger
+	} from '$lib/components/ui/dropdown-menu/index.js';
+	import { mode, setMode, userPrefersMode } from 'mode-watcher';
 	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+	import SunIcon from '@lucide/svelte/icons/sun';
+	import MoonIcon from '@lucide/svelte/icons/moon';
+	import MonitorIcon from '@lucide/svelte/icons/monitor';
 	import logo from '$lib/assets/favicon.svg';
 
 	const settingsLinks = [
@@ -103,7 +114,41 @@
 				>Users</a
 			>
 		</nav>
-		<div class="ml-auto flex items-center">
+		<div class="ml-auto flex items-center gap-2">
+			<!-- Theme picker: Light / Dark / System. Defaults to the OS preference
+			     (mode-watcher's `system`) and persists an explicit choice in
+			     localStorage, so the `.dark` class on <html> survives reloads. -->
+			<DropdownMenu>
+				<DropdownMenuTrigger
+					class="flex size-9 items-center justify-center rounded-md text-primary-foreground transition-colors hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring aria-expanded:bg-foreground/15"
+					aria-label="Toggle theme"
+				>
+					{#if mode.current === 'dark'}
+						<MoonIcon class="size-5" aria-hidden />
+					{:else}
+						<SunIcon class="size-5" aria-hidden />
+					{/if}
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end">
+					<DropdownMenuRadioGroup
+						value={userPrefersMode.current}
+						onValueChange={(v) => setMode(v as 'light' | 'dark' | 'system')}
+					>
+						<DropdownMenuRadioItem value="light">
+							<SunIcon class="size-4" aria-hidden />
+							Light
+						</DropdownMenuRadioItem>
+						<DropdownMenuRadioItem value="dark">
+							<MoonIcon class="size-4" aria-hidden />
+							Dark
+						</DropdownMenuRadioItem>
+						<DropdownMenuRadioItem value="system">
+							<MonitorIcon class="size-4" aria-hidden />
+							System
+						</DropdownMenuRadioItem>
+					</DropdownMenuRadioGroup>
+				</DropdownMenuContent>
+			</DropdownMenu>
 			{#if showAccount}
 				<Popover>
 					<PopoverTrigger

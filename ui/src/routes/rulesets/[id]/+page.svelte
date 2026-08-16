@@ -236,18 +236,18 @@
 
 <AsyncSection state={ruleset}>
 	{#snippet children(r)}
-		<dl class="meta">
+		<dl class="my-4 flex gap-6">
 			<div>
-				<dt>Revision</dt>
-				<dd>{r.revision}</dd>
+				<dt class="text-sm text-muted-foreground">Revision</dt>
+				<dd class="m-0">{r.revision}</dd>
 			</div>
 			<div>
-				<dt>Date</dt>
-				<dd>{new Date(r.date).toLocaleString()}</dd>
+				<dt class="text-sm text-muted-foreground">Date</dt>
+				<dd class="m-0">{new Date(r.date).toLocaleString()}</dd>
 			</div>
 			<div>
-				<dt>Superseded by</dt>
-				<dd>
+				<dt class="text-sm text-muted-foreground">Superseded by</dt>
+				<dd class="m-0">
 					{#if r.superseded_by}
 						<a href={`/rulesets/${r.superseded_by}`}>{r.superseded_by}</a>
 					{:else}
@@ -287,7 +287,7 @@
 				{:else}
 					<ol class="flex flex-col gap-3">
 						{#each sections as section, i (section.section_id)}
-							<li class="section-card">
+							<li class="rounded-lg border border-border p-3">
 								<div class="flex items-center justify-between gap-2">
 									<span class="font-medium">
 										{i + 1}. {section.title || '(untitled)'}
@@ -358,7 +358,9 @@
 									</form>
 								{:else}
 									{#if section.markdown}
-										<p class="section-contents">{section.markdown}</p>
+										<p class="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+											{section.markdown}
+										</p>
 									{/if}
 								{/if}
 							</li>
@@ -432,29 +434,3 @@
 		</div>
 	{/snippet}
 </AsyncSection>
-
-<style>
-	.meta {
-		display: flex;
-		gap: 1.5rem;
-		margin: 1rem 0;
-	}
-	.meta dt {
-		font-size: 0.85rem;
-		color: #666;
-	}
-	.meta dd {
-		margin: 0;
-	}
-	.section-card {
-		border: 1px solid var(--border);
-		border-radius: var(--radius);
-		padding: 0.75rem;
-	}
-	.section-contents {
-		margin-top: 0.5rem;
-		white-space: pre-wrap;
-		font-size: 0.875rem;
-		color: #555;
-	}
-</style>
