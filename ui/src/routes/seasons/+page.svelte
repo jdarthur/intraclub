@@ -65,7 +65,7 @@
 </script>
 
 {#snippet nameCell(s: Season)}
-	<a href={`/seasons/${s.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+	<a href={`/seasons/${s.id}`} class="font-medium text-primary underline-offset-4 hover:underline dark:text-brand">
 		{s.name}
 	</a>
 {/snippet}

@@ -67,7 +67,7 @@
 
 {#if devLink}
 	<p>
-		<a href={devLink} class="text-sm font-medium text-primary underline underline-offset-4 hover:underline">Log in</a>
+		<a href={devLink} class="text-sm font-medium text-primary underline underline-offset-4 hover:underline dark:text-brand">Log in</a>
 	</p>
 {/if}
 

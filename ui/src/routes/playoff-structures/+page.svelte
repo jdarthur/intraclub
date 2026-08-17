@@ -24,7 +24,7 @@
 {#snippet nameCell(s: PlayoffStructure)}
 	<a
 		href={`/playoff-structures/${s.id}`}
-		class="font-medium text-primary underline-offset-4 hover:underline"
+		class="font-medium text-primary underline-offset-4 hover:underline dark:text-brand"
 	>
 		{s.byes} byes / {s.number_of_teams} teams
 	</a>

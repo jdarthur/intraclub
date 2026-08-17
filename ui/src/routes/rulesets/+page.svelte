@@ -23,7 +23,7 @@
 </script>
 
 {#snippet nameCell(r: Ruleset)}
-	<a href={`/rulesets/${r.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+	<a href={`/rulesets/${r.id}`} class="font-medium text-primary underline-offset-4 hover:underline dark:text-brand">
 		{r.name}
 	</a>
 {/snippet}

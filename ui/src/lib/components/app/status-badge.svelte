@@ -52,7 +52,8 @@
 		},
 		official: {
 			variant: 'outline',
-			tone: 'border-primary/40 bg-primary/10 text-primary',
+			tone:
+				'border-primary/40 bg-primary/10 text-primary dark:border-brand/40 dark:bg-brand/10 dark:text-brand',
 			icon: ShieldCheckIcon
 		},
 		complete: {

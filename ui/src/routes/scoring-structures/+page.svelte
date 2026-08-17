@@ -45,7 +45,7 @@
 </script>
 
 {#snippet nameCell(s: ScoringStructure)}
-	<a href={`/scoring-structures/${s.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+	<a href={`/scoring-structures/${s.id}`} class="font-medium text-primary underline-offset-4 hover:underline dark:text-brand">
 		{s.name}
 	</a>
 {/snippet}
