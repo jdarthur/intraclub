@@ -151,38 +151,45 @@ test('sysadmin adds and removes co-commissioners on a season via the UI', async 
 	await page.goto(`/seasons/${seasonId}`);
 	await waitForHydration(page);
 
+	// Scope transfer-list interactions to the Co-commissioners card: the
+	// season page also shows a Late additions card whose source pool lists the
+	// same eligible users.
+	const coCommissionersCard = page
+		.locator('[data-slot="card"]')
+		.filter({ has: page.getByRole('heading', { name: 'Co-commissioners' }) });
+
 	// The sysadmin sees the Co-commissioners card, listing the existing
 	// commissioner (the sysadmin who created the season) on the target side.
 	await expect(page.getByRole('heading', { name: 'Co-commissioners' })).toBeVisible();
-	await expect(page.getByRole('button', { name: 'JD Arthur' })).toBeVisible();
+	await expect(coCommissionersCard.getByRole('button', { name: 'JD Arthur' })).toBeVisible();
 
 	// The new co-commissioner is not yet a commissioner.
 	expect(await commissionerUserIds(page, seasonId)).not.toContain(coUserId);
 
 	// Add the co-commissioner through the transfer list.
-	await page.getByRole('button', { name: `${coName} SC`, exact: true }).click();
-	await page.getByRole('button', { name: 'Move selected to pool' }).click();
-	await page.getByRole('button', { name: 'Save co-commissioners' }).click();
+	await coCommissionersCard.getByRole('button', { name: `${coName} SC`, exact: true }).click();
+	await coCommissionersCard.getByRole('button', { name: 'Move selected to pool' }).click();
+	await coCommissionersCard.getByRole('button', { name: 'Save co-commissioners' }).click();
 	// The save button stays disabled until the join rows are persisted and the
 	// list is re-seeded with the new co-commissioner on the target side.
-	await expect(page.getByRole('button', { name: 'Save co-commissioners' })).toBeEnabled();
-	await expect(page.getByRole('button', { name: `${coName} SC`, exact: true })).toBeVisible();
+	await expect(coCommissionersCard.getByRole('button', { name: 'Save co-commissioners' })).toBeEnabled();
+	await expect(coCommissionersCard.getByRole('button', { name: `${coName} SC`, exact: true })).toBeVisible();
 
 	// The API reflects the new co-commissioner.
 	expect(await commissionerUserIds(page, seasonId)).toContain(coUserId);
 
 	// Remove the co-commissioner through the transfer list (leaving the
 	// original one).
-	await page.getByRole('button', { name: `${coName} SC`, exact: true }).click();
-	await page.getByRole('button', { name: 'Move selected out of pool' }).click();
-	await page.getByRole('button', { name: 'Save co-commissioners' }).click();
-	await expect(page.getByRole('button', { name: 'Save co-commissioners' })).toBeEnabled();
+	await coCommissionersCard.getByRole('button', { name: `${coName} SC`, exact: true }).click();
+	await coCommissionersCard.getByRole('button', { name: 'Move selected out of pool' }).click();
+	await coCommissionersCard.getByRole('button', { name: 'Save co-commissioners' }).click();
+	await expect(coCommissionersCard.getByRole('button', { name: 'Save co-commissioners' })).toBeEnabled();
 	// The original commissioner is still assigned on the target side.
-	await expect(page.getByRole('button', { name: 'JD Arthur' })).toBeVisible();
+	await expect(coCommissionersCard.getByRole('button', { name: 'JD Arthur' })).toBeVisible();
 	expect(await commissionerUserIds(page, seasonId)).not.toContain(coUserId);
 
 	// The user is selectable again after removal (back in the source pool).
-	await expect(page.getByRole('button', { name: `${coName} SC`, exact: true })).toBeVisible();
+	await expect(coCommissionersCard.getByRole('button', { name: `${coName} SC`, exact: true })).toBeVisible();
 
 	// Clean up the co-commissioner rows so the table doesn't accumulate across runs.
 	const rows = (await (await page.request.get(`${API}/season_commissioner`)).json())
