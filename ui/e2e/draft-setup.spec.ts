@@ -84,10 +84,11 @@ test('draft setup page configures captains, players, and rating cutoffs', async 
 		'600'
 	);
 
-	await page.getByLabel('Captain', { exact: true }).selectOption({ label: captainOne });
-	await page.getByRole('button', { name: 'Add captain' }).click();
-	await page.getByLabel('Captain', { exact: true }).selectOption({ label: captainTwo });
-	await page.getByRole('button', { name: 'Add captain' }).click();
+	// Select the two captains in the source panel and move them into the
+	// target (draft order) with the transfer list, then initialize.
+	await page.getByRole('button', { name: captainOne }).click();
+	await page.getByRole('button', { name: captainTwo }).click();
+	await page.getByRole('button', { name: 'Move selected to pool' }).click();
 	await page.getByRole('button', { name: 'Initialize draft' }).click();
 
 	// Initialization creates the teams/draft order and adds captains to the
