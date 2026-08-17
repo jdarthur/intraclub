@@ -35,6 +35,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { NativeSelect, NativeSelectOption } from '$lib/components/ui/native-select/index.js';
+	import * as TransferList from '$lib/components/ui/transfer-list/index.js';
 	import { toast } from '$lib/toast';
 	import GaugeIcon from '@lucide/svelte/icons/gauge';
 
@@ -55,14 +56,16 @@
 	// Secondary (tie-breaker) scoring structures assigned to this structure,
 	// ordered by SecondaryIndex.
 	let secondaries = $state<ScoringStructure[]>([]);
-	// Local draft of secondary edits, built incrementally. The backend requires
-	// a composite to have exactly the required number of secondaries, so edits
-	// accumulate here and are committed in one call via the Save button.
-	let draftSecondaries = $state<ScoringStructure[]>([]);
 	let allStructures = $state<ScoringStructure[]>([]);
-	let selectedSecondaryId = $state('');
 	let secondariesError = $state('');
 	let secondariesSaving = $state(false);
+
+	// The transfer list core holds the in-memory source (eligible structures)
+	// / target (assigned secondaries in tie-breaker order) lists and
+	// selection. The backend requires a composite to have exactly the required
+	// number of secondaries, so edits accumulate in the core and are committed
+	// in one call via the Save button.
+	let transferCore = $state<TransferList.Core<ScoringStructure> | null>(null);
 
 	// The win condition as currently being edited in the form (what a save
 	// would validate against).
@@ -79,20 +82,19 @@
 	const requiredSecondaryCount = $derived(
 		secondaryType === null ? null : maximumScoreCountingUnits(formWinCondition)
 	);
-	const eligibleStructures = $derived(
+	// All catalog structures of the required secondary type, regardless of
+	// assignment (used to explain an empty source list).
+	const typeStructures = $derived(
 		secondaryType === null
 			? []
-			: allStructures.filter(
-					(s) =>
-						s.win_condition_counting_type === secondaryType &&
-						!draftSecondaries.some((d) => d.id === s.id)
-				)
+			: allStructures.filter((s) => s.win_condition_counting_type === secondaryType)
 	);
 	// The backend requires a composite to have exactly this many secondaries.
 	const canSaveSecondaries = $derived(
 		secondaryType !== null &&
 			requiredSecondaryCount !== null &&
-			draftSecondaries.length === requiredSecondaryCount
+			transferCore !== null &&
+			transferCore.target.length === requiredSecondaryCount
 	);
 	const secondaryTypeName = $derived(
 		countingTypes.find((t) => t.type === secondaryType)?.name.toLowerCase() ?? ''
@@ -104,6 +106,24 @@
 				? 'game'
 				: ''
 	);
+
+	// Keep the transfer list's source in sync with the catalog and the form's
+	// counting type: only structures of the required secondary type that are
+	// not already in the target are available to assign. Recomputing here
+	// (rather than only on load) means editing the counting type in the form
+	// immediately refilters the available structures.
+	$effect(() => {
+		const core = transferCore;
+		if (!core) return;
+		const targetIds = new Set(core.target.map((s) => s.id));
+		core.source =
+			secondaryType === null
+				? []
+				: allStructures.filter(
+						(s) =>
+							s.win_condition_counting_type === secondaryType && !targetIds.has(s.id)
+					);
+	});
 
 	function countingTypeName(type: number): string {
 		return countingTypes.find((t) => t.type === type)?.name ?? String(type);
@@ -131,55 +151,55 @@
 		return s;
 	}
 
+	function buildTransferCore(target: ScoringStructure[]): TransferList.Core<ScoringStructure> {
+		const type = secondaryCountingTypeFor(countingType);
+		const targetIds = new Set(target.map((s) => s.id));
+		return new TransferList.Core<ScoringStructure>({
+			initialSource:
+				type === null
+					? []
+					: allStructures.filter(
+							(s) => s.win_condition_counting_type === type && !targetIds.has(s.id)
+						),
+			initialTarget: target,
+			filterPredicate: (s, search) => s.name.toLowerCase().includes(search.toLowerCase())
+		});
+	}
+
 	async function loadSecondaries() {
 		try {
 			secondaries = await getScoringStructureSecondaries(id());
-			draftSecondaries = secondaries;
 		} catch (e) {
 			secondariesError = e instanceof Error ? e.message : 'Failed to load secondary scoring structures';
 		}
-		// Refresh the full catalog so the add dropdown reflects available structures.
+		// Refresh the full catalog so the transfer-list source reflects the
+		// structures available to assign.
 		try {
 			allStructures = await listScoringStructures();
 		} catch {
-			// ignore; the add dropdown just stays empty
+			// ignore; the source just stays empty
 		}
+		transferCore = buildTransferCore(secondaries);
 	}
 
 	async function saveSecondaries() {
 		secondariesError = '';
+		if (!transferCore) return;
 		secondariesSaving = true;
 		try {
 			secondaries = await setScoringStructureSecondaries(
 				id(),
-				draftSecondaries.map((s) => s.id)
+				transferCore.target.map((s) => s.id)
 			);
-			draftSecondaries = secondaries;
+			// Rebuild the transfer list from the server-confirmed ordering
+			// (SecondaryIndex), clearing any in-progress selections.
+			transferCore = buildTransferCore(secondaries);
 			toast.success('Secondaries saved');
 		} catch (err) {
 			secondariesError = err instanceof Error ? err.message : 'Failed to update secondary scoring structures';
 		} finally {
 			secondariesSaving = false;
 		}
-	}
-
-	function addToDraft() {
-		const chosen = allStructures.find((s) => s.id === selectedSecondaryId);
-		if (!chosen) return;
-		draftSecondaries = [...draftSecondaries, chosen];
-		selectedSecondaryId = '';
-	}
-
-	function removeFromDraft(index: number) {
-		draftSecondaries = draftSecondaries.filter((_, i) => i !== index);
-	}
-
-	function moveDraft(index: number, direction: -1 | 1) {
-		const target = index + direction;
-		if (target < 0 || target >= draftSecondaries.length) return;
-		const next = [...draftSecondaries];
-		[next[index], next[target]] = [next[target], next[index]];
-		draftSecondaries = next;
 	}
 
 	async function handleSave(e: Event) {
@@ -303,131 +323,111 @@
 			</CardContent>
 		</Card>
 
-		<section class="mt-6 max-w-md">
+		<section class="mt-6 max-w-2xl">
 			<h2 class="text-xl font-semibold tracking-tight">Secondary scoring structures</h2>
-
-			{#if draftSecondaries.length > 0}
-				<ul class="mt-4 flex flex-col gap-2">
-					{#each draftSecondaries as secondary, i}
-						<li class="flex items-center justify-between gap-2 rounded-lg border p-2 pl-3">
-							<span class="flex items-center gap-2">
-								<span class="text-sm text-muted-foreground">{i + 1}.</span>
-								<Badge variant="secondary" class="secondary-name">{secondary.name}</Badge>
-							</span>
-							<span class="flex items-center gap-1">
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									onclick={() => moveDraft(i, -1)}
-									disabled={i === 0}
-								>
-									↑
-								</Button>
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									onclick={() => moveDraft(i, 1)}
-									disabled={i === draftSecondaries.length - 1}
-								>
-									↓
-								</Button>
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									onclick={() => removeFromDraft(i)}
-								>
-									Remove
-								</Button>
-							</span>
-						</li>
-					{/each}
-				</ul>
-			{/if}
 
 			{#if secondaryType === null}
 				<p class="mt-2 text-sm text-muted-foreground">
 					Point-based scoring structures cannot have secondary (tie-breaker) scoring structures
-					{#if draftSecondaries.length > 0}
-						— remove the {draftSecondaries.length} assigned secondaries (or change the counting type)
-						before saving.
+					{#if transferCore && transferCore.target.length > 0}
+						— move the {transferCore.target.length} assigned secondaries back to the
+						available list (or change the counting type) before saving.
 					{/if}
 				</p>
 			{:else if requiredSecondaryCount === null}
 				<p class="mt-2 text-sm text-muted-foreground">
 					Win conditions that require winning by 2 or more without an instant-win threshold cannot
 					be composite
-					{#if draftSecondaries.length > 0}
-						— remove the {draftSecondaries.length} assigned secondaries (or change the win condition)
-						before saving.
+					{#if transferCore && transferCore.target.length > 0}
+						— move the {transferCore.target.length} assigned secondaries back to the
+						available list (or change the win condition) before saving.
 					{/if}
 				</p>
 			{:else}
 				<p class="mt-1 text-sm text-muted-foreground">
-					The {secondaryTypeName}-based structures used to score each {unitNoun} in this structure,
-					in tie-breaker order.
+					The {secondaryTypeName}-based structures used to score each {unitNoun} in this
+					structure, in tie-breaker order. Changes apply when you save.
 				</p>
+			{/if}
 
-				{#if draftSecondaries.length === 0}
-					<p class="mt-4 text-muted-foreground">No secondary scoring structures assigned yet.</p>
-				{/if}
+			{#if transferCore}
+				<div class="mt-4">
+					<TransferList.Root direction="horizontal">
+						<TransferList.Container>
+							<TransferList.Title title="Available secondaries" />
+							<TransferList.Toolbar
+								variant="source"
+								core={transferCore}
+								inputPlaceholder="Search secondaries..."
+							/>
+							<TransferList.Body>
+								{#each transferCore.filteredSource as row (row.id)}
+									<TransferList.Item side="source" {row} core={transferCore}>
+										<Badge variant="secondary" class="secondary-name">{row.name}</Badge>
+									</TransferList.Item>
+								{/each}
+							</TransferList.Body>
+						</TransferList.Container>
+						<TransferList.Container class="secondary-target">
+							<TransferList.Title title="Assigned secondaries" />
+							<TransferList.Toolbar
+								variant="target"
+								core={transferCore}
+								inputPlaceholder="Search secondaries..."
+							/>
+							<TransferList.Body>
+								{#each transferCore.filteredTarget as row (row.id)}
+									<TransferList.Item side="target" {row} core={transferCore}>
+										<Badge variant="secondary" class="secondary-name">{row.name}</Badge>
+									</TransferList.Item>
+								{/each}
+							</TransferList.Body>
+						</TransferList.Container>
+					</TransferList.Root>
 
-				{#if draftSecondaries.length !== requiredSecondaryCount}
-					<p class="mt-2 text-sm text-muted-foreground">
-						This win condition can play at most {requiredSecondaryCount} {unitNoun}s, so a
-						composite structure needs exactly {requiredSecondaryCount} secondary scoring
-						structures ({draftSecondaries.length} currently assigned).
-					</p>
-				{:else if draftSecondaries.length > 0}
-					<p class="mt-2 text-sm text-muted-foreground">
-						All {requiredSecondaryCount} required secondary scoring structures assigned.
-					</p>
-				{/if}
+					{#if secondaryType !== null && requiredSecondaryCount !== null}
+						<div class="mt-4 flex flex-col gap-2">
+							{#if transferCore.target.length === 0}
+								<p class="text-sm text-muted-foreground">
+									No secondary scoring structures assigned yet.
+								</p>
+							{/if}
 
-				{#if eligibleStructures.length > 0}
-					<div class="mt-4 flex items-center gap-2">
-						<NativeSelect
-							bind:value={selectedSecondaryId}
-							aria-label="Secondary structure to assign"
-							class="flex-1"
-						>
-							<NativeSelectOption value="" disabled
-								>Select a {secondaryTypeName} structure…</NativeSelectOption
-							>
-							{#each eligibleStructures as s}
-								<NativeSelectOption value={s.id}>{s.name}</NativeSelectOption>
-							{/each}
-						</NativeSelect>
-						<Button
-							type="button"
-							onclick={addToDraft}
-							disabled={
-								!selectedSecondaryId || draftSecondaries.length >= requiredSecondaryCount
-							}
-						>
-							Add secondary
-						</Button>
-					</div>
-				{:else}
-					<p class="mt-4 text-sm text-muted-foreground">
-						No {secondaryTypeName}-based scoring structures available to assign.
-					</p>
-				{/if}
+							{#if transferCore.target.length !== requiredSecondaryCount}
+								<p class="text-sm text-muted-foreground">
+									This win condition can play at most {requiredSecondaryCount} {unitNoun}s,
+									so a composite structure needs exactly {requiredSecondaryCount} secondary
+									scoring structures ({transferCore.target.length} currently assigned).
+								</p>
+							{:else if transferCore.target.length > 0}
+								<p class="text-sm text-muted-foreground">
+									All {requiredSecondaryCount} required secondary scoring structures assigned.
+								</p>
+							{/if}
 
-				<Button
-					type="button"
-					onclick={saveSecondaries}
-					disabled={secondariesSaving || !canSaveSecondaries}
-					class="mt-4"
-				>
-					{secondariesSaving
-						? 'Saving…'
-						: canSaveSecondaries
-							? 'Save secondaries'
-							: `Add ${requiredSecondaryCount - draftSecondaries.length} more to save`}
-				</Button>
+							{#if typeStructures.length === 0}
+								<p class="text-sm text-muted-foreground">
+									No {secondaryTypeName}-based scoring structures available to assign.
+								</p>
+							{/if}
+
+							<div class="mt-1 flex items-center gap-3">
+								<Button
+									type="button"
+									onclick={saveSecondaries}
+									disabled={secondariesSaving || !canSaveSecondaries}
+								>
+									{secondariesSaving ? 'Saving…' : 'Save secondaries'}
+								</Button>
+								<span class="text-sm text-muted-foreground">
+									{transferCore.target.length} of {requiredSecondaryCount} required
+								</span>
+							</div>
+						</div>
+					{/if}
+				</div>
+			{:else}
+				<p class="mt-4 text-sm text-muted-foreground">Loading secondaries...</p>
 			{/if}
 
 			{#if secondariesError}
