@@ -152,33 +152,37 @@ test('sysadmin adds and removes co-commissioners on a season via the UI', async 
 	await waitForHydration(page);
 
 	// The sysadmin sees the Co-commissioners card, listing the existing
-	// commissioner (the sysadmin who created the season).
-	await expect(page.getByText('Co-commissioners', { exact: true })).toBeVisible();
-	await expect(page.getByRole('list').filter({ hasText: 'JD Arthur' })).toBeVisible();
+	// commissioner (the sysadmin who created the season) on the target side.
+	await expect(page.getByRole('heading', { name: 'Co-commissioners' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'JD Arthur' })).toBeVisible();
 
 	// The new co-commissioner is not yet a commissioner.
 	expect(await commissionerUserIds(page, seasonId)).not.toContain(coUserId);
 
-	// Add the co-commissioner through the UI.
-	await page.getByLabel('User').selectOption({ label: `${coName} SC` });
-	await page.getByRole('button', { name: 'Add co-commissioner' }).click();
-	await expect(page.getByRole('listitem').filter({ hasText: coName })).toBeVisible();
+	// Add the co-commissioner through the transfer list.
+	await page.getByRole('button', { name: `${coName} SC`, exact: true }).click();
+	await page.getByRole('button', { name: 'Move selected to pool' }).click();
+	await page.getByRole('button', { name: 'Save co-commissioners' }).click();
+	// The save button stays disabled until the join rows are persisted and the
+	// list is re-seeded with the new co-commissioner on the target side.
+	await expect(page.getByRole('button', { name: 'Save co-commissioners' })).toBeEnabled();
+	await expect(page.getByRole('button', { name: `${coName} SC`, exact: true })).toBeVisible();
 
 	// The API reflects the new co-commissioner.
 	expect(await commissionerUserIds(page, seasonId)).toContain(coUserId);
 
-	// The added user no longer appears in the add dropdown.
-	await expect(page.getByLabel('User')).not.toHaveValue(coUserId);
-
-	// Remove the co-commissioner through the UI (leaving the original one).
-	await page.getByRole('listitem').filter({ hasText: coName }).getByRole('button', { name: 'Remove' }).click();
-	await expect(page.getByRole('listitem').filter({ hasText: coName })).toHaveCount(0);
-	await expect(page.getByRole('list').filter({ hasText: 'JD Arthur' })).toBeVisible();
+	// Remove the co-commissioner through the transfer list (leaving the
+	// original one).
+	await page.getByRole('button', { name: `${coName} SC`, exact: true }).click();
+	await page.getByRole('button', { name: 'Move selected out of pool' }).click();
+	await page.getByRole('button', { name: 'Save co-commissioners' }).click();
+	await expect(page.getByRole('button', { name: 'Save co-commissioners' })).toBeEnabled();
+	// The original commissioner is still assigned on the target side.
+	await expect(page.getByRole('button', { name: 'JD Arthur' })).toBeVisible();
 	expect(await commissionerUserIds(page, seasonId)).not.toContain(coUserId);
 
-	// The user is selectable again after removal.
-	await page.getByLabel('User').selectOption({ label: `${coName} SC` });
-	await expect(page.getByRole('button', { name: 'Add co-commissioner' })).toBeEnabled();
+	// The user is selectable again after removal (back in the source pool).
+	await expect(page.getByRole('button', { name: `${coName} SC`, exact: true })).toBeVisible();
 
 	// Clean up the co-commissioner rows so the table doesn't accumulate across runs.
 	const rows = (await (await page.request.get(`${API}/season_commissioner`)).json())
