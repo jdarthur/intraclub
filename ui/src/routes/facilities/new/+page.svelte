@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createFacility } from '$lib/facility';
 	import { goto } from '$app/navigation';
-	import { PageHeader } from '$lib/components/app/index.js';
+	import { PageHeader, PhotoPicker } from '$lib/components/app/index.js';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Card, CardContent, CardHeader, CardTitle } from '$lib/components/ui/card/index.js';
@@ -89,13 +89,8 @@
 				/>
 			</div>
 			<div class="flex flex-col gap-2">
-				<Label for="layoutPhoto">Layout photo ID (optional)</Label>
-				<Input
-					id="layoutPhoto"
-					type="text"
-					bind:value={layoutPhoto}
-					placeholder="16-char hex ID"
-				/>
+				<Label>Layout photo (optional)</Label>
+				<PhotoPicker label="Layout photo" bind:value={layoutPhoto} />
 			</div>
 			<Button type="submit" disabled={submitting} class="w-fit">
 				{submitting ? 'Creating...' : 'Create facility'}

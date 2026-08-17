@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { Async } from '$lib/async.svelte';
-	import { AsyncSection, PageHeader } from '$lib/components/app/index.js';
+	import { AsyncSection, PageHeader, PhotoPicker } from '$lib/components/app/index.js';
 	import { Alert, AlertDescription } from '$lib/components/ui/alert/index.js';
 	import {
 		AlertDialog,
@@ -116,13 +116,8 @@
 						<Input id="courts" type="number" bind:value={courts} min="1" required />
 					</div>
 					<div class="flex flex-col gap-2">
-						<Label for="layoutPhoto">Layout photo ID (optional)</Label>
-						<Input
-							id="layoutPhoto"
-							type="text"
-							bind:value={layoutPhoto}
-							placeholder="16-char hex ID"
-						/>
+						<Label>Layout photo (optional)</Label>
+						<PhotoPicker label="Layout photo" bind:value={layoutPhoto} />
 					</div>
 					<Button type="submit" disabled={saving} class="w-fit">
 						{saving ? 'Saving...' : 'Save changes'}
