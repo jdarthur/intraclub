@@ -40,39 +40,55 @@ test('assign ratings to a format: add, list, remove', async ({ page }) => {
 	await page.getByRole('button', { name: 'Create format' }).click();
 	await expect(page).toHaveURL(/\/formats\/[0-9a-f]+$/);
 
-	// No ratings assigned yet.
-	await expect(page.getByText('No ratings assigned yet.')).toBeVisible();
+	// The Ratings tab hosts the transfer list.
+	await page.getByRole('tab', { name: 'Ratings' }).click();
 
-	const ratingNames = page.locator('.rating-name');
+	// Fresh format: no ratings assigned yet; both ratings are available in the
+	// source list. The target is empty, so saving is blocked.
+	await expect(page.getByText('0 ratings')).toBeVisible();
+	await expect(page.getByText('A format must keep at least one rating.')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Save ratings' })).toBeDisabled();
 
-	// Assign the first rating.
-	await page.getByLabel('Rating to assign').selectOption({ label: ratingName1 });
-	await page.getByRole('button', { name: 'Add rating' }).click();
-	await expect(ratingNames.getByText(ratingName1)).toBeVisible();
+	// Assign the first rating: select it in the source, move it, save.
+	await page.getByRole('button', { name: ratingName1, exact: true }).click();
+	await page.getByRole('button', { name: 'Move selected to pool' }).click();
+	await expect(page.getByText('1 rating')).toBeVisible();
+	await page.getByRole('button', { name: 'Save ratings' }).click();
+	await expect(page.getByText('1 rating')).toBeVisible();
 
 	// Assign the second rating.
-	await page.getByLabel('Rating to assign').selectOption({ label: ratingName2 });
-	await page.getByRole('button', { name: 'Add rating' }).click();
-	await expect(ratingNames.getByText(ratingName1)).toBeVisible();
-	await expect(ratingNames.getByText(ratingName2)).toBeVisible();
+	await page.getByRole('button', { name: ratingName2, exact: true }).click();
+	await page.getByRole('button', { name: 'Move selected to pool' }).click();
+	await page.getByRole('button', { name: 'Save ratings' }).click();
+	await expect(page.getByText('2 ratings')).toBeVisible();
 
-	// Remove the first rating; it disappears and becomes assignable again.
-	const firstItem = page.locator('li', { hasText: ratingName1 });
-	await firstItem.getByRole('button', { name: 'Remove' }).click();
-	await expect(ratingNames.getByText(ratingName1)).toHaveCount(0);
-	await expect(ratingNames.getByText(ratingName2)).toBeVisible();
-	await expect(page.getByLabel('Rating to assign')).toContainText(ratingName1);
+	// Remove the first rating: select it in the target, move it back out, save.
+	const firstItem = page.getByRole('button', { name: ratingName1, exact: true });
+	await firstItem.getByRole('checkbox').click();
+	await expect(firstItem.getByRole('checkbox')).toHaveAttribute('aria-checked', 'true');
+	await page.getByRole('button', { name: 'Move selected out of pool' }).click();
+	await expect(page.getByText('1 rating')).toBeVisible();
+	await page.getByRole('button', { name: 'Save ratings' }).click();
+	await expect(page.getByText('1 rating')).toBeVisible();
 
-	// A format must keep at least one rating, so with only rating2 remaining the
-	// Remove button is disabled.
-	const secondItem = page.locator('li', { hasText: ratingName2 });
-	await expect(secondItem.getByRole('button', { name: 'Remove' })).toBeDisabled();
+	// The removed rating is available again and the remaining one is assigned.
+	await expect(page.getByRole('button', { name: ratingName1, exact: true })).toBeVisible();
+	await expect(page.getByRole('button', { name: ratingName2, exact: true })).toBeVisible();
+
+	// A format must keep at least one rating: move the last one out and the
+	// save button becomes disabled again.
+	const secondItem = page.getByRole('button', { name: ratingName2, exact: true });
+	await secondItem.getByRole('checkbox').click();
+	await page.getByRole('button', { name: 'Move selected out of pool' }).click();
+	await expect(page.getByText('0 ratings')).toBeVisible();
 	await expect(page.getByText('A format must keep at least one rating.')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Save ratings' })).toBeDisabled();
 
 	// Clean up. Deleting a format now cascades to its format_rating / format_line
 	// join rows, so the ratings are no longer "in-use" and can be deleted to
 	// keep the shared dev db clean. Both deletes below confirm via an in-app
-	// popover (no window.confirm).
+	// popover (no window.confirm). The delete button lives on the Details tab.
+	await page.getByRole('tab', { name: 'Details' }).click();
 	await page.getByRole('button', { name: 'Delete format' }).click();
 	await page.getByRole('button', { name: 'Delete', exact: true }).click();
 	await expect(page).toHaveURL('/formats');
