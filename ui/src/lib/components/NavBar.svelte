@@ -23,41 +23,55 @@
 	import SunIcon from '@lucide/svelte/icons/sun';
 	import MoonIcon from '@lucide/svelte/icons/moon';
 	import MonitorIcon from '@lucide/svelte/icons/monitor';
+	import ShieldIcon from '@lucide/svelte/icons/shield';
+	import CalendarIcon from '@lucide/svelte/icons/calendar';
+	import ListOrderedIcon from '@lucide/svelte/icons/list-ordered';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
+	import BuildingIcon from '@lucide/svelte/icons/building';
+	import Building2Icon from '@lucide/svelte/icons/building-2';
+	import ListTreeIcon from '@lucide/svelte/icons/list-tree';
+	import StarIcon from '@lucide/svelte/icons/star';
+	import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
+	import GaugeIcon from '@lucide/svelte/icons/gauge';
+	import TrophyIcon from '@lucide/svelte/icons/trophy';
+	import UsersIcon from '@lucide/svelte/icons/users';
+	import ImageIcon from '@lucide/svelte/icons/image';
 	import logo from '$lib/assets/favicon.svg';
 
-	// League-config pages live in the Settings dropdown.
+	// League-config pages live in the Settings dropdown. Each link carries the
+	// same icon its page uses (see the PageHeader on each list page).
 	const settingsLinks = [
-		{ href: '/organizations', label: 'Organizations' },
-		{ href: '/facilities', label: 'Facilities' },
-		{ href: '/formats', label: 'Formats' },
-		{ href: '/ratings', label: 'Ratings' },
-		{ href: '/rulesets', label: 'Rulesets' },
-		{ href: '/scoring-structures', label: 'Scoring Structures' },
-		{ href: '/playoff-structures', label: 'Playoff Structures' }
+		{ href: '/organizations', label: 'Organizations', icon: BuildingIcon },
+		{ href: '/facilities', label: 'Facilities', icon: Building2Icon },
+		{ href: '/formats', label: 'Formats', icon: ListTreeIcon },
+		{ href: '/ratings', label: 'Ratings', icon: StarIcon },
+		{ href: '/rulesets', label: 'Rulesets', icon: ScrollTextIcon },
+		{ href: '/scoring-structures', label: 'Scoring Structures', icon: GaugeIcon },
+		{ href: '/playoff-structures', label: 'Playoff Structures', icon: TrophyIcon }
 	];
 
 	// Users and Photos are also under Settings, separated from the config pages
 	// by a divider so the account/asset group reads as its own tab.
 	const accountLinks = [
-		{ href: '/users', label: 'Users' },
-		{ href: '/photos', label: 'Photos' }
+		{ href: '/users', label: 'Users', icon: UsersIcon },
+		{ href: '/photos', label: 'Photos', icon: ImageIcon }
 	];
 
 	// Seasons is a dropdown: the season dashboard plus the draft-creation flow.
 	const seasonsLinks = [
-		{ href: '/seasons', label: 'Seasons' },
-		{ href: '/drafts/new', label: 'New Draft' }
+		{ href: '/seasons', label: 'Seasons', icon: CalendarIcon },
+		{ href: '/drafts/new', label: 'New Draft', icon: ListOrderedIcon }
 	];
 
 	// Shared look for every nav item (dropdown triggers + top-level links): same
 	// height, size and weight so nothing reads smaller or lighter than the rest.
 	const navItemClass =
-		'flex h-9 items-center rounded-md px-3 text-base font-medium text-primary-foreground transition-colors hover:bg-foreground/10';
+		'flex h-9 items-center gap-2 rounded-md px-3 text-base font-medium text-primary-foreground transition-colors hover:bg-foreground/10';
 	const navItemActiveClass = 'bg-foreground/15';
 
 	// Mobile sheet links sit on the popover surface instead of the primary bar.
 	const mobileNavItemClass =
-		'flex h-9 items-center rounded-md px-3 text-base font-medium transition-colors hover:bg-muted';
+		'flex h-9 items-center gap-2 rounded-md px-3 text-base font-medium transition-colors hover:bg-muted';
 	const mobileNavItemActiveClass = 'bg-muted text-foreground';
 
 	// Sheet state: bind:open keeps the trigger and content in sync so links can
@@ -124,19 +138,20 @@
 							onclick={closeMobile}
 							class={`${mobileNavItemClass} ${isActive('/teams') ? mobileNavItemActiveClass : ''}`}
 							aria-current={isActive('/teams') ? 'page' : undefined}
-							>Teams</a
+							><ShieldIcon class="size-4 shrink-0" aria-hidden />Teams</a
 						>
 						<p
 							class="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
 							>Seasons</p
 						>
 						{#each seasonsLinks as link}
+							{@const Icon = link.icon}
 							<a
 								href={link.href}
 								onclick={closeMobile}
 								class={`${mobileNavItemClass} ${isActive(link.href) ? mobileNavItemActiveClass : ''}`}
 								aria-current={isActive(link.href) ? 'page' : undefined}
-								>{link.label}</a
+								><Icon class="size-4 shrink-0" aria-hidden />{link.label}</a
 							>
 						{/each}
 						<p
@@ -144,22 +159,24 @@
 							>Settings</p
 						>
 						{#each settingsLinks as link}
+							{@const Icon = link.icon}
 							<a
 								href={link.href}
 								onclick={closeMobile}
 								class={`${mobileNavItemClass} ${isActive(link.href) ? mobileNavItemActiveClass : ''}`}
 								aria-current={isActive(link.href) ? 'page' : undefined}
-								>{link.label}</a
+								><Icon class="size-4 shrink-0" aria-hidden />{link.label}</a
 							>
 						{/each}
 						<div class="my-2 border-t"></div>
 						{#each accountLinks as link}
+							{@const Icon = link.icon}
 							<a
 								href={link.href}
 								onclick={closeMobile}
 								class={`${mobileNavItemClass} ${isActive(link.href) ? mobileNavItemActiveClass : ''}`}
 								aria-current={isActive(link.href) ? 'page' : undefined}
-								>{link.label}</a
+								><Icon class="size-4 shrink-0" aria-hidden />{link.label}</a
 							>
 						{/each}
 					</div>
@@ -184,47 +201,50 @@
 					href="/teams"
 					class={`${navItemClass} ${isActive('/teams') ? navItemActiveClass : ''}`}
 					aria-current={isActive('/teams') ? 'page' : undefined}
-					>Teams</a
+					><ShieldIcon class="size-4 shrink-0" aria-hidden />Teams</a
 				>
 				<Popover>
 					<PopoverTrigger
-						class={`${navItemClass} gap-2 ${seasonsActive ? navItemActiveClass : ''} aria-expanded:bg-foreground/15 aria-expanded:text-primary-foreground`}
+						class={`${navItemClass} ${seasonsActive ? navItemActiveClass : ''} aria-expanded:bg-foreground/15 aria-expanded:text-primary-foreground`}
 						aria-current={seasonsActive ? 'true' : undefined}
-						>Seasons<ChevronDownIcon class="size-4 shrink-0 opacity-70" aria-hidden /></PopoverTrigger
+						><CalendarIcon class="size-4 shrink-0" aria-hidden />Seasons<ChevronDownIcon class="size-4 shrink-0 opacity-70" aria-hidden /></PopoverTrigger
 					>
 					<PopoverContent class="flex flex-col gap-0.5 p-1.5" align="start">
 						{#each seasonsLinks as link}
+							{@const Icon = link.icon}
 							<a
 								href={link.href}
-								class="rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground {isActive(link.href) ? 'bg-muted font-semibold text-foreground' : ''}"
+								class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground {isActive(link.href) ? 'bg-muted font-semibold text-foreground' : ''}"
 								aria-current={isActive(link.href) ? 'page' : undefined}
-								>{link.label}</a
+								><Icon class="size-4 shrink-0" aria-hidden />{link.label}</a
 							>
 						{/each}
 					</PopoverContent>
 				</Popover>
 				<Popover>
 					<PopoverTrigger
-						class={`${navItemClass} gap-2 ${settingsActive ? navItemActiveClass : ''} aria-expanded:bg-foreground/15 aria-expanded:text-primary-foreground`}
+						class={`${navItemClass} ${settingsActive ? navItemActiveClass : ''} aria-expanded:bg-foreground/15 aria-expanded:text-primary-foreground`}
 						aria-current={settingsActive ? 'true' : undefined}
-						>Settings<ChevronDownIcon class="size-4 shrink-0 opacity-70" aria-hidden /></PopoverTrigger
+						><SettingsIcon class="size-4 shrink-0" aria-hidden />Settings<ChevronDownIcon class="size-4 shrink-0 opacity-70" aria-hidden /></PopoverTrigger
 					>
 					<PopoverContent class="flex flex-col gap-0.5 p-1.5" align="start">
 						{#each settingsLinks as link}
+							{@const Icon = link.icon}
 							<a
 								href={link.href}
-								class="rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground {isActive(link.href) ? 'bg-muted font-semibold text-foreground' : ''}"
+								class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground {isActive(link.href) ? 'bg-muted font-semibold text-foreground' : ''}"
 								aria-current={isActive(link.href) ? 'page' : undefined}
-								>{link.label}</a
+								><Icon class="size-4 shrink-0" aria-hidden />{link.label}</a
 							>
 						{/each}
 						<div class="my-1 border-t"></div>
 						{#each accountLinks as link}
+							{@const Icon = link.icon}
 							<a
 								href={link.href}
-								class="rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground {isActive(link.href) ? 'bg-muted font-semibold text-foreground' : ''}"
+								class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground {isActive(link.href) ? 'bg-muted font-semibold text-foreground' : ''}"
 								aria-current={isActive(link.href) ? 'page' : undefined}
-								>{link.label}</a
+								><Icon class="size-4 shrink-0" aria-hidden />{link.label}</a
 							>
 						{/each}
 					</PopoverContent>
