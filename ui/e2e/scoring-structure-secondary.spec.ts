@@ -36,7 +36,7 @@ async function createScoringStructure(
 	await expect(page).toHaveURL(/\/scoring-structures\/[0-9a-f]+$/);
 }
 
-test('scoring structure secondaries: add, save, reorder, remove', async ({ page }) => {
+test('scoring structure secondaries: assign, save, reorder, remove', async ({ page }) => {
 	await login(page);
 
 	const unique = Date.now();
@@ -47,8 +47,7 @@ test('scoring structure secondaries: add, save, reorder, remove', async ({ page 
 
 	// Three game-based structures to use as secondaries (a set-based primary
 	// uses game-based secondaries), and a set-based primary (best of 3 sets ->
-	// plays at most 3 sets -> needs 3 secondaries). The dropdown excludes
-	// already-assigned structures, so three distinct games are needed.
+	// plays at most 3 sets -> needs 3 secondaries).
 	await createScoringStructure(page, gameA, 'Game', '11', '1', '0');
 	await createScoringStructure(page, gameB, 'Game', '11', '1', '0');
 	await createScoringStructure(page, gameC, 'Game', '11', '1', '0');
@@ -62,45 +61,51 @@ test('scoring structure secondaries: add, save, reorder, remove', async ({ page 
 		)
 	).toBeVisible();
 
-	const secondaryNames = page.locator('.secondary-name');
+	// The target list shows the assigned secondaries in tie-breaker order; the
+	// source list shows the structures still available to assign.
+	const targetItems = page.locator('.secondary-target .secondary-name');
 
-	// Build the draft by adding each secondary in turn. Edits accumulate
-	// locally and are only committed once the exact required count is reached.
-	const toAdd = [gameA, gameB, gameC];
-	for (let i = 0; i < toAdd.length; i++) {
-		await page
-			.getByLabel('Secondary structure to assign')
-			.selectOption({ label: toAdd[i] });
-		await page.getByRole('button', { name: 'Add secondary' }).click();
-		if (i < toAdd.length - 1) {
-			await expect(page.getByText(`(${i + 1} currently assigned)`)).toBeVisible();
-		}
+	// Build the assignment by moving each secondary into the target in turn;
+	// the target order follows the order they are moved in.
+	for (const name of [gameA, gameB, gameC]) {
+		await page.getByRole('button', { name, exact: true }).click();
+		await page.getByRole('button', { name: 'Move selected to pool' }).click();
 	}
-	await expect(secondaryNames.nth(0)).toHaveText(gameA);
-	await expect(secondaryNames.nth(1)).toHaveText(gameB);
-	await expect(secondaryNames.nth(2)).toHaveText(gameC);
+	await expect(targetItems.nth(0)).toHaveText(gameA);
+	await expect(targetItems.nth(1)).toHaveText(gameB);
+	await expect(targetItems.nth(2)).toHaveText(gameC);
 	await expect(
 		page.getByText('All 3 required secondary scoring structures assigned.')
 	).toBeVisible();
 
-	// Commit the draft once complete.
+	// Commit the assignment once complete.
 	await page.getByRole('button', { name: 'Save secondaries' }).click();
 	await expect(
 		page.getByText('All 3 required secondary scoring structures assigned.')
 	).toBeVisible();
 
-	// Reorder: move the first row (gameA) down so gameB becomes the first
-	// tie-breaker, then commit.
+	// Reorder: move the first tie-breaker (gameA) to the end by removing it
+	// and re-adding it; the saved order follows the target list order
+	// (SecondaryIndex).
 	await page
-		.locator('li')
-		.filter({ hasText: gameA })
-		.first()
-		.getByRole('button', { name: '↓' })
+		.locator('.secondary-target')
+		.getByRole('button', { name: gameA, exact: true })
+		.getByRole('checkbox')
 		.click();
-	await expect(secondaryNames.nth(0)).toHaveText(gameB);
-	await expect(secondaryNames.nth(1)).toHaveText(gameA);
-	await expect(secondaryNames.nth(2)).toHaveText(gameC);
+	await page.getByRole('button', { name: 'Move selected out of pool' }).click();
+	await page.getByRole('button', { name: gameA, exact: true }).click();
+	await page.getByRole('button', { name: 'Move selected to pool' }).click();
+	await expect(targetItems.nth(0)).toHaveText(gameB);
+	await expect(targetItems.nth(1)).toHaveText(gameC);
+	await expect(targetItems.nth(2)).toHaveText(gameA);
 	await page.getByRole('button', { name: 'Save secondaries' }).click();
+
+	// The reordered assignment survives a reload (SecondaryIndex order).
+	await page.reload();
+	await waitForHydration(page);
+	await expect(targetItems.nth(0)).toHaveText(gameB);
+	await expect(targetItems.nth(1)).toHaveText(gameC);
+	await expect(targetItems.nth(2)).toHaveText(gameA);
 
 	// Saving the primary succeeds now that the required number of secondaries
 	// is assigned.
@@ -108,23 +113,24 @@ test('scoring structure secondaries: add, save, reorder, remove', async ({ page 
 	await page.getByRole('button', { name: 'Save changes' }).click();
 	await expect(page.getByRole('heading', { name: `${match} Updated` })).toBeVisible();
 
-	// Remove one secondary; the draft is now under-assigned, so the save is
-	// disabled until the exact required count is restored.
+	// Remove one secondary; the assignment is now under the exact count, so
+	// the save is disabled until the exact required count is restored.
 	await page
-		.locator('li')
-		.filter({ hasText: gameC })
-		.getByRole('button', { name: 'Remove' })
+		.locator('.secondary-target')
+		.getByRole('button', { name: gameC, exact: true })
+		.getByRole('checkbox')
 		.click();
+	await page.getByRole('button', { name: 'Move selected out of pool' }).click();
 	await expect(
 		page.getByText(
 			'This win condition can play at most 3 sets, so a composite structure needs exactly 3 secondary scoring structures (2 currently assigned).'
 		)
 	).toBeVisible();
-	await expect(page.getByRole('button', { name: /Add 1 more to save/ })).toBeDisabled();
+	await expect(page.getByRole('button', { name: 'Save secondaries' })).toBeDisabled();
 
 	// Re-add a secondary and commit; the draft is complete again.
-	await page.getByLabel('Secondary structure to assign').selectOption({ label: gameC });
-	await page.getByRole('button', { name: 'Add secondary' }).click();
+	await page.getByRole('button', { name: gameC, exact: true }).click();
+	await page.getByRole('button', { name: 'Move selected to pool' }).click();
 	await expect(
 		page.getByText('All 3 required secondary scoring structures assigned.')
 	).toBeVisible();
