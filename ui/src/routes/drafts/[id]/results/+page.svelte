@@ -116,7 +116,7 @@
 						Season created:
 						<a
 							href={`/seasons/${season.id}`}
-							class="ml-1 font-medium text-foreground underline underline-offset-2 hover:text-primary"
+							class="ml-1 font-medium text-foreground underline underline-offset-2 hover:text-primary dark:hover:text-brand"
 						>
 							{season.name}
 						</a>

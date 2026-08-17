@@ -496,7 +496,7 @@
 		<div class="mt-8 grid gap-6 sm:grid-cols-3">
 			<Card>
 				<CardHeader>
-					<DraftingCompassIcon class="size-6 text-primary" aria-hidden />
+					<DraftingCompassIcon class="size-6 text-primary dark:text-brand" aria-hidden />
 					<CardTitle>Draft</CardTitle>
 				</CardHeader>
 				<CardContent>
@@ -508,7 +508,7 @@
 			</Card>
 			<Card>
 				<CardHeader>
-					<CalendarDaysIcon class="size-6 text-primary" aria-hidden />
+					<CalendarDaysIcon class="size-6 text-primary dark:text-brand" aria-hidden />
 					<CardTitle>Season</CardTitle>
 				</CardHeader>
 				<CardContent>
@@ -520,7 +520,7 @@
 			</Card>
 			<Card>
 				<CardHeader>
-					<TrophyIcon class="size-6 text-primary" aria-hidden />
+					<TrophyIcon class="size-6 text-primary dark:text-brand" aria-hidden />
 					<CardTitle>Score</CardTitle>
 				</CardHeader>
 				<CardContent>
@@ -574,7 +574,7 @@
 							<li>
 								<a
 									href={`/teams/${roster.team.id}`}
-									class="text-sm font-medium text-primary underline-offset-4 hover:underline"
+									class="text-sm font-medium text-primary underline-offset-4 hover:underline dark:text-brand"
 								>
 									{roster.team.name}
 								</a>

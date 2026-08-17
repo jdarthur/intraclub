@@ -30,7 +30,7 @@
 </script>
 
 {#snippet nameCell(u: User)}
-	<a href={`/users/${u.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+	<a href={`/users/${u.id}`} class="font-medium text-primary underline-offset-4 hover:underline dark:text-brand">
 		{fullName(u)}
 	</a>
 {/snippet}

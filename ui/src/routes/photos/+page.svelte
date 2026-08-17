@@ -40,7 +40,7 @@
 {#snippet altCell(p: Photo)}
 	<a
 		href={`/photos/${p.id}`}
-		class="font-medium text-primary underline-offset-4 hover:underline"
+		class="font-medium text-primary underline-offset-4 hover:underline dark:text-brand"
 	>
 		{p.alt_text || '(no alt text)'}
 	</a>

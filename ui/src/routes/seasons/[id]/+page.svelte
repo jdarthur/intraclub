@@ -1508,7 +1508,7 @@
 						<CardTitle>
 							<a
 								href={`/teams/${team.teamId}`}
-								class="text-primary underline-offset-4 hover:underline"
+								class="text-primary underline-offset-4 hover:underline dark:text-brand"
 							>
 								{team.name}
 							</a>

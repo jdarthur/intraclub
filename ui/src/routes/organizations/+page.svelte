@@ -22,7 +22,7 @@
 </script>
 
 {#snippet nameCell(o: Organization)}
-	<a href={`/organizations/${o.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+	<a href={`/organizations/${o.id}`} class="font-medium text-primary underline-offset-4 hover:underline dark:text-brand">
 		{o.name}
 	</a>
 {/snippet}

@@ -6,7 +6,7 @@
 		variants: {
 			tone: {
 				default: 'text-muted-foreground',
-				primary: 'text-primary',
+				primary: 'text-primary dark:text-brand',
 				success: 'text-success',
 				warning: 'text-warning',
 				info: 'text-info',

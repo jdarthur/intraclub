@@ -156,7 +156,7 @@
 							<span
 								class={cn(
 									'relative block w-full overflow-hidden rounded-md ring-1 ring-foreground/10',
-									p.id === value && 'ring-2 ring-primary'
+									p.id === value && 'ring-2 ring-primary dark:ring-brand'
 								)}
 							>
 								<img

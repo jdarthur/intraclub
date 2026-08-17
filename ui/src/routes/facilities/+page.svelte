@@ -24,7 +24,7 @@
 </script>
 
 {#snippet nameCell(f: Facility)}
-	<a href={`/facilities/${f.id}`} class="font-medium text-primary underline-offset-4 hover:underline">
+	<a href={`/facilities/${f.id}`} class="font-medium text-primary underline-offset-4 hover:underline dark:text-brand">
 		{f.name}
 	</a>
 {/snippet}
