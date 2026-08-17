@@ -75,6 +75,7 @@
 	} from '$lib/components/ui/native-select/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+	import * as TransferList from '$lib/components/ui/transfer-list/index.js';
 	import Standings from '$lib/components/Standings.svelte';
 
 	const id = () => page.params.id as string;
@@ -123,9 +124,13 @@
 
 	// co-commissioners state (sysadmin-only writes)
 	let seasonCommissioners = $state<SeasonCommissioner[]>([]);
-	let commissionerUserId = $state('');
 	let commissionerError = $state('');
 	let savingCommissioner = $state(false);
+
+	// Co-commissioner assignment (sysadmin-only). The transfer-list core holds
+	// the in-memory source (eligible users) / target (current co-commissioners)
+	// lists and selection; we persist diffs on save.
+	let commissionerTransferCore = $state<TransferList.Core<User> | null>(null);
 
 	let loading = $state(true);
 	let loadError = $state('');
@@ -199,6 +204,7 @@
 			lateAdditions = lateAdditionList.filter((l) => l.season_id === seasonData.id);
 			seasonCommissioners = commissionerList.filter((c) => c.season_id === seasonData.id);
 			isSysAdmin = (await getRoles()).includes('System Administrator');
+			seedCommissionerTransfer();
 			selectedScoringStructure =
 				scoringStructureList.find((s) => s.name === 'Tennis standard set')?.id ??
 				scoringStructureList[0]?.id ??
@@ -668,11 +674,11 @@
 	// --- co-commissioners (sysadmin only) --------------------------------
 
 	// Users already serving as commissioners of this season (from the schedule
-	// detail), used to filter the add dropdown and to render the current list.
+	// detail), used to filter the transfer-list source pool.
 	const currentCommissionerIds = $derived(scheduleDetail?.commissioners ?? []);
 
 	// Co-commissioners are typically users who help administer the season
-	// rather than players in it, so the add dropdown excludes anyone already in
+	// rather than players in it, so the source pool excludes anyone already in
 	// the season (drafted roster / late addition) as well as current
 	// commissioners — mirroring the late-addition dropdown.
 	const commissionerOptions = $derived(
@@ -681,44 +687,50 @@
 			.sort((a, b) => fullName(a).localeCompare(fullName(b)))
 	);
 
-	const commissionerNames = $derived(
-		[...seasonCommissioners].sort((a, b) => userName(a.user_id).localeCompare(userName(b.user_id)))
-	);
-
-	// addSeasonCommissioner creates a SeasonCommissioner for the selected user
-	// and refreshes both the join rows and the schedule detail (so the new
-	// co-commissioner immediately counts as a commissioner of the season).
-	async function handleAddSeasonCommissioner() {
-		const seasonId = season?.id;
-		if (!seasonId || !commissionerUserId) return;
-		savingCommissioner = true;
-		commissionerError = '';
-		try {
-			await addSeasonCommissioner(seasonId, commissionerUserId);
-			commissionerUserId = '';
-			seasonCommissioners = (await listSeasonCommissioners()).filter((c) => c.season_id === seasonId);
-			scheduleDetail = await getScheduleForSeason(seasonId);
-		} catch (e) {
-			commissionerError = e instanceof Error ? e.message : 'Failed to add co-commissioner';
-		} finally {
-			savingCommissioner = false;
-		}
+	// seedCommissionerTransfer builds a fresh transfer-list core from the
+	// current users / join rows: source = eligible users (see
+	// commissionerOptions), target = the season's current co-commissioners.
+	function seedCommissionerTransfer() {
+		commissionerTransferCore = new TransferList.Core<User>({
+			initialSource: commissionerOptions,
+			initialTarget: seasonCommissioners
+				.map((sc) => users.find((u) => u.id === sc.user_id))
+				.filter((u): u is User => u !== undefined),
+			filterPredicate: (u, search) =>
+				fullName(u).toLowerCase().includes(search.toLowerCase())
+		});
 	}
 
-	// removeSeasonCommissioner deletes the SeasonCommissioner record and
-	// refreshes both the join rows and the schedule detail.
-	async function handleRemoveSeasonCommissioner(scId: string) {
+	// handleSaveCommissioners persists the transfer-list state: adds users that
+	// moved into the target, removes users that moved back to the source, then
+	// refreshes both the join rows and the schedule detail (so the new
+	// co-commissioners immediately count as commissioners of the season).
+	async function handleSaveCommissioners() {
 		const seasonId = season?.id;
-		savingCommissioner = true;
+		if (!seasonId || !commissionerTransferCore) return;
 		commissionerError = '';
+		const currentIds = new Set(seasonCommissioners.map((sc) => sc.user_id));
+		const targetIds = new Set(commissionerTransferCore.target.map((u) => u.id));
+		const toAdd = commissionerTransferCore.target
+			.filter((u) => !currentIds.has(u.id))
+			.map((u) => u.id);
+		const toRemove = seasonCommissioners.filter((sc) => !targetIds.has(sc.user_id));
+		if (toAdd.length === 0 && toRemove.length === 0) return;
+		savingCommissioner = true;
 		try {
-			await removeSeasonCommissioner(scId);
-			if (seasonId) {
-				seasonCommissioners = (await listSeasonCommissioners()).filter((c) => c.season_id === seasonId);
-				scheduleDetail = await getScheduleForSeason(seasonId);
+			for (const userId of toAdd) {
+				await addSeasonCommissioner(seasonId, userId);
 			}
+			for (const sc of toRemove) {
+				await removeSeasonCommissioner(sc.id);
+			}
+			seasonCommissioners = (await listSeasonCommissioners()).filter(
+				(c) => c.season_id === seasonId
+			);
+			scheduleDetail = await getScheduleForSeason(seasonId);
+			seedCommissionerTransfer();
 		} catch (e) {
-			commissionerError = e instanceof Error ? e.message : 'Failed to remove co-commissioner';
+			commissionerError = e instanceof Error ? e.message : 'Failed to save co-commissioners';
 		} finally {
 			savingCommissioner = false;
 		}
@@ -1365,63 +1377,60 @@
 			</CardHeader>
 			<CardContent>
 				<p class="mb-4 text-sm text-muted-foreground">
-					Additional users who can help administer this season.
+					Additional users who can help administer this season. Move users into
+					the list to make them co-commissioners. Changes apply when you save.
 				</p>
 
 				{#if commissionerError}
 					<p class="mb-4 text-sm font-medium text-destructive">{commissionerError}</p>
 				{/if}
 
-				<form
-					class="flex flex-wrap items-end gap-3"
-					onsubmit={(e) => {
-						e.preventDefault();
-						handleAddSeasonCommissioner();
-					}}
-				>
-					<div class="flex flex-col gap-1">
-						<Label for="co-commissioner-user" class="text-xs">User</Label>
-						<NativeSelect
-							id="co-commissioner-user"
-							value={commissionerUserId}
-							oninput={(e) =>
-								(commissionerUserId = (
-									e.currentTarget as HTMLSelectElement
-								).value)}
+				{#if commissionerTransferCore}
+					<TransferList.Root direction="horizontal">
+						<TransferList.Container>
+							<TransferList.Title title="Eligible users" />
+							<TransferList.Toolbar
+								variant="source"
+								core={commissionerTransferCore}
+								inputPlaceholder="Search users..."
+							/>
+							<TransferList.Body>
+								{#each commissionerTransferCore.filteredSource as row (row.id)}
+									<TransferList.Item side="source" {row} core={commissionerTransferCore}>
+										{fullName(row)}
+									</TransferList.Item>
+								{/each}
+							</TransferList.Body>
+						</TransferList.Container>
+						<TransferList.Container>
+							<TransferList.Title title="Co-commissioners" />
+							<TransferList.Toolbar
+								variant="target"
+								core={commissionerTransferCore}
+								inputPlaceholder="Search co-commissioners..."
+							/>
+							<TransferList.Body>
+								{#each commissionerTransferCore.filteredTarget as row (row.id)}
+									<TransferList.Item side="target" {row} core={commissionerTransferCore}>
+										{fullName(row)}
+									</TransferList.Item>
+								{/each}
+							</TransferList.Body>
+						</TransferList.Container>
+					</TransferList.Root>
+					<div class="mt-4 flex items-center gap-3">
+						<Button
+							type="button"
+							onclick={handleSaveCommissioners}
+							disabled={savingCommissioner}
 						>
-							<NativeSelectOption value="" disabled>Select a user…</NativeSelectOption>
-							{#each commissionerOptions as u (u.id)}
-								<NativeSelectOption value={u.id}>{fullName(u)}</NativeSelectOption>
-							{/each}
-						</NativeSelect>
+							{savingCommissioner ? 'Saving…' : 'Save co-commissioners'}
+						</Button>
+						<span class="text-sm text-muted-foreground">
+							{commissionerTransferCore.target.length} co-commissioner
+							{commissionerTransferCore.target.length === 1 ? '' : 's'}
+						</span>
 					</div>
-					<Button
-						type="submit"
-						disabled={savingCommissioner || !commissionerUserId}
-					>
-						{savingCommissioner ? 'Saving…' : 'Add co-commissioner'}
-					</Button>
-				</form>
-
-				{#if commissionerNames.length === 0}
-					<p class="mt-4 text-sm text-muted-foreground">No co-commissioners yet.</p>
-				{:else}
-					<ul class="mt-4 space-y-2 text-sm">
-						{#each commissionerNames as sc (sc.id)}
-							<li class="flex items-center justify-between gap-3">
-								<span class="font-medium">{userName(sc.user_id)}</span>
-								<Button
-									type="button"
-									variant="ghost"
-									size="sm"
-									disabled={savingCommissioner}
-									onclick={() => handleRemoveSeasonCommissioner(sc.id)}
-								>
-									Remove
-								</Button>
-							</li>
-						{/each}
-					</ul>
 				{/if}
 			</CardContent>
 		</Card>

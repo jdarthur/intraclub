@@ -162,7 +162,7 @@ test('commissioner builds a season schedule and participants can view it', async
 	// Fill the matchup: Team 1 (home) vs Team 2 (away).
 	await page.getByLabel('Home').selectOption({ label: 'Team 1' });
 	await page.getByLabel('Away').selectOption({ label: 'Team 2' });
-	await page.getByRole('button', { name: 'Save' }).click();
+	await page.getByRole('button', { name: 'Save', exact: true }).click();
 
 	// The assigned matchup is visible on the season page.
 	await expect(page.getByText('Team 1 vs Team 2')).toBeVisible();

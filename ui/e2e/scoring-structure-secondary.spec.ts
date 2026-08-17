@@ -1,6 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 import { waitForHydration } from './helpers';
 
+// This spec drives a long UI flow (creating four structures, transfer-list
+// edits, saves, reloads, then deleting each structure) that routinely exceeds
+// Playwright's 30s default test timeout when the fullyParallel suite runs on a
+// loaded machine, so give it a longer budget.
+test.describe.configure({ timeout: 60_000 });
+
 // The Go backend runs with --dev-token from the repo root (see
 // playwright.config.ts), so POST /api/one_time_password returns the magic-link
 // token in the response body. Login with the user seeded by SeedDevData.
