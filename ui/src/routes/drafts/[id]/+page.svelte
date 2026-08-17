@@ -44,10 +44,6 @@
 	} from '$lib/components/ui/card/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import {
-		NativeSelect,
-		NativeSelectOption
-	} from '$lib/components/ui/native-select/index.js';
-	import {
 		Popover,
 		PopoverClose,
 		PopoverContent,
@@ -85,9 +81,11 @@
 	let loading = $state(true);
 	let loadError = $state('');
 
-	// Captains / teams configuration (pre-initialization).
-	let selectedCaptains = $state<string[]>([]);
-	let captainToAdd = $state('');
+	// Captains / teams configuration (pre-initialization). The transfer-list
+	// core holds the in-memory source (eligible users) / target (selected
+	// captains in draft order) lists; the selection is committed by
+	// "Initialize draft".
+	let captainTransferCore = $state<TransferList.Core<User> | null>(null);
 	let initializing = $state(false);
 	let actionError = $state('');
 
@@ -181,6 +179,15 @@
 			ratingCutoffs = cutoffList.filter((c) => c.draft_id === draftData.id);
 			picks = pickList.filter((p) => p.draft_id === draftData.id);
 
+			// Seed the captains transfer list: source = every eligible user,
+			// target = the currently selected captains (in draft order, empty
+			// until the user moves users across).
+			captainTransferCore = new TransferList.Core<User>({
+				initialSource: users,
+				filterPredicate: (u, search) =>
+					fullName(u).toLowerCase().includes(search.toLowerCase())
+			});
+
 			// Seed the transfer list: source = every user not already in the
 			// pool, target = the currently available players.
 			const inPool = new Set(availablePlayers.map((a) => a.player_id));
@@ -220,27 +227,21 @@
 
 	// --- Captains / teams ---
 
-	function addCaptain() {
-		if (captainToAdd && !selectedCaptains.includes(captainToAdd)) {
-			selectedCaptains = [...selectedCaptains, captainToAdd];
-		}
-		captainToAdd = '';
-	}
-
-	function removeCaptain(userId: string) {
-		selectedCaptains = selectedCaptains.filter((c) => c !== userId);
-	}
+	// Selected captain ids, in draft order (the order they sit in the
+	// transfer-list target).
+	const selectedCaptainIds = $derived(
+		captainTransferCore ? captainTransferCore.target.map((u) => u.id) : []
+	);
 
 	async function handleInitialize() {
 		actionError = '';
-		if (selectedCaptains.length === 0) {
+		if (selectedCaptainIds.length === 0) {
 			actionError = 'Select at least one captain to initialize the draft.';
 			return;
 		}
 		initializing = true;
 		try {
-			await initializeDraft(id(), selectedCaptains);
-			selectedCaptains = [];
+			await initializeDraft(id(), selectedCaptainIds);
 			await load();
 		} catch (e) {
 			actionError = e instanceof Error ? e.message : 'Failed to initialize draft';
@@ -395,9 +396,6 @@
 		return `${playerCount} available players across ${teams} teams (${perTeam} per team)`;
 	}
 
-	function userOptions(exclude: string[]): User[] {
-		return users.filter((u) => !exclude.includes(u.id));
-	}
 </script>
 
 <svelte:head>
@@ -529,37 +527,56 @@
 						Pick the captains who will run the draft. Initializing creates the teams
 						and the draft order.
 					</p>
-					<div class="mt-4 flex flex-col gap-2">
-						<Label for="captain-select">Captain</Label>
-						<div class="flex gap-2">
-							<NativeSelect id="captain-select" bind:value={captainToAdd} class="w-full">
-								<NativeSelectOption value="" disabled>Select a captain…</NativeSelectOption>
-								{#each userOptions(selectedCaptains) as u}
-									<NativeSelectOption value={u.id}>{fullName(u)}</NativeSelectOption>
-								{/each}
-							</NativeSelect>
-							<Button type="button" variant="outline" onclick={addCaptain}>Add captain</Button>
+					{#if captainTransferCore}
+						<div class="mt-4">
+							<TransferList.Root direction="horizontal">
+								<TransferList.Container>
+									<TransferList.Title title="Eligible users" />
+									<TransferList.Toolbar
+										variant="source"
+										core={captainTransferCore}
+										inputPlaceholder="Search users..."
+									/>
+									<TransferList.Body>
+										{#each captainTransferCore.filteredSource as row (row.id)}
+											<TransferList.Item side="source" {row} core={captainTransferCore}>
+												{fullName(row)}
+											</TransferList.Item>
+										{/each}
+									</TransferList.Body>
+								</TransferList.Container>
+								<TransferList.Container>
+									<TransferList.Title title="Captains" />
+									<TransferList.Toolbar
+										variant="target"
+										core={captainTransferCore}
+										inputPlaceholder="Search captains..."
+									/>
+									<TransferList.Body>
+										{#each captainTransferCore.filteredTarget as row (row.id)}
+											<TransferList.Item side="target" {row} core={captainTransferCore}>
+												{fullName(row)}
+											</TransferList.Item>
+										{/each}
+									</TransferList.Body>
+								</TransferList.Container>
+							</TransferList.Root>
+							<div class="mt-4 flex items-center gap-3">
+								<Button
+									type="button"
+									onclick={handleInitialize}
+									disabled={initializing || selectedCaptainIds.length === 0}
+								>
+									{initializing ? 'Initializing...' : 'Initialize draft'}
+								</Button>
+								<span class="text-sm text-muted-foreground">
+									{selectedCaptainIds.length} captain{selectedCaptainIds.length === 1 ? '' : 's'} selected
+								</span>
+							</div>
 						</div>
-					</div>
-					{#if selectedCaptains.length > 0}
-						<ul class="mt-4 flex flex-col gap-2">
-							{#each selectedCaptains as captainId}
-								<li class="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-									<span>{userName(captainId)}</span>
-									<Button type="button" variant="ghost" onclick={() => removeCaptain(captainId)}>
-										Remove
-									</Button>
-								</li>
-							{/each}
-						</ul>
+					{:else}
+						<p class="mt-4 text-sm text-muted-foreground">Loading users...</p>
 					{/if}
-					<Button
-						class="mt-4"
-						onclick={handleInitialize}
-						disabled={initializing || selectedCaptains.length === 0}
-					>
-						{initializing ? 'Initializing...' : 'Initialize draft'}
-					</Button>
 				{:else}
 					<div class="overflow-hidden rounded-lg border">
 						<table class="w-full text-sm">
