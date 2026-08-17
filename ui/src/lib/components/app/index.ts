@@ -9,3 +9,4 @@ export { default as StatCard, statCardTone, type StatCardTone } from './stat-car
 export { default as StatusBadge, statusConfig, type Status } from './status-badge.svelte';
 export { default as AsyncSection } from './async-section.svelte';
 export { default as DataTable, type Column } from './data-table.svelte';
+export { default as PhotoPicker } from './photo-picker.svelte';

@@ -29,6 +29,11 @@ async function confirmDelete(page: Page) {
 // (spawned from the repo root) keeps its SQLite db at <repo>/intraclub.db.
 const dbPath = fileURLToPath(new URL('../../intraclub.db', import.meta.url));
 
+// A 1x1 transparent PNG. The backend stores raw bytes and doesn't decode the
+// image, so this is enough to exercise the upload path end to end.
+const PNG_1PX =
+	'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
 test('facility CRUD: create, view, update, delete', async ({ page }) => {
 	await login(page);
 
@@ -117,4 +122,63 @@ test('facility delete is blocked when the facility is assigned to a season', asy
 	await confirmDelete(page);
 	await expect(page).toHaveURL('/facilities');
 	await expect(page.getByRole('link', { name: `In Use Facility ${unique}` })).toHaveCount(0);
+});
+
+test('facility layout photo: upload from the form and pick from existing photos', async ({
+	page
+}) => {
+	await login(page);
+
+	const unique = Date.now();
+	const name = `Photo Facility ${unique}`;
+
+	// Create a facility, attaching a layout photo uploaded inline in the form
+	// (no need to visit /photos first).
+	await page.goto('/facilities/new');
+	await waitForHydration(page);
+	await page.getByLabel('Name').fill(name);
+	await page.getByLabel('Address').fill(`${unique} St`);
+	await page.getByLabel('Number of courts').fill('3');
+	await page.getByRole('button', { name: 'Select layout photo' }).click();
+	await page.getByLabel('Alt text').fill(`Inline Photo ${unique}`);
+	await page.setInputFiles('input[type=file]', {
+		name: 'layout.png',
+		mimeType: 'image/png',
+		buffer: Buffer.from(PNG_1PX, 'base64')
+	});
+	await page.getByRole('button', { name: 'Upload', exact: true }).click();
+
+	// The picker closes and the trigger reflects the new selection.
+	const trigger = page.getByRole('button', { name: 'Select layout photo' });
+	await expect(trigger).toContainText(`Inline Photo ${unique}`);
+	await page.getByRole('button', { name: 'Create facility' }).click();
+
+	// The selection persists on the detail/edit page.
+	await expect(page).toHaveURL(/\/facilities\/[0-9a-f]+$/);
+	await expect(page.getByRole('button', { name: 'Select layout photo' })).toContainText(
+		`Inline Photo ${unique}`
+	);
+
+	// Upload a second photo via the photos page, then swap the layout photo to
+	// it by picking it out of the thumbnail grid.
+	await page.goto('/photos/new');
+	await waitForHydration(page);
+	await page.getByLabel('Alt text').fill(`Grid Photo ${unique}`);
+	await page.setInputFiles('input[type=file]', {
+		name: 'grid.png',
+		mimeType: 'image/png',
+		buffer: Buffer.from(PNG_1PX, 'base64')
+	});
+	await page.getByRole('button', { name: 'Create photo' }).click();
+	await expect(page).toHaveURL(/\/photos\/[0-9a-f]+$/);
+
+	await page.goto('/facilities');
+	await page.getByRole('link', { name }).click();
+	await expect(page.getByRole('heading', { name })).toBeVisible();
+	await page.getByRole('button', { name: 'Select layout photo' }).click();
+	await page.getByRole('button', { name: `Grid Photo ${unique}` }).click();
+	await page.getByRole('button', { name: 'Save changes' }).click();
+	await expect(page.getByRole('button', { name: 'Select layout photo' })).toContainText(
+		`Grid Photo ${unique}`
+	);
 });
