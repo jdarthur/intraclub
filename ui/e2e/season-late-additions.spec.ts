@@ -151,30 +151,40 @@ test('sysadmin adds and removes late players on a season via the UI', async ({ p
 	await page.goto(`/seasons/${seasonId}`);
 	await waitForHydration(page);
 
-	// The sysadmin sees the Late additions card.
-	await expect(page.getByText('Late additions', { exact: true })).toBeVisible();
-	await expect(page.getByText('No late additions yet.')).toBeVisible();
+	// Scope transfer-list interactions to the Late additions card: the
+	// season page also shows a Co-commissioners card whose source pool lists
+	// the same eligible users.
+	const lateAdditionsCard = page
+		.locator('[data-slot="card"]')
+		.filter({ has: page.getByRole('heading', { name: 'Late additions' }) });
 
-	// Add the late player through the UI.
-	await page.getByLabel('Player').selectOption({ label: `${lateName} LA` });
-	await page.getByRole('button', { name: 'Add late player' }).click();
-	await expect(page.getByText(`No late additions yet.`)).toBeHidden();
-	await expect(page.getByRole('list').filter({ hasText: lateName }).getByText(lateName)).toBeVisible();
+	// The sysadmin sees the Late additions card.
+	await expect(page.getByRole('heading', { name: 'Late additions' })).toBeVisible();
+
+	// The new late player is not yet a late addition.
+	expect(await lateAdditionUserIds(page, seasonId)).not.toContain(lateUserId);
+
+	// Add the late player through the transfer list.
+	await lateAdditionsCard.getByRole('button', { name: `${lateName} LA`, exact: true }).click();
+	await lateAdditionsCard.getByRole('button', { name: 'Move selected to pool' }).click();
+	await lateAdditionsCard.getByRole('button', { name: 'Save late additions' }).click();
+	// The save button stays disabled until the join rows are persisted and the
+	// list is re-seeded with the new late addition on the target side.
+	await expect(lateAdditionsCard.getByRole('button', { name: 'Save late additions' })).toBeEnabled();
+	await expect(lateAdditionsCard.getByRole('button', { name: `${lateName} LA`, exact: true })).toBeVisible();
 
 	// The API reflects the new late addition.
 	expect(await lateAdditionUserIds(page, seasonId)).toContain(lateUserId);
 
-	// The added player no longer appears in the add dropdown.
-	await expect(page.getByLabel('Player')).not.toHaveValue(lateUserId);
-
-	// Remove the late player through the UI.
-	await page.getByRole('list').filter({ hasText: lateName }).getByRole('button', { name: 'Remove' }).click();
-	await expect(page.getByText(`No late additions yet.`)).toBeVisible();
+	// Remove the late player through the transfer list.
+	await lateAdditionsCard.getByRole('button', { name: `${lateName} LA`, exact: true }).click();
+	await lateAdditionsCard.getByRole('button', { name: 'Move selected out of pool' }).click();
+	await lateAdditionsCard.getByRole('button', { name: 'Save late additions' }).click();
+	await expect(lateAdditionsCard.getByRole('button', { name: 'Save late additions' })).toBeEnabled();
 	expect(await lateAdditionUserIds(page, seasonId)).not.toContain(lateUserId);
 
-	// The player is selectable again after removal.
-	await page.getByLabel('Player').selectOption({ label: `${lateName} LA` });
-	await expect(page.getByRole('button', { name: 'Add late player' })).toBeEnabled();
+	// The player is selectable again after removal (back in the source pool).
+	await expect(lateAdditionsCard.getByRole('button', { name: `${lateName} LA`, exact: true })).toBeVisible();
 
 	// Clean up the late addition row so the table doesn't accumulate across runs.
 	const rows = (await (await page.request.get(`${API}/season_late_addition`)).json())
@@ -202,7 +212,7 @@ test('non-sysadmin does not see the late additions card', async ({ page }) => {
 	await page.goto(`/seasons/${seasonId}`);
 	await waitForHydration(page);
 
-	await expect(page.getByText('Late additions', { exact: true })).not.toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Late additions' })).not.toBeVisible();
 
 	// And the non-sysadmin is rejected by the API write surface too.
 	const otherToken = await page.evaluate(() => localStorage.getItem('intraclub_jwt') ?? '');

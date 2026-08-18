@@ -117,10 +117,14 @@
 
 	// late additions state (sysadmin-only writes)
 	let lateAdditions = $state<SeasonLateAddition[]>([]);
-	let lateAdditionUserId = $state('');
 	let lateAdditionError = $state('');
 	let savingLateAddition = $state(false);
 	let isSysAdmin = $state(false);
+
+	// Late-addition assignment (sysadmin-only). The transfer-list core holds
+	// the in-memory source (eligible users) / target (current late additions)
+	// lists and selection; we persist diffs on save.
+	let lateAdditionTransferCore = $state<TransferList.Core<User> | null>(null);
 
 	// co-commissioners state (sysadmin-only writes)
 	let seasonCommissioners = $state<SeasonCommissioner[]>([]);
@@ -204,6 +208,7 @@
 			lateAdditions = lateAdditionList.filter((l) => l.season_id === seasonData.id);
 			seasonCommissioners = commissionerList.filter((c) => c.season_id === seasonData.id);
 			isSysAdmin = (await getRoles()).includes('System Administrator');
+			seedLateAdditionTransfer();
 			seedCommissionerTransfer();
 			selectedScoringStructure =
 				scoringStructureList.find((s) => s.name === 'Tennis standard set')?.id ??
@@ -622,50 +627,62 @@
 	// --- late additions (sysadmin only) ------------------------------------
 
 	// Whether a user is already part of the season (on a drafted team or an
-	// existing late addition), used to filter the add dropdown.
+	// existing late addition), used to filter the transfer-list source pool.
 	function userInSeason(userId: string): boolean {
 		if (lateAdditions.some((l) => l.user_id === userId)) return true;
 		return teams.some((t) => t.members.some((m) => m.user_id === userId));
 	}
 
+	// Eligible users = everyone not already in the season and not a current
+	// late addition (mirroring the old add dropdown's filter).
 	const lateAdditionOptions = $derived(
-		[...users].filter((u) => !userInSeason(u.id)).sort((a, b) => fullName(a).localeCompare(fullName(b)))
+		[...users]
+			.filter((u) => !userInSeason(u.id))
+			.sort((a, b) => fullName(a).localeCompare(fullName(b)))
 	);
 
-	const lateAdditionNames = $derived(
-		[...lateAdditions].sort((a, b) => userName(a.user_id).localeCompare(userName(b.user_id)))
-	);
-
-	// addLateAddition creates a SeasonLateAddition for the selected user and
-	// refreshes the list from the API.
-	async function handleAddLateAddition() {
-		const seasonId = season?.id;
-		if (!seasonId || !lateAdditionUserId) return;
-		savingLateAddition = true;
-		lateAdditionError = '';
-		try {
-			await addSeasonLateAddition(seasonId, lateAdditionUserId);
-			lateAdditionUserId = '';
-			lateAdditions = (await listSeasonLateAdditions()).filter((l) => l.season_id === seasonId);
-		} catch (e) {
-			lateAdditionError = e instanceof Error ? e.message : 'Failed to add late addition';
-		} finally {
-			savingLateAddition = false;
-		}
+	// seedLateAdditionTransfer builds a fresh transfer-list core from the
+	// current users / join rows: source = eligible users (see
+	// lateAdditionOptions), target = the season's current late additions.
+	function seedLateAdditionTransfer() {
+		lateAdditionTransferCore = new TransferList.Core<User>({
+			initialSource: lateAdditionOptions,
+			initialTarget: lateAdditions
+				.map((la) => users.find((u) => u.id === la.user_id))
+				.filter((u): u is User => u !== undefined),
+			filterPredicate: (u, search) =>
+				fullName(u).toLowerCase().includes(search.toLowerCase())
+		});
 	}
 
-	// removeLateAddition deletes the SeasonLateAddition record and refreshes.
-	async function handleRemoveLateAddition(lateId: string) {
+	// handleSaveLateAdditions persists the transfer-list state: adds users
+	// that moved into the target, removes users that moved back to the source,
+	// then refreshes the join rows.
+	async function handleSaveLateAdditions() {
 		const seasonId = season?.id;
-		savingLateAddition = true;
+		if (!seasonId || !lateAdditionTransferCore) return;
 		lateAdditionError = '';
+		const currentIds = new Set(lateAdditions.map((la) => la.user_id));
+		const targetIds = new Set(lateAdditionTransferCore.target.map((u) => u.id));
+		const toAdd = lateAdditionTransferCore.target
+			.filter((u) => !currentIds.has(u.id))
+			.map((u) => u.id);
+		const toRemove = lateAdditions.filter((la) => !targetIds.has(la.user_id));
+		if (toAdd.length === 0 && toRemove.length === 0) return;
+		savingLateAddition = true;
 		try {
-			await removeSeasonLateAddition(lateId);
-			if (seasonId) {
-				lateAdditions = (await listSeasonLateAdditions()).filter((l) => l.season_id === seasonId);
+			for (const userId of toAdd) {
+				await addSeasonLateAddition(seasonId, userId);
 			}
+			for (const la of toRemove) {
+				await removeSeasonLateAddition(la.id);
+			}
+			lateAdditions = (await listSeasonLateAdditions()).filter(
+				(l) => l.season_id === seasonId
+			);
+			seedLateAdditionTransfer();
 		} catch (e) {
-			lateAdditionError = e instanceof Error ? e.message : 'Failed to remove late addition';
+			lateAdditionError = e instanceof Error ? e.message : 'Failed to save late additions';
 		} finally {
 			savingLateAddition = false;
 		}
@@ -680,7 +697,7 @@
 	// Co-commissioners are typically users who help administer the season
 	// rather than players in it, so the source pool excludes anyone already in
 	// the season (drafted roster / late addition) as well as current
-	// commissioners — mirroring the late-addition dropdown.
+	// commissioners — mirroring the late-addition source pool.
 	const commissionerOptions = $derived(
 		[...users]
 			.filter((u) => !userInSeason(u.id) && !currentCommissionerIds.includes(u.id))
@@ -1445,63 +1462,60 @@
 			</CardHeader>
 			<CardContent>
 				<p class="mb-4 text-sm text-muted-foreground">
-					Players added to this season after the draft was completed.
+					Players added to this season after the draft was completed. Move players
+					into the list to add them late. Changes apply when you save.
 				</p>
 
 				{#if lateAdditionError}
 					<p class="mb-4 text-sm font-medium text-destructive">{lateAdditionError}</p>
 				{/if}
 
-				<form
-					class="flex flex-wrap items-end gap-3"
-					onsubmit={(e) => {
-						e.preventDefault();
-						handleAddLateAddition();
-					}}
-				>
-					<div class="flex flex-col gap-1">
-						<Label for="late-addition-user" class="text-xs">Player</Label>
-						<NativeSelect
-							id="late-addition-user"
-							value={lateAdditionUserId}
-							oninput={(e) =>
-								(lateAdditionUserId = (
-									e.currentTarget as HTMLSelectElement
-								).value)}
+				{#if lateAdditionTransferCore}
+					<TransferList.Root direction="horizontal">
+						<TransferList.Container>
+							<TransferList.Title title="Eligible users" />
+							<TransferList.Toolbar
+								variant="source"
+								core={lateAdditionTransferCore}
+								inputPlaceholder="Search users..."
+							/>
+							<TransferList.Body>
+								{#each lateAdditionTransferCore.filteredSource as row (row.id)}
+									<TransferList.Item side="source" {row} core={lateAdditionTransferCore}>
+										{fullName(row)}
+									</TransferList.Item>
+								{/each}
+							</TransferList.Body>
+						</TransferList.Container>
+						<TransferList.Container>
+							<TransferList.Title title="Late players" />
+							<TransferList.Toolbar
+								variant="target"
+								core={lateAdditionTransferCore}
+								inputPlaceholder="Search players..."
+							/>
+							<TransferList.Body>
+								{#each lateAdditionTransferCore.filteredTarget as row (row.id)}
+									<TransferList.Item side="target" {row} core={lateAdditionTransferCore}>
+										{fullName(row)}
+									</TransferList.Item>
+								{/each}
+							</TransferList.Body>
+						</TransferList.Container>
+					</TransferList.Root>
+					<div class="mt-4 flex items-center gap-3">
+						<Button
+							type="button"
+							onclick={handleSaveLateAdditions}
+							disabled={savingLateAddition}
 						>
-							<NativeSelectOption value="" disabled>Select a player…</NativeSelectOption>
-							{#each lateAdditionOptions as u (u.id)}
-								<NativeSelectOption value={u.id}>{fullName(u)}</NativeSelectOption>
-							{/each}
-						</NativeSelect>
+							{savingLateAddition ? 'Saving…' : 'Save late additions'}
+						</Button>
+						<span class="text-sm text-muted-foreground">
+							{lateAdditionTransferCore.target.length} late player
+							{lateAdditionTransferCore.target.length === 1 ? '' : 's'}
+						</span>
 					</div>
-					<Button
-						type="submit"
-						disabled={savingLateAddition || !lateAdditionUserId}
-					>
-						{savingLateAddition ? 'Saving…' : 'Add late player'}
-					</Button>
-				</form>
-
-				{#if lateAdditionNames.length === 0}
-					<p class="mt-4 text-sm text-muted-foreground">No late additions yet.</p>
-				{:else}
-					<ul class="mt-4 space-y-2 text-sm">
-						{#each lateAdditionNames as la (la.id)}
-							<li class="flex items-center justify-between gap-3">
-								<span class="font-medium">{userName(la.user_id)}</span>
-								<Button
-									type="button"
-									variant="ghost"
-									size="sm"
-									disabled={savingLateAddition}
-									onclick={() => handleRemoveLateAddition(la.id)}
-								>
-									Remove
-								</Button>
-							</li>
-						{/each}
-					</ul>
 				{/if}
 			</CardContent>
 		</Card>
